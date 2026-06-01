@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 from pdf_vector_ingest.db import PgVectorRepository, file_record
 from pdf_vector_ingest.embeddings import create_embeddings
@@ -56,14 +58,26 @@ def ingest_spark(
     dry_run: bool = False,
     limit_files: int | None = None,
 ) -> IngestStats:
+    _validate_spark_python()
     _validate_spark_java()
+    _configure_spark_python()
 
-    from pyspark.sql import SparkSession
+    try:
+        from pyspark.sql import SparkSession
+    except ModuleNotFoundError as exc:
+        if exc.name == "pyspark":
+            raise RuntimeError(
+                "Spark engine icin pyspark gerekli. Bu projedeki sanal ortami kullanin "
+                "veya `python -m pip install -r requirements.txt` komutuyla bagimliliklari yukleyin."
+            ) from exc
+        raise
 
     try:
         spark = (
             SparkSession.builder.appName("lawai-pdf-vector-ingest")
             .master(spark_master)
+            .config("spark.pyspark.python", sys.executable)
+            .config("spark.pyspark.driver.python", sys.executable)
             .getOrCreate()
         )
     except Exception as exc:
@@ -127,9 +141,16 @@ def _embed_and_insert(repository, embeddings, chunks: list[PdfChunk]) -> int:
 
 
 def _validate_spark_java() -> None:
+    java_command = ["java", "-version"]
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home:
+        java_from_home = Path(java_home) / "bin" / "java.exe"
+        if java_from_home.exists():
+            java_command = [str(java_from_home), "-version"]
+
     try:
         completed = subprocess.run(
-            ["java", "-version"],
+            java_command,
             check=False,
             capture_output=True,
             text=True,
@@ -153,3 +174,18 @@ def _validate_spark_java() -> None:
             f"Spark bu Java surumuyle baslatilamiyor: Java {major}. "
             "JDK 17 kurup JAVA_HOME'u JDK 17 klasorune ayarlayin veya --engine local kullanin."
         )
+
+
+def _validate_spark_python() -> None:
+    major, minor = sys.version_info[:2]
+    if (major, minor) > (3, 14):
+        raise RuntimeError(
+            f"PySpark 4.1.2 bu Python surumunu desteklemiyor: Python {major}.{minor}. "
+            "Spark engine icin Python 3.14, 3.13 veya 3.12 ile yeni bir .venv olusturun "
+            "ya da --engine local kullanin."
+        )
+
+
+def _configure_spark_python() -> None:
+    os.environ["PYSPARK_PYTHON"] = sys.executable
+    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
