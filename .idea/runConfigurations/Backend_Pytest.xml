@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Backend Pytest" type="tests" factoryName="py.test">
+    <module name="LawAI-NextLangChain" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="LAWAI_AI_PROVIDER" value="local" />
+      <env name="LAWAI_VECTOR_STORE" value="json" />
+    </envs>
+    <option name="SDK_HOME" value="$PROJECT_DIR$/backend/.venv/Scripts/python.exe" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+    <option name="IS_MODULE_SDK" value="false" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <option name="_new_target" value="$PROJECT_DIR$/backend/tests" />
+    <option name="_new_targetType" value="PATH" />
+    <option name="_new_keywords" value="" />
+    <option name="_new_additionalArguments" value="" />
+    <method v="2" />
+  </configuration>
+</component>

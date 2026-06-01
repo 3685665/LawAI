@@ -1,0 +1,93 @@
+from pydantic import BaseModel, Field
+
+
+class PrecedentDto(BaseModel):
+    court: str
+    chamber: str | None = None
+    docketNo: str | None = None
+    decisionNo: str | None = None
+    date: str | None = None
+    topic: str
+    summary: str
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=3)
+    mode: str = "analysis"
+    privateMode: bool = True
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    citations: list[PrecedentDto]
+    nextSteps: list[str]
+    disclaimer: str
+
+
+class PrecedentSearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    court: str | None = None
+    chamber: str | None = None
+    limit: int | None = 5
+
+
+class PrecedentSearchResponse(BaseModel):
+    query: str
+    results: list[PrecedentDto]
+
+
+class PetitionRequest(BaseModel):
+    petitionType: str
+    court: str
+    parties: str
+    facts: str
+    demands: str | None = None
+
+
+class PetitionResponse(BaseModel):
+    title: str
+    body: str
+    citedPrecedents: list[PrecedentDto]
+
+
+class KnowledgeDocumentRequest(BaseModel):
+    sourceType: str = "precedent"
+    court: str | None = None
+    chamber: str | None = None
+    docketNo: str | None = None
+    decisionNo: str | None = None
+    date: str | None = None
+    topic: str
+    summary: str
+    content: str
+
+
+class KnowledgeIngestRequest(BaseModel):
+    documents: list[KnowledgeDocumentRequest]
+
+
+class KnowledgeIngestResponse(BaseModel):
+    indexed: int
+    storage: str
+    message: str
+
+
+class DocumentAnalysisResponse(BaseModel):
+    filename: str
+    size: int
+    contentType: str
+    detectedIssues: list[str]
+    summary: str
+
+
+class DocumentIngestResponse(BaseModel):
+    filename: str
+    size: int
+    contentType: str
+    extractedCharacters: int
+    chunkCount: int
+    indexed: int
+    storage: str
+    message: str
+    textPreview: str
+    warnings: list[str]

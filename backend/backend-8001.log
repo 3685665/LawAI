@@ -1,0 +1,6 @@
+INFO:     127.0.0.1:52859 - "POST /api/documents/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58131 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49684 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55598 - "POST /api/knowledge/seed-precedents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55598 - "POST /api/knowledge/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56722 - "POST /api/documents/ingest HTTP/1.1" 200 OK
