@@ -1,6 +1,6 @@
 # LawAI Next LangChain
 
-Bu proje, mevcut `LawAI` projesine dokunmadan ayni MVP kapsamlarini Next.js, Python/FastAPI ve LangChain ile yeniden kurar.
+Bu proje, web/API katmanini Spring Boot'a, AI/RAG katmanini Python'a ayiracak sekilde kurgulanmistir.
 
 ## Kapsam
 
@@ -14,9 +14,10 @@ Bu proje, mevcut `LawAI` projesine dokunmadan ayni MVP kapsamlarini Next.js, Pyt
 ## Klasorler
 
 - `frontend`: Next.js 15, React 19, TypeScript
-- `backend`: FastAPI, LangChain, OpenAI/Gemini/Ollama adaptorleri
+- `backend`: Python AI mikroservisi, LangChain, OpenAI/Gemini/Ollama adaptorleri
+- `springboot-backend`: Spring Boot ana API, dosya islemleri ve orkestrasyon
 
-## Backend
+## Python AI Servisi
 
 Python kurulu olduktan sonra:
 
@@ -26,7 +27,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
 OpenAI icin `.env`:
@@ -72,7 +73,23 @@ copy .env.local.example .env.local
 npm.cmd run dev
 ```
 
-Frontend varsayilan olarak `http://localhost:3000`, backend `http://localhost:8000` adresinde calisir.
+## Spring Boot API
+
+```powershell
+cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
+.\mvnw.cmd spring-boot:run
+```
+
+Spring Boot ana API varsayilan olarak `http://localhost:8080`, Python AI servisi `http://localhost:8001/api` adresinde calisir.
+
+Manuel derleme icin:
+
+```powershell
+cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
+.\mvnw.cmd -DskipTests compile
+```
+
+Frontend varsayilan olarak `http://localhost:3000`, ana API `http://localhost:8080/api` adresinde calisir.
 
 ## Endpointler
 
@@ -87,4 +104,4 @@ Frontend varsayilan olarak `http://localhost:3000`, backend `http://localhost:80
 
 ## Notlar
 
-Bu surum pgvector yerine bellek-ici vektor store kullanir. PostgreSQL/pgvector kaliciligi eklemek icin backend tarafinda `vector_store.py` arayuzunu kalici repository ile degistirmek yeterlidir.
+Python servisi AI saglayici, embedding ve vektor depo islerini uzerine alir; Spring Boot ise dosya kabul etme, metin cikarma, is kurallari ve REST orkestrasyonunu yapar.

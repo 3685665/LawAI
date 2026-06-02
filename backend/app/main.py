@@ -1,11 +1,9 @@
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models.schemas import (
     ChatRequest,
     ChatResponse,
-    DocumentAnalysisResponse,
-    DocumentIngestResponse,
     KnowledgeIngestRequest,
     KnowledgeIngestResponse,
     PetitionRequest,
@@ -13,7 +11,6 @@ from app.models.schemas import (
     PrecedentSearchRequest,
     PrecedentSearchResponse,
 )
-from app.services.document_service import document_service
 from app.services.legal_service import legal_service
 
 app = FastAPI(title="LawAI Next LangChain API")
@@ -50,25 +47,6 @@ def search_precedents(request: PrecedentSearchRequest) -> PrecedentSearchRespons
 @app.post("/api/petitions", response_model=PetitionResponse)
 def petitions(request: PetitionRequest) -> PetitionResponse:
     return legal_service.generate_petition(request)
-
-
-@app.post("/api/documents/analyze", response_model=DocumentAnalysisResponse)
-async def analyze_document(file: UploadFile = File(...)) -> DocumentAnalysisResponse:
-    return await document_service.analyze(file)
-
-
-@app.post("/api/documents/ingest", response_model=DocumentIngestResponse)
-async def ingest_document(
-    file: UploadFile = File(...),
-    topic: str | None = Form(default=None),
-    court: str | None = Form(default=None),
-) -> DocumentIngestResponse:
-    try:
-        return await document_service.ingest(file, topic, court)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Dokuman indeksleme basarisiz: {exc}") from exc
 
 
 @app.post("/api/knowledge/documents", response_model=KnowledgeIngestResponse)

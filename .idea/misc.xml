@@ -3,8 +3,16 @@
   <component name="Black">
     <option name="sdkName" value="LawAI Backend .venv" />
   </component>
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="KubernetesApiPersistence">{}</component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_24" default="true" project-jdk-name="LawAI Backend .venv" project-jdk-type="Python SDK">
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/springboot-backend/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="corretto-24.0.2" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>
