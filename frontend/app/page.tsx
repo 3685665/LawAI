@@ -6,6 +6,7 @@ import {
   Bot,
   CheckCircle2,
   Database,
+  GraduationCap,
   FileSearch,
   FileText,
   FolderOpen,
@@ -17,6 +18,7 @@ import {
   Upload,
   X
 } from "lucide-react";
+import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
 import {
   CaseDocument as ApiCaseDocument,
   CaseRecord,
@@ -32,7 +34,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "cases" | "document" | "knowledge";
+type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
@@ -156,6 +158,12 @@ export default function Home() {
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [training, setTraining] = useState<TrainingTabResponse | null>(null);
+  const [trainingLoading, setTrainingLoading] = useState(false);
+  const [trainingError, setTrainingError] = useState("");
+  const [selectedTrainingModule, setSelectedTrainingModule] = useState(0);
+  const [selectedTrainingPrompt, setSelectedTrainingPrompt] = useState(0);
+  const [trainingDraft, setTrainingDraft] = useState("");
 
   const [chatQuestion, setChatQuestion] = useState("Kira alacagi icin nasil bir yol izlemeliyim?");
   const [chatMode, setChatMode] = useState("analysis");
@@ -189,6 +197,7 @@ export default function Home() {
     { id: "chat" as const, label: "Sohbet", icon: Bot },
     { id: "search" as const, label: "Emsal", icon: FileSearch },
     { id: "petition" as const, label: "Dilekce", icon: FileText },
+    { id: "training" as const, label: "Egitim", icon: GraduationCap },
     { id: "cases" as const, label: "Davalar", icon: FolderOpen },
     { id: "document" as const, label: "Dokuman", icon: Upload },
     { id: "knowledge" as const, label: "Bilgi", icon: Database }
@@ -197,6 +206,38 @@ export default function Home() {
   useEffect(() => {
     checkHealth().then(setBackendOnline);
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "training" || training || trainingLoading) {
+      return;
+    }
+
+    let cancelled = false;
+    setTrainingLoading(true);
+    setTrainingError("");
+    getJson<TrainingTabResponse>("/training/petition-drafting")
+      .then((data) => {
+        if (cancelled) return;
+        setTraining(data);
+        setSelectedTrainingModule(0);
+        setSelectedTrainingPrompt(0);
+        setTrainingDraft(data.prompts[0]?.prompt ?? "");
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setTrainingError(err instanceof Error ? err.message : "Egitim verisi yuklenemedi.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTrainingLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, training, trainingLoading]);
 
   async function run(action: string, fn: () => Promise<void>) {
     setLoading(action);
@@ -343,6 +384,27 @@ export default function Home() {
               ) : <EmptyState text="Dilekce taslagi burada gorunur." />}
             </ResultPanel>
           </section>
+        )}
+
+        {activeTab === "training" && (
+          <TrainingPanel
+            loading={trainingLoading}
+            error={trainingError}
+            training={training}
+            selectedModuleIndex={selectedTrainingModule}
+            selectedPromptIndex={selectedTrainingPrompt}
+            draft={trainingDraft}
+            onSelectModule={setSelectedTrainingModule}
+            onSelectPrompt={(index) => {
+              setSelectedTrainingPrompt(index);
+              setTrainingDraft(training?.prompts[index]?.prompt ?? "");
+            }}
+            onChangeDraft={setTrainingDraft}
+            onReload={() => {
+              setTraining(null);
+              setTrainingError("");
+            }}
+          />
         )}
 
         {activeTab === "cases" && <CasesPanel onGoToDocuments={() => setActiveTab("document")} />}
