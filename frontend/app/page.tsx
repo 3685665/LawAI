@@ -2,9 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   AlertCircle,
+  BarChart3,
   Bot,
   CheckCircle2,
+  ChevronRight,
   Database,
   GraduationCap,
   FileSearch,
@@ -12,9 +15,12 @@ import {
   FolderOpen,
   LoaderCircle,
   Lock,
+  Clock3,
+  ClipboardList,
   Scale,
   Search,
   Send,
+  ShieldAlert,
   Upload,
   X
 } from "lucide-react";
@@ -34,7 +40,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
+type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
@@ -153,7 +159,7 @@ const caseDocuments: Record<CaseType, CaseDocument[]> = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [privateMode, setPrivateMode] = useState(true);
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
@@ -164,6 +170,10 @@ export default function Home() {
   const [selectedTrainingModule, setSelectedTrainingModule] = useState(0);
   const [selectedTrainingPrompt, setSelectedTrainingPrompt] = useState(0);
   const [trainingDraft, setTrainingDraft] = useState("");
+  const [dashboardCases, setDashboardCases] = useState<CaseRecord[]>([]);
+  const [dashboardTemplates, setDashboardTemplates] = useState<CaseTemplate[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState("");
 
   const [chatQuestion, setChatQuestion] = useState("Kira alacagi icin nasil bir yol izlemeliyim?");
   const [chatMode, setChatMode] = useState("analysis");
@@ -194,13 +204,14 @@ export default function Home() {
   const [knowledgeResult, setKnowledgeResult] = useState<KnowledgeResponse | null>(null);
 
   const tabs = useMemo(() => [
-    { id: "chat" as const, label: "Sohbet", icon: Bot },
-    { id: "search" as const, label: "Emsal", icon: FileSearch },
-    { id: "petition" as const, label: "Dilekce", icon: FileText },
+    { id: "dashboard" as const, label: "Dashboard", icon: Scale },
+    { id: "chat" as const, label: "Asistan", icon: Bot },
+    { id: "search" as const, label: "Emsal Arama", icon: FileSearch },
+    { id: "petition" as const, label: "Dilekce Taslak", icon: FileText },
     { id: "training" as const, label: "Egitim", icon: GraduationCap },
-    { id: "cases" as const, label: "Davalar", icon: FolderOpen },
-    { id: "document" as const, label: "Dokuman", icon: Upload },
-    { id: "knowledge" as const, label: "Bilgi", icon: Database }
+    { id: "cases" as const, label: "Dosyalar", icon: FolderOpen },
+    { id: "document" as const, label: "Belge Isleme", icon: Upload },
+    { id: "knowledge" as const, label: "Bilgi Bankasi", icon: Database }
   ], []);
 
   useEffect(() => {
@@ -238,6 +249,58 @@ export default function Home() {
       cancelled = true;
     };
   }, [activeTab, training, trainingLoading]);
+
+  useEffect(() => {
+    if (activeTab !== "dashboard" || dashboardCases.length || dashboardTemplates.length || dashboardLoading) {
+      return;
+    }
+
+    let cancelled = false;
+    setDashboardLoading(true);
+    setDashboardError("");
+    Promise.all([
+      getJson<CaseRecord[]>("/cases"),
+      getJson<CaseTemplatesResponse>("/cases/templates")
+    ])
+      .then(([cases, templates]) => {
+        if (cancelled) return;
+        setDashboardCases(cases);
+        setDashboardTemplates(templates.templates);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDashboardError(err instanceof Error ? err.message : "Dashboard verisi yuklenemedi.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDashboardLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
+
+  const dashboardMetrics = useMemo(() => {
+    const totalCases = dashboardCases.length;
+    const avgProgress = totalCases
+      ? Math.round(dashboardCases.reduce((sum, item) => sum + item.progress, 0) / totalCases)
+      : 0;
+    const completedRequiredDocs = dashboardCases.reduce((sum, item) => sum + item.completedRequiredDocumentCount, 0);
+    const requiredDocs = dashboardCases.reduce((sum, item) => sum + item.requiredDocumentCount, 0);
+    const riskCases = dashboardCases.filter((item) => item.progress < 60);
+    return {
+      totalCases,
+      avgProgress,
+      completedRequiredDocs,
+      requiredDocs,
+      riskCases,
+      recentCases: [...dashboardCases].slice(0, 3),
+      templates: dashboardTemplates.slice(0, 4)
+    };
+  }, [dashboardCases, dashboardTemplates]);
 
   async function run(action: string, fn: () => Promise<void>) {
     setLoading(action);
@@ -293,10 +356,11 @@ export default function Home() {
         <div className="brand">
           <Scale size={28} />
           <div>
-            <strong>LawAI</strong>
-            <span>Next.js + LangChain</span>
+            <strong>LawAI Studio</strong>
+            <span>Avukat calisma alani</span>
           </div>
         </div>
+        <div className="nav-label">Uygulamalar</div>
         <nav className="tabs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -316,13 +380,197 @@ export default function Home() {
       </aside>
 
       <section className="workspace">
-        <header className="topbar">
-        <div>
-          <h1>Hukuki calisma paneli</h1>
-          <p>Soru yanitlama, emsal arama, dilekce taslagi, dava dosyasi, dokuman kontrolu ve bilgi bankasi tek ekranda.</p>
-        </div>
-          <span className={backendOnline === false ? "status offline" : "status"}>{loading ? "Isleniyor" : backendOnline === false ? "Backend yok" : "Hazir"}</span>
-        </header>
+        {activeTab === "dashboard" && (
+          <header className="topbar">
+            <div>
+              <span className="eyebrow">Hukuk AI Calisma Sistemi</span>
+              <h1>Dosya, dilekce ve emsal calismasi icin kurumsal arayuz.</h1>
+              <p>Kaynakli yanit, belge inceleme, risk kontrolu ve taslak olusturma tek panelde; resmi ofis kullanimina uygun, sakin ve kontrollu bir akis.</p>
+            </div>
+            <span className={backendOnline === false ? "status offline" : "status"}>{loading ? "Isleniyor" : backendOnline === false ? "Backend yok" : "Hazir"}</span>
+          </header>
+        )}
+
+        {activeTab === "dashboard" && (
+          <section className="dashboard-hero panel">
+            <div className="dashboard-hero-copy">
+              <h2>Ofis standardinda calisan, kaynakli ve izlenebilir hukuk uygulamasi.</h2>
+              <p>Dilekce, emsal, dosya ve egitim modulleri tek yapida; avukat icin hizli ama resmi is akisi sunar.</p>
+              <div className="hero-actions">
+                <button type="button" onClick={() => setActiveTab("training")}>
+                  <GraduationCap size={17} />
+                  Egitim
+                </button>
+                <button className="secondary-button" type="button" onClick={() => setActiveTab("petition")}>
+                  <FileText size={17} />
+                  Dilekce
+                </button>
+                <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
+                  Emsal
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="dashboard-hero-side">
+              <div className="hero-metric">
+                <span>Durum</span>
+                <strong>{backendOnline === false ? "Baglanti yok" : "AI servisi hazir"}</strong>
+              </div>
+              <div className="hero-metric">
+                <span>Calisma modu</span>
+                <strong>{privateMode ? "Gizli mod aktif" : "Standart mod"}</strong>
+              </div>
+              <div className="hero-metric">
+                <span>Odak</span>
+                <strong>Kaynak, risk, taslak</strong>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === "dashboard" && (
+          <section className="dashboard-grid">
+            <div className="dashboard-stats">
+              <article className="panel stat-card">
+                <span>Toplam dosya</span>
+                <strong>{dashboardLoading ? "..." : dashboardMetrics.totalCases}</strong>
+                <small>Aktif dosya kayitlari</small>
+              </article>
+              <article className="panel stat-card">
+                <span>Ortalama ilerleme</span>
+                <strong>{dashboardLoading ? "..." : `${dashboardMetrics.avgProgress}%`}</strong>
+                <small>Dosya bazli durum ortalamasi</small>
+              </article>
+              <article className="panel stat-card">
+                <span>Tamamlanan zorunlu belge</span>
+                <strong>{dashboardLoading ? "..." : `${dashboardMetrics.completedRequiredDocs}/${dashboardMetrics.requiredDocs}`}</strong>
+                <small>Eksik evrak takibi</small>
+              </article>
+              <article className="panel stat-card">
+                <span>Riskli dosya</span>
+                <strong>{dashboardLoading ? "..." : dashboardMetrics.riskCases.length}</strong>
+                <small>60% altinda kalan dosyalar</small>
+              </article>
+            </div>
+
+            {dashboardError && <div className="error">{dashboardError}</div>}
+
+            <div className="dashboard-panels">
+              <article className="panel dashboard-panel dashboard-panel-large">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">Son hareketler</span>
+                    <h3>Son dosyalar</h3>
+                  </div>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
+                    Dosyalara git
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                {dashboardLoading ? (
+                  <p className="empty">Yukleniyor...</p>
+                ) : dashboardMetrics.recentCases.length ? (
+                  <div className="dashboard-list">
+                    {dashboardMetrics.recentCases.map((item) => (
+                      <article key={item.id} className="dashboard-row">
+                        <div>
+                          <strong>{item.caseLabel}</strong>
+                          <span>{item.clientName} - {item.opponentName}</span>
+                        </div>
+                        <div className="dashboard-row-meta">
+                          <span>{item.progress}%</span>
+                          <small>{item.courtName}</small>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty">Henüz dosya yok. Ornek kayitlari yukleyin.</p>
+                )}
+              </article>
+
+              <article className="panel dashboard-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">Kontrol</span>
+                    <h3>Risk ve görevler</h3>
+                  </div>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("training")}>
+                    Egitim ac
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                <div className="dashboard-checks">
+                  <div className="dashboard-check">
+                    <ShieldAlert size={18} />
+                    <div>
+                      <strong>Usul kontrolu</strong>
+                      <span>Sure, harc ve yetki noktalarini dava acmadan once kontrol edin.</span>
+                    </div>
+                  </div>
+                  <div className="dashboard-check">
+                    <ClipboardList size={18} />
+                    <div>
+                      <strong>Belge hazirligi</strong>
+                      <span>Eksik ekleri tamamlama ve dosya siralamasini standardize etme.</span>
+                    </div>
+                  </div>
+                  <div className="dashboard-check">
+                    <Clock3 size={18} />
+                    <div>
+                      <strong>Bugun icin takip</strong>
+                      <span>Oncelikli isler, bekleyen revizyonlar ve acil dosyalar.</span>
+                    </div>
+                  </div>
+                </div>
+                {dashboardMetrics.riskCases.length ? (
+                  <div className="dashboard-risk-list">
+                    {dashboardMetrics.riskCases.slice(0, 3).map((item) => (
+                      <div key={item.id} className="dashboard-risk-item">
+                        <strong>{item.caseLabel}</strong>
+                        <span>{item.progress}% tamamlandi</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty">Risk seviyesi dusuk dosya yok.</p>
+                )}
+              </article>
+
+              <article className="panel dashboard-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">Hizli erisim</span>
+                    <h3>Calisma kisa yolları</h3>
+                  </div>
+                </div>
+                <div className="dashboard-actions">
+                  <button type="button" onClick={() => setActiveTab("petition")}>
+                    Dilekce baslat
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("search")}>
+                    Emsal ara
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("document")}>
+                    Belge yukle
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("knowledge")}>
+                    Bilgi bankasi
+                  </button>
+                </div>
+                <div className="dashboard-template-list">
+                  {dashboardMetrics.templates.map((template) => (
+                    <article key={template.caseType} className="dashboard-template">
+                      <strong>{template.label}</strong>
+                      <span>{template.title}</span>
+                      <small>{template.summary}</small>
+                    </article>
+                  ))}
+                </div>
+              </article>
+            </div>
+          </section>
+        )}
 
         {error && <div className="error">{error}</div>}
 
@@ -990,4 +1238,3 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
