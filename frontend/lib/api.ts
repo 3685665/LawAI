@@ -10,11 +10,89 @@ export type Precedent = {
   summary: string;
 };
 
+export type CaseDocument = {
+  id: string;
+  title: string;
+  detail: string;
+  required: boolean;
+  group: string;
+  completed: boolean;
+};
+
+export type CaseTemplate = {
+  caseType: string;
+  label: string;
+  title: string;
+  courtHint: string;
+  summary: string;
+  documents: CaseDocument[];
+};
+
+export type CaseRecord = {
+  id: string;
+  caseType: string;
+  caseLabel: string;
+  clientName: string;
+  opponentName: string;
+  courtName: string;
+  subject: string;
+  summary: string;
+  requiredDocumentCount: number;
+  completedRequiredDocumentCount: number;
+  progress: number;
+  documents: CaseDocument[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CaseTemplatesResponse = { templates: CaseTemplate[] };
+export type CaseDocumentPatchResponse = { caseRecord: CaseRecord; cases: CaseRecord[] };
+
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function patchJson<T>(path: string, payload: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function deleteJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE"
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function seedSamples<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST"
   });
   if (!response.ok) {
     throw new Error(await readError(response));

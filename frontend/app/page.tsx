@@ -8,6 +8,7 @@ import {
   Database,
   FileSearch,
   FileText,
+  FolderOpen,
   LoaderCircle,
   Lock,
   Scale,
@@ -16,12 +17,34 @@ import {
   Upload,
   X
 } from "lucide-react";
-import { checkHealth, postJson, Precedent, uploadMultipart } from "@/lib/api";
+import {
+  CaseDocument as ApiCaseDocument,
+  CaseRecord,
+  CaseTemplate,
+  CaseTemplatesResponse,
+  checkHealth,
+  deleteJson,
+  getJson,
+  patchJson,
+  postJson,
+  Precedent,
+  seedSamples,
+  uploadMultipart
+} from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "document" | "knowledge";
+type Tab = "chat" | "search" | "petition" | "cases" | "document" | "knowledge";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
+type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
+type CaseScreen = "list" | "create" | "detail";
+type CaseDocument = {
+  id: string;
+  title: string;
+  detail: string;
+  required: boolean;
+  group: string;
+};
 type UploadResponse = {
   filename: string;
   size: number;
@@ -39,6 +62,93 @@ type UploadResponse = {
 
 const acceptedExtensions = [".pdf", ".doc", ".docx", ".txt"];
 const maxFileBytes = 25 * 1024 * 1024;
+
+const caseTypeLabels: Record<CaseType, string> = {
+  genel: "Genel hukuk",
+  is: "Is hukuku",
+  sozlesme: "Sozlesme / alacak",
+  icra: "Icra takibi",
+  aile: "Aile hukuku"
+};
+
+const caseTemplates: Record<CaseType, { title: string; courtHint: string; summary: string }> = {
+  genel: {
+    title: "Genel hukuk dosyasi",
+    courtHint: "Nobetci Asliye Hukuk Mahkemesi",
+    summary: "Dava dilekcesi, delil listesi, vekaletname ve ekler klasoru ile baslanir."
+  },
+  is: {
+    title: "Is hukuku dosyasi",
+    courtHint: "Is Mahkemesi",
+    summary: "Hizmet dokumu, fesih bildirimi, bordrolar ve arabuluculuk son tutanagi onerilir."
+  },
+  sozlesme: {
+    title: "Sozlesme / alacak dosyasi",
+    courtHint: "Nobetci Asliye Hukuk Mahkemesi",
+    summary: "Sozlesme, fatura, dekont, ihtarname ve teslim / kabul belgeleri bir arada tutulur."
+  },
+  icra: {
+    title: "Icra takibi dosyasi",
+    courtHint: "Icra Mudurlugu / Icra Hukuk Mahkemesi",
+    summary: "Takip dayanagi belge, hesap cetveli, senet / cek ve tebligat evraki gerekir."
+  },
+  aile: {
+    title: "Aile hukuku dosyasi",
+    courtHint: "Aile Mahkemesi",
+    summary: "Nufus kayit ornegi, evlilik belgeleri, velayet / nafaka belgeleri ve sosyal inceleme destegi gerekir."
+  }
+};
+
+const caseDocuments: Record<CaseType, CaseDocument[]> = {
+  genel: [
+    { id: "genel-vekalet", title: "Vekaletname / yetki belgesi", detail: "Musteri vekaleti ve temsil yetkisini gosteren ana belge.", required: true, group: "Yetki" },
+    { id: "genel-kimlik", title: "Taraf kimlik ve iletisim bilgileri", detail: "TCKN / VKN, adres, telefon ve tebligat bilgileri.", required: true, group: "Taraf bilgileri" },
+    { id: "genel-dilekce", title: "Dava dilekcesi", detail: "Talep sonucu, vakialar ve hukuki nedenler.", required: true, group: "Dava evraki" },
+    { id: "genel-delil", title: "Delil listesi", detail: "Belgeler, taniklar, bilirkiisi ve diger ispat vasitalari.", required: true, group: "Dava evraki" },
+    { id: "genel-ekler", title: "Ekler klasoru", detail: "Belgelerin numarali ve duzenli sekilde dosyalanmis hali.", required: true, group: "Ekler" },
+    { id: "genel-harc", title: "Harc ve gider avansi makbuzlari", detail: "Basvuru harci, pesin harc ve gider avansi kayitlari.", required: true, group: "Usul" },
+    { id: "genel-arabuluculuk", title: "Arabuluculuk son tutanagi", detail: "Zorunlu dava sartina tabi dosyalarda eklenir.", required: false, group: "Usul" },
+    { id: "genel-tebligat", title: "Tebligat / ihtarname evraki", detail: "Karsi tarafa gonderilen ihtar ve tebligat belgeleri.", required: false, group: "Ekler" }
+  ],
+  is: [
+    { id: "is-vekalet", title: "Vekaletname / yetki belgesi", detail: "Avukatlik yetkisini ve temsil kapsamini gosterir.", required: true, group: "Yetki" },
+    { id: "is-hizmet", title: "Hizmet dokumu / SGK kayitlari", detail: "Calisma suresi ve prim kayitlarini teyit eder.", required: true, group: "Calisma kaydi" },
+    { id: "is-fesih", title: "Fesih bildirimi / cikis evragi", detail: "Fesih tarihini ve sebebini netlestirir.", required: true, group: "Fesih" },
+    { id: "is-bordro", title: "Bordro ve ucret belgeleri", detail: "Maas, fazla mesai ve kesintilerin ispatinda kullanilir.", required: true, group: "Ucret" },
+    { id: "is-sozlesme", title: "Is sozlesmesi / gorev tanimi", detail: "Gorev, unvan ve calisma duzenini ortaya koyar.", required: true, group: "Calisma kaydi" },
+    { id: "is-arabuluculuk", title: "Arabuluculuk son tutanagi", detail: "Dava sartidir; sure ve taraf bilgileri kontrol edilmelidir.", required: true, group: "Usul" },
+    { id: "is-izin", title: "Izin ve puantaj kayitlari", detail: "Yillik izin, devamsizlik ve fazla mesai icin destek belge.", required: false, group: "Ekler" },
+    { id: "is-tanik", title: "Tanik listesi", detail: "Calisma kosullari ve alacaklar icin taniklar.", required: false, group: "Delil" }
+  ],
+  sozlesme: [
+    { id: "s-vekalet", title: "Vekaletname / yetki belgesi", detail: "Temsil yetkisini ve dava acma yetkisini gosterir.", required: true, group: "Yetki" },
+    { id: "s-sozlesme", title: "Sozlesme / siparis formu", detail: "Taraflar arasindaki borc ve edimleri belirler.", required: true, group: "Sozlesme" },
+    { id: "s-fatura", title: "Fatura / irsaliye / teslim belgeleri", detail: "Edimin yerine getirildigini veya alacagin dogdugunu destekler.", required: true, group: "Delil" },
+    { id: "s-dekont", title: "Odeme dekontlari / cari hesap", detail: "Yapilan veya yapilmayan odemeleri gosteren belgeler.", required: true, group: "Delil" },
+    { id: "s-ihtar", title: "Ihtarname ve tebligat evraki", detail: "Temerrut, ihtar ve bildirimin ispatinda kullanilir.", required: true, group: "Usul" },
+    { id: "s-delil", title: "Ek deliller klasoru", detail: "Mail yazismalari, teslim tutanaklari, WhatsApp ciktilari vb.", required: true, group: "Ekler" },
+    { id: "s-arabuluculuk", title: "Arabuluculuk son tutanagi", detail: "Konuya gore zorunlu olabilir.", required: false, group: "Usul" },
+    { id: "s-hesap", title: "Hesap cetveli", detail: "Faiz ve ana para hesabini tablo halinde verir.", required: false, group: "Delil" }
+  ],
+  icra: [
+    { id: "i-dayanak", title: "Takip dayanagi belge", detail: "Ilam, senet, sozlesme veya faturaya dayali evrak.", required: true, group: "Dayanak" },
+    { id: "i-vekalet", title: "Vekaletname / yetki belgesi", detail: "Icra islemlerinde temsil yetkisi icin gerekir.", required: true, group: "Yetki" },
+    { id: "i-hesap", title: "Hesap cetveli", detail: "Faiz, vekalet ucreti ve toplam alacak hesabi.", required: true, group: "Hesap" },
+    { id: "i-tebligat", title: "Tebligat / ihtar evraki", detail: "Borc bildirimi ve temerrut icin kullanilir.", required: true, group: "Usul" },
+    { id: "i-senet", title: "Senet / cek / bono", detail: "Ilamsiz takipte dayanak olarak kullanilir.", required: false, group: "Dayanak" },
+    { id: "i-kesinlesme", title: "Kesinlesme / ilam serhi", detail: "Ilamli takipte gerektiginde eklenir.", required: false, group: "Dayanak" },
+    { id: "i-adres", title: "Alacakli / borclu adres bilgileri", detail: "Tebligat ve takip islemleri icin gerekir.", required: true, group: "Taraf bilgileri" }
+  ],
+  aile: [
+    { id: "a-vekalet", title: "Vekaletname / yetki belgesi", detail: "Temsil yetkisini gosterir.", required: true, group: "Yetki" },
+    { id: "a-nufus", title: "Nufus kayit ornegi", detail: "Taraflarin aile bagini ve baglantili kayitlarini ortaya koyar.", required: true, group: "Kimlik" },
+    { id: "a-evlilik", title: "Evlilik / bosanma belgeleri", detail: "Nikah, bosanma, ayrilik veya aile birligi belgeleri.", required: true, group: "Aile kaydi" },
+    { id: "a-velayet", title: "Velayet / nafaka destek belgeleri", detail: "Cocuklarin bakimi, egitimi ve giderlerine iliskin belgeler.", required: true, group: "Cocuk ve destek" },
+    { id: "a-gelir", title: "Gelir ve gider belgeleri", detail: "Nafaka veya katilma alacagi taleplerinde kullanilir.", required: false, group: "Mali durum" },
+    { id: "a-sosyal", title: "Sosyal inceleme / adres belgeleri", detail: "Gerekirse mahkemeye sunulacak destek evraki.", required: false, group: "Ekler" },
+    { id: "a-tedbir", title: "Tedbir / koruma talebi belgeleri", detail: "Acil koruma, uzaklastirma veya gecici onlem icin.", required: false, group: "Usul" }
+  ]
+};
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
@@ -79,6 +189,7 @@ export default function Home() {
     { id: "chat" as const, label: "Sohbet", icon: Bot },
     { id: "search" as const, label: "Emsal", icon: FileSearch },
     { id: "petition" as const, label: "Dilekce", icon: FileText },
+    { id: "cases" as const, label: "Davalar", icon: FolderOpen },
     { id: "document" as const, label: "Dokuman", icon: Upload },
     { id: "knowledge" as const, label: "Bilgi", icon: Database }
   ], []);
@@ -165,10 +276,10 @@ export default function Home() {
 
       <section className="workspace">
         <header className="topbar">
-          <div>
-            <h1>Hukuki calisma paneli</h1>
-            <p>Soru yanitlama, emsal arama, dilekce taslagi, dokuman kontrolu ve bilgi bankasi tek ekranda.</p>
-          </div>
+        <div>
+          <h1>Hukuki calisma paneli</h1>
+          <p>Soru yanitlama, emsal arama, dilekce taslagi, dava dosyasi, dokuman kontrolu ve bilgi bankasi tek ekranda.</p>
+        </div>
           <span className={backendOnline === false ? "status offline" : "status"}>{loading ? "Isleniyor" : backendOnline === false ? "Backend yok" : "Hazir"}</span>
         </header>
 
@@ -233,6 +344,8 @@ export default function Home() {
             </ResultPanel>
           </section>
         )}
+
+        {activeTab === "cases" && <CasesPanel onGoToDocuments={() => setActiveTab("document")} />}
 
         {activeTab === "document" && <DocumentPanel loading={loading} run={run} onGoToChat={() => setActiveTab("chat")} />}
 
@@ -355,6 +468,425 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
   );
 }
 
+function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
+  const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
+  const [caseType, setCaseType] = useState<CaseType>("genel");
+  const [clientName, setClientName] = useState("");
+  const [opponentName, setOpponentName] = useState("");
+  const [courtName, setCourtName] = useState("");
+  const [subject, setSubject] = useState("Dava kaydi ve dosya hazirligi");
+  const [summary, setSummary] = useState("Musteri gorusmesi, taraf bilgileri ve belge kontrolu tamamlanacak.");
+  const [documents, setDocuments] = useState<Record<string, boolean>>({});
+  const [templates, setTemplates] = useState<CaseTemplate[]>([]);
+  const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
+  const [localError, setLocalError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadingCases, setLoadingCases] = useState(true);
+
+  const selectedTemplate = useMemo(() => {
+    const fetched = templates.find((item) => item.caseType === caseType);
+    if (fetched) return fetched;
+    return {
+      caseType,
+      label: caseTypeLabels[caseType],
+      title: caseTemplates[caseType].title,
+      courtHint: caseTemplates[caseType].courtHint,
+      summary: caseTemplates[caseType].summary,
+      documents: caseDocuments[caseType].map((item) => ({ ...item, completed: false }))
+    } satisfies CaseTemplate;
+  }, [caseType, templates]);
+
+  const requiredDocs = selectedTemplate.documents.filter((item) => item.required);
+  const optionalDocs = selectedTemplate.documents.filter((item) => !item.required);
+  const missingRequired = requiredDocs.filter((item) => !documents[item.id]);
+  const completion = requiredDocs.length === 0 ? 100 : Math.round(((requiredDocs.length - missingRequired.length) / requiredDocs.length) * 100);
+  const groupedDocs = useMemo(() => groupDocuments(selectedTemplate.documents), [selectedTemplate.documents]);
+  const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingCases(true);
+      setLocalError("");
+      try {
+        const [templateResponse, caseList] = await Promise.all([
+          getJson<CaseTemplatesResponse>("/cases/templates"),
+          getJson<CaseRecord[]>("/cases")
+        ]);
+        if (cancelled) return;
+        setTemplates(templateResponse.templates);
+        setSavedCases(caseList);
+        const firstCase = caseList[0] ?? null;
+        setSelectedCaseId(firstCase?.id ?? null);
+        setSelectedCase(firstCase);
+      } catch (error) {
+        if (!cancelled) {
+          setLocalError(error instanceof Error ? error.message : "Davalar yuklenemedi.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingCases(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setCourtName(selectedTemplate.courtHint);
+    setDocuments(Object.fromEntries(selectedTemplate.documents.map((item) => [item.id, item.completed])) as Record<string, boolean>);
+  }, [selectedTemplate]);
+
+  function toggleDocument(id: string) {
+    setDocuments((current) => ({ ...current, [id]: !current[id] }));
+  }
+
+  function markAll() {
+    setDocuments(Object.fromEntries(selectedTemplate.documents.map((item) => [item.id, true])) as Record<string, boolean>);
+  }
+
+  async function openCase(caseId: string) {
+    setLocalError("");
+    try {
+      const detail = await getJson<CaseRecord>(`/cases/${caseId}`);
+      setSelectedCaseId(caseId);
+      setSelectedCase(detail);
+      setCaseScreen("detail");
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Dava acilamadi.");
+    }
+  }
+
+  function openCreateScreen() {
+    setCaseScreen("create");
+    setLocalError("");
+  }
+
+  function openListScreen() {
+    setCaseScreen("list");
+    setLocalError("");
+  }
+
+  async function submitCase(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setLocalError("");
+    try {
+      const created = await postJson<CaseRecord>("/cases", {
+        caseType,
+        clientName,
+        opponentName,
+        courtName,
+        subject,
+        summary,
+        completedDocumentIds: Object.entries(documents)
+          .filter(([, completed]) => completed)
+          .map(([id]) => id)
+      });
+      const caseList = await getJson<CaseRecord[]>("/cases");
+      setSavedCases(caseList);
+      const nextSelected = caseList.find((item) => item.id === created.id) ?? caseList[0] ?? null;
+      setSelectedCaseId(nextSelected?.id ?? null);
+      setSelectedCase(nextSelected);
+      setCaseScreen("list");
+      setCaseType(created.caseType as CaseType);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Dava kaydedilemedi.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleSavedDocument(caseId: string, documentId: string, completed: boolean) {
+    setLocalError("");
+    try {
+      const response = await patchJson<{ caseRecord: CaseRecord; cases: CaseRecord[] }>(`/cases/${caseId}/documents/${documentId}`, { completed });
+      setSavedCases(response.cases);
+      setSelectedCase(response.caseRecord);
+      setSelectedCaseId(response.caseRecord.id);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Belge durumu guncellenemedi.");
+    }
+  }
+
+  async function deleteCase(caseId: string) {
+    const confirmed = window.confirm("Bu davayi silmek istiyor musunuz?");
+    if (!confirmed) return;
+    setLocalError("");
+    try {
+      const caseList = await deleteJson<CaseRecord[]>(`/cases/${caseId}`);
+      setSavedCases(caseList);
+      const nextSelected = caseList[0] ?? null;
+      setSelectedCaseId(nextSelected?.id ?? null);
+      setSelectedCase(nextSelected);
+      setCaseScreen("list");
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Dava silinemedi.");
+    }
+  }
+
+  async function loadSampleCases() {
+    setLoadingCases(true);
+    setLocalError("");
+    try {
+      const caseList = await seedSamples<CaseRecord[]>("/cases/seed-samples");
+      setSavedCases(caseList);
+      const firstCase = caseList[0] ?? null;
+      setSelectedCaseId(firstCase?.id ?? null);
+      setSelectedCase(firstCase);
+      setCaseScreen("list");
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Ornek davalar yuklenemedi.");
+    } finally {
+      setLoadingCases(false);
+    }
+  }
+
+  return (
+    <section className="cases-shell">
+      <div className="cases-toolbar panel">
+        <div>
+          <h2>Davalar</h2>
+          <p>Dava kaydi, listeleme, goruntuleme ve silme islemleri.</p>
+        </div>
+        <div className="cases-toolbar-actions">
+          <button className={caseScreen === "list" ? "active" : ""} onClick={openListScreen} type="button">Liste</button>
+          <button className={caseScreen === "create" ? "active" : ""} onClick={openCreateScreen} type="button">Dava ekle</button>
+        </div>
+      </div>
+
+      {localError && <div className="error">{localError}</div>}
+
+      {caseScreen === "create" && (
+        <section className="cases-grid">
+          <form className="panel primary-panel case-form case-form-large" onSubmit={submitCase}>
+            <PanelTitle icon={<FolderOpen size={20} />} title="Dava ekle" />
+            <label className="field-label">
+              Dava turu
+              <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
+                {Object.entries(caseTypeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Musteri / vekil olunan kisi
+              <input value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ad soyad / unvan" />
+            </label>
+            <label className="field-label">
+              Karsi taraf
+              <input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="Davali / alacakli / borclu" />
+            </label>
+            <label className="field-label">
+              Mahkeme / kurum
+              <input value={courtName} onChange={(event) => setCourtName(event.target.value)} />
+            </label>
+            <label className="field-label">
+              Konu / talep
+              <input value={subject} onChange={(event) => setSubject(event.target.value)} />
+            </label>
+            <label className="field-label">
+              Dosya ozeti
+              <textarea rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} />
+            </label>
+            <div className="case-template">
+              <strong>{selectedTemplate.title}</strong>
+              <p>{selectedTemplate.summary}</p>
+              <small>Mahkeme ipucu: {selectedTemplate.courtHint}</small>
+            </div>
+            <div className="upload-actions">
+              <button className="secondary-button" type="button" onClick={onGoToDocuments}>
+                <Upload size={17} />
+                Belge yukleme
+              </button>
+              <button type="button" onClick={markAll}>
+                <CheckCircle2 size={17} />
+                Tumunu isaretle
+              </button>
+              <button disabled={saving} type="submit">
+                {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
+                Kaydet ve listele
+              </button>
+            </div>
+          </form>
+
+          <div className="panel result-panel case-summary-panel">
+            <div className="cases-preview-head">
+              <h2>Hazirlik ozeti</h2>
+              <button className="secondary-button" onClick={openListScreen} type="button">Listeye don</button>
+            </div>
+            <div className="case-score">
+              <strong>{completion}%</strong>
+              <span>Zorunlu belgeler tamamlanma orani</span>
+            </div>
+            <div className="meter" aria-hidden="true">
+              <div className="meter-fill" style={{ width: `${completion}%` }} />
+            </div>
+            <div className="case-stats">
+              <div><span>Musteri</span><strong>{clientName || "-"}</strong></div>
+              <div><span>Karsi taraf</span><strong>{opponentName || "-"}</strong></div>
+              <div><span>Konu</span><strong>{subject || "-"}</strong></div>
+              <div><span>Mahkeme</span><strong>{courtName || selectedTemplate.courtHint}</strong></div>
+            </div>
+            <div className="check-note">
+              <CheckCircle2 size={18} />
+              <span>{missingRequired.length === 0 ? "Zorunlu belgeler tamam." : `${missingRequired.length} zorunlu belge eksik.`}</span>
+            </div>
+            <div className="check-note muted">
+              <AlertCircle size={18} />
+              <span>Kayit tamamlandiginda sistem otomatik olarak liste ekranina donecek.</span>
+            </div>
+            <div className="case-detail-documents">
+              {groupedDocs.map(([groupName, items]) => (
+                <section key={groupName} className="case-group">
+                  <h3>{groupName}</h3>
+                  <div className="checklist">
+                    {items.map((item) => (
+                      <label key={item.id} className={`check-item ${item.required ? "required" : ""}`}>
+                        <input checked={Boolean(documents[item.id])} onChange={() => toggleDocument(item.id)} type="checkbox" />
+                        <div>
+                          <strong>{item.title}</strong>
+                          <span>{item.detail}</span>
+                        </div>
+                        <em>{item.required ? "Zorunlu" : "Opsiyonel"}</em>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {caseScreen !== "create" && (
+        <section className="cases-grid">
+          <div className="panel case-list-panel">
+            <div className="case-list-head">
+              <div>
+                <h2>Listeleme</h2>
+                <p>{savedCases.length} dava kaydi</p>
+              </div>
+              <div className="case-list-head-actions">
+                <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
+                  <CheckCircle2 size={17} />
+                  Ornekleri yukle
+                </button>
+                <button className="secondary-button" onClick={openCreateScreen} type="button">
+                  <FolderOpen size={17} />
+                  Dava ekle
+                </button>
+              </div>
+            </div>
+            {loadingCases ? (
+              <p className="empty">Davalar yukleniyor...</p>
+            ) : allCases.length ? (
+              <div className="case-list">
+                {allCases.map((item) => (
+                  <article key={item.id} className={`case-list-item ${selectedCaseId === item.id ? "selected" : ""}`}>
+                    <button className="case-list-main" onClick={() => void openCase(item.id)} type="button">
+                      <div className="case-list-title">
+                        <strong>{item.caseLabel}</strong>
+                        <span>{item.progress}% tamamlandi</span>
+                      </div>
+                      <p>{item.clientName} - {item.opponentName}</p>
+                      <small>{item.courtName}</small>
+                    </button>
+                    <div className="case-list-actions">
+                      <button className="secondary-button" onClick={() => void openCase(item.id)} type="button">Goruntule</button>
+                      <button className="danger-button" onClick={() => void deleteCase(item.id)} type="button">Sil</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="case-empty-detail">
+                <h3>Liste bos</h3>
+                <p>Listeyi test etmek icin ornek kayıtları yukleyin veya yeni dava ekleyin.</p>
+                <div className="upload-actions">
+                  <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
+                    <CheckCircle2 size={17} />
+                    Ornekleri yukle
+                  </button>
+                  <button onClick={openCreateScreen} type="button">
+                    <FolderOpen size={17} />
+                    Dava ekle
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="panel case-detail-panel">
+            {selectedCase ? (
+              <>
+                <div className="case-detail-head">
+                  <div>
+                    <h2>Goruntuleme</h2>
+                    <p>{selectedCase.caseLabel}</p>
+                  </div>
+                  <div className="case-detail-actions">
+                    <button className="secondary-button" onClick={openListScreen} type="button">Listeye don</button>
+                    <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">Sil</button>
+                  </div>
+                </div>
+                <div className="case-score compact">
+                  <strong>{selectedCase.progress}%</strong>
+                  <span>Genel tamamlanma</span>
+                </div>
+                <div className="meter" aria-hidden="true">
+                  <div className="meter-fill" style={{ width: `${selectedCase.progress}%` }} />
+                </div>
+                <div className="case-stats case-detail-stats">
+                  <div><span>Musteri</span><strong>{selectedCase.clientName}</strong></div>
+                  <div><span>Karsi taraf</span><strong>{selectedCase.opponentName}</strong></div>
+                  <div><span>Mahkeme</span><strong>{selectedCase.courtName}</strong></div>
+                  <div><span>Konu</span><strong>{selectedCase.subject}</strong></div>
+                </div>
+                <p>{selectedCase.summary}</p>
+                <div className="case-detail-documents">
+                  {selectedCase.documents.map((document) => (
+                    <label key={document.id} className={`check-item ${document.required ? "required" : ""}`}>
+                      <input checked={document.completed} onChange={() => void toggleSavedDocument(selectedCase.id, document.id, !document.completed)} type="checkbox" />
+                      <div>
+                        <strong>{document.title}</strong>
+                        <span>{document.detail}</span>
+                      </div>
+                      <em>{document.required ? "Zorunlu" : "Opsiyonel"}</em>
+                    </label>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="case-empty-detail">
+                <h2>Goruntuleme</h2>
+                <p>Listedeki bir davayi secerek detaylari burada goruntuleyin.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+    </section>
+  );
+}
+
+function groupDocuments(items: ApiCaseDocument[]) {
+  return items.reduce<Array<[string, ApiCaseDocument[]]>>((acc, item) => {
+    const entry = acc.find(([groupName]) => groupName === item.group);
+    if (entry) {
+      entry[1].push(item);
+    } else {
+      acc.push([item.group, [item]]);
+    }
+    return acc;
+  }, []);
+}
+
 function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return <div className="panel-title">{icon}<h2>{title}</h2></div>;
 }
@@ -396,3 +928,4 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
