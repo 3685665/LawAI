@@ -13,3 +13,10 @@ spring:
 app:
   ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
   max-upload-mb: ${MAX_UPLOAD_MB:25}
+  auth:
+    bootstrap-enabled: ${AUTH_BOOTSTRAP_ENABLED:true}
+    bootstrap-name: ${AUTH_BOOTSTRAP_NAME:Yonetici}
+    bootstrap-email: ${AUTH_BOOTSTRAP_EMAIL:admin@lawai.local}
+    bootstrap-password: ${AUTH_BOOTSTRAP_PASSWORD:ChangeMe123!}
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    preview-reset-token: ${AUTH_PREVIEW_RESET_TOKEN:true}

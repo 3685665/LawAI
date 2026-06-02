@@ -47,10 +47,21 @@ export type CaseRecord = {
 
 export type CaseTemplatesResponse = { templates: CaseTemplate[] };
 export type CaseDocumentPatchResponse = { caseRecord: CaseRecord; cases: CaseRecord[] };
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt?: string | null;
+  lastLoginAt?: string | null;
+};
+
+export type AuthSessionResponse = { user: AuthUser };
+export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null };
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
@@ -61,7 +72,7 @@ export async function postJson<T>(path: string, payload: unknown): Promise<T> {
 }
 
 export async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store", credentials: "include" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
@@ -71,6 +82,7 @@ export async function getJson<T>(path: string): Promise<T> {
 export async function patchJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "PATCH",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
@@ -82,7 +94,8 @@ export async function patchJson<T>(path: string, payload: unknown): Promise<T> {
 
 export async function deleteJson<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    method: "DELETE"
+    method: "DELETE",
+    credentials: "include"
   });
   if (!response.ok) {
     throw new Error(await readError(response));
@@ -92,7 +105,8 @@ export async function deleteJson<T>(path: string): Promise<T> {
 
 export async function seedSamples<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST"
+    method: "POST",
+    credentials: "include"
   });
   if (!response.ok) {
     throw new Error(await readError(response));
@@ -103,6 +117,7 @@ export async function seedSamples<T>(path: string): Promise<T> {
 export async function uploadMultipart<T>(path: string, form: FormData): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
+    credentials: "include",
     body: form
   });
   if (!response.ok) {
@@ -113,11 +128,39 @@ export async function uploadMultipart<T>(path: string, form: FormData): Promise<
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/health`, { cache: "no-store" });
+    const response = await fetch(`${API_BASE}/health`, { cache: "no-store", credentials: "include" });
     return response.ok;
   } catch {
     return false;
   }
+}
+
+export async function authLogin(payload: { email: string; password: string; rememberMe?: boolean }): Promise<AuthSessionResponse> {
+  return postJson<AuthSessionResponse>("/auth/login", payload);
+}
+
+export async function authRegister(payload: { name: string; email: string; password: string }): Promise<AuthSessionResponse> {
+  return postJson<AuthSessionResponse>("/auth/register", payload);
+}
+
+export async function authMe(): Promise<AuthUser> {
+  return getJson<AuthUser>("/auth/me");
+}
+
+export async function authLogout(): Promise<{ message: string }> {
+  return postJson<{ message: string }>("/auth/logout", {});
+}
+
+export async function authForgotPassword(payload: { email: string }): Promise<AuthPasswordResetResponse> {
+  return postJson<AuthPasswordResetResponse>("/auth/password/forgot", payload);
+}
+
+export async function authResetPassword(payload: { token: string; newPassword: string }): Promise<AuthSessionResponse> {
+  return postJson<AuthSessionResponse>("/auth/password/reset", payload);
+}
+
+export async function authChangePassword(payload: { currentPassword: string; newPassword: string }): Promise<AuthSessionResponse> {
+  return postJson<AuthSessionResponse>("/auth/password/change", payload);
 }
 
 async function readError(response: Response): Promise<string> {

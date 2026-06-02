@@ -1,0 +1,318 @@
+package com.lawai.auth.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lawai.auth.dto.AuthChangePasswordRequest;
+import com.lawai.auth.dto.AuthForgotPasswordRequest;
+import com.lawai.auth.dto.AuthLoginRequest;
+import com.lawai.auth.dto.AuthPasswordResetResponse;
+import com.lawai.auth.dto.AuthRegisterRequest;
+import com.lawai.auth.dto.AuthSessionResponse;
+import com.lawai.auth.dto.AuthUserDto;
+import com.lawai.auth.model.AuthStorePayload;
+import com.lawai.auth.model.AuthenticatedUser;
+import com.lawai.auth.model.PasswordResetRecord;
+import com.lawai.auth.model.SessionRecord;
+import com.lawai.auth.model.UserRecord;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class AuthService {
+
+  private final ObjectMapper objectMapper;
+  private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+  private final Path storagePath;
+  private final boolean previewResetToken;
+
+  public AuthService(ObjectMapper objectMapper, @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken) {
+    this.objectMapper = objectMapper;
+    this.storagePath = Path.of(System.getProperty("user.dir"), "data", "auth-store.json");
+    this.previewResetToken = previewResetToken;
+  }
+
+  public AuthSessionResponse register(AuthRegisterRequest request) {
+    String email = normalizeEmail(request.email());
+    if (findUserByEmail(email).isPresent()) {
+      throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+    }
+
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    UserRecord user = new UserRecord(
+        UUID.randomUUID().toString(),
+        request.name().trim(),
+        email,
+        passwordEncoder.encode(request.password()),
+        now,
+        now
+    );
+    AuthStorePayload payload = load();
+    List<UserRecord> users = new ArrayList<>(safeList(payload.users()));
+    users.add(user);
+    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets())));
+    return new AuthSessionResponse(toDto(user));
+  }
+
+  public AuthSessionResponse login(AuthLoginRequest request) {
+    UserRecord user = findUserByEmail(normalizeEmail(request.email()))
+        .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
+    if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
+      throw new BadCredentialsException("E-posta veya sifre hatali.");
+    }
+
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    UserRecord updatedUser = user.withLastLoginAt(now);
+    replaceUser(updatedUser);
+    return new AuthSessionResponse(toDto(updatedUser));
+  }
+
+  public void logout(String sessionToken) {
+    if (!StringUtils.hasText(sessionToken)) {
+      return;
+    }
+    AuthStorePayload payload = load();
+    List<SessionRecord> sessions = safeList(payload.sessions()).stream()
+        .filter(item -> !passwordEncoder.matches(sessionToken, item.tokenHash()))
+        .toList();
+    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets())));
+  }
+
+  public AuthUserDto currentUser(String sessionToken) {
+    SessionRecord session = requireSession(sessionToken);
+    UserRecord user = requireUser(session.userId());
+    return toDto(user);
+  }
+
+  public AuthPasswordResetResponse requestPasswordReset(AuthForgotPasswordRequest request) {
+    String email = normalizeEmail(request.email());
+    Optional<UserRecord> userOptional = findUserByEmail(email);
+    if (userOptional.isEmpty()) {
+      return new AuthPasswordResetResponse("E-posta adresi sistemde bulunuyorsa sifirlama adimi olusturuldu.", null, null);
+    }
+
+    UserRecord user = userOptional.get();
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    String resetToken = generateToken();
+    PasswordResetRecord resetRecord = new PasswordResetRecord(
+        hash(resetToken),
+        user.id(),
+        now.plusHours(2),
+        false,
+        now
+    );
+
+    AuthStorePayload payload = load();
+    List<PasswordResetRecord> resets = new ArrayList<>(safeList(payload.passwordResets()));
+    resets.removeIf(item -> item.userId().equals(user.id()) && !item.used());
+    resets.add(resetRecord);
+    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets));
+    return new AuthPasswordResetResponse(
+        "Sifre sifirlama baglantisi olusturuldu. Gelistirme ortaminda token ayrica gosteriliyor.",
+        previewResetToken ? resetToken : null,
+        resetRecord.expiresAt()
+    );
+  }
+
+  public AuthUserDto resetPassword(String token, String newPassword) {
+    PasswordResetRecord reset = requireResetToken(token);
+    UserRecord user = requireUser(reset.userId());
+    UserRecord updatedUser = user.withPasswordHash(passwordEncoder.encode(newPassword)).withLastLoginAt(OffsetDateTime.now(ZoneOffset.UTC));
+    replaceUser(updatedUser);
+    invalidateSessionsForUser(user.id());
+    markResetUsed(reset.userId());
+    return toDto(updatedUser);
+  }
+
+  public AuthUserDto changePassword(String sessionToken, AuthChangePasswordRequest request) {
+    SessionRecord session = requireSession(sessionToken);
+    UserRecord user = requireUser(session.userId());
+    if (!passwordEncoder.matches(request.currentPassword(), user.passwordHash())) {
+      throw new BadCredentialsException("Mevcut sifre hatali.");
+    }
+    UserRecord updatedUser = user.withPasswordHash(passwordEncoder.encode(request.newPassword()));
+    replaceUser(updatedUser);
+    invalidateSessionsForUser(user.id());
+    return toDto(updatedUser);
+  }
+
+  public String issueSessionToken(AuthLoginRequest request) {
+    UserRecord user = findUserByEmail(normalizeEmail(request.email()))
+        .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
+    if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
+      throw new BadCredentialsException("E-posta veya sifre hatali.");
+    }
+
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    String token = generateToken();
+    SessionRecord session = new SessionRecord(
+        hash(token),
+        user.id(),
+        now.plusDays(Boolean.TRUE.equals(request.rememberMe()) ? 30 : 7),
+        now
+    );
+    replaceUser(user.withLastLoginAt(now));
+    addSession(session);
+    return token;
+  }
+
+  public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {
+    SessionRecord session = requireSession(sessionToken);
+    UserRecord user = requireUser(session.userId());
+    return new AuthenticatedUser(user.id(), user.name(), user.email());
+  }
+
+  public boolean hasUsers() {
+    return !safeList(load().users()).isEmpty();
+  }
+
+  private AuthUserDto toDto(UserRecord user) {
+    return new AuthUserDto(user.id(), user.name(), user.email(), user.createdAt(), user.lastLoginAt());
+  }
+
+  private UserRecord requireUser(String userId) {
+    return safeList(load().users()).stream()
+        .filter(item -> item.id().equals(userId))
+        .findFirst()
+        .orElseThrow(() -> new BadCredentialsException("Oturum gecersiz."));
+  }
+
+  private SessionRecord requireSession(String sessionToken) {
+    if (!StringUtils.hasText(sessionToken)) {
+      throw new BadCredentialsException("Oturum bulunamadi.");
+    }
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    AuthStorePayload payload = load();
+    List<SessionRecord> active = new ArrayList<>();
+    SessionRecord found = null;
+    for (SessionRecord session : safeList(payload.sessions())) {
+      if (session.expiresAt().isBefore(now)) {
+        continue;
+      }
+      active.add(session);
+      if (passwordEncoder.matches(sessionToken, session.tokenHash())) {
+        found = session;
+      }
+    }
+    if (active.size() != safeList(payload.sessions()).size()) {
+      save(new AuthStorePayload(safeList(payload.users()), active, safeList(payload.passwordResets())));
+    }
+    if (found == null) {
+      throw new BadCredentialsException("Oturum gecersiz veya suresi dolmus.");
+    }
+    return found;
+  }
+
+  private PasswordResetRecord requireResetToken(String token) {
+    if (!StringUtils.hasText(token)) {
+      throw new IllegalArgumentException("Sifirlama tokeni gerekli.");
+    }
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    AuthStorePayload payload = load();
+    List<PasswordResetRecord> nextResets = new ArrayList<>();
+    PasswordResetRecord found = null;
+    for (PasswordResetRecord reset : safeList(payload.passwordResets())) {
+      if (reset.expiresAt().isBefore(now) || reset.used()) {
+        nextResets.add(reset);
+        continue;
+      }
+      nextResets.add(reset);
+      if (passwordEncoder.matches(token, reset.tokenHash())) {
+        found = reset;
+      }
+    }
+    if (found == null) {
+      throw new IllegalArgumentException("Sifirlama tokeni gecersiz veya suresi dolmus.");
+    }
+    return found;
+  }
+
+  private void replaceUser(UserRecord updatedUser) {
+    AuthStorePayload payload = load();
+    List<UserRecord> users = safeList(payload.users()).stream()
+        .map(item -> item.id().equals(updatedUser.id()) ? updatedUser : item)
+        .toList();
+    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets())));
+  }
+
+  private void addSession(SessionRecord session) {
+    AuthStorePayload payload = load();
+    List<SessionRecord> sessions = new ArrayList<>(safeList(payload.sessions()));
+    sessions.add(session);
+    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets())));
+  }
+
+  private void invalidateSessionsForUser(String userId) {
+    AuthStorePayload payload = load();
+    List<SessionRecord> sessions = safeList(payload.sessions()).stream()
+        .filter(item -> !item.userId().equals(userId))
+        .toList();
+    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets())));
+  }
+
+  private void markResetUsed(String userId) {
+    AuthStorePayload payload = load();
+    List<PasswordResetRecord> resets = safeList(payload.passwordResets()).stream()
+        .map(item -> item.userId().equals(userId) && !item.used() ? item.withUsed(true) : item)
+        .toList();
+    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets));
+  }
+
+  private Optional<UserRecord> findUserByEmail(String email) {
+    return safeList(load().users()).stream()
+        .filter(item -> item.email().equalsIgnoreCase(email))
+        .findFirst();
+  }
+
+  private AuthStorePayload load() {
+    if (!Files.exists(storagePath)) {
+      return new AuthStorePayload(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+    try {
+      AuthStorePayload payload = objectMapper.readValue(Files.readString(storagePath), AuthStorePayload.class);
+      return new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), safeList(payload.passwordResets()));
+    } catch (IOException exception) {
+      throw new IllegalStateException("Auth verisi yuklenemedi: " + exception.getMessage(), exception);
+    }
+  }
+
+  private void save(AuthStorePayload payload) {
+    try {
+      Files.createDirectories(storagePath.getParent());
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(storagePath.toFile(), payload);
+    } catch (IOException exception) {
+      throw new IllegalStateException("Auth verisi kaydedilemedi: " + exception.getMessage(), exception);
+    }
+  }
+
+  private String normalizeEmail(String email) {
+    return email == null ? "" : email.trim().toLowerCase();
+  }
+
+  private String generateToken() {
+    return UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+  }
+
+  private String hash(String value) {
+    return passwordEncoder.encode(value);
+  }
+
+  private <T> List<T> safeList(List<T> items) {
+    return items == null ? List.of() : new ArrayList<>(items);
+  }
+}
+
+

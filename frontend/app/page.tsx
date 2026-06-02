@@ -26,10 +26,20 @@ import {
 } from "lucide-react";
 import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
 import {
+  authChangePassword,
+  authForgotPassword,
+  authLogin,
+  authLogout,
+  authMe,
+  authRegister,
+  authResetPassword,
   CaseDocument as ApiCaseDocument,
   CaseRecord,
   CaseTemplate,
   CaseTemplatesResponse,
+  type AuthPasswordResetResponse,
+  type AuthSessionResponse,
+  type AuthUser,
   checkHealth,
   deleteJson,
   getJson,
@@ -41,6 +51,7 @@ import {
 } from "@/lib/api";
 
 type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
+type AuthMode = "login" | "register" | "forgot" | "reset";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
@@ -174,6 +185,35 @@ export default function Home() {
   const [dashboardTemplates, setDashboardTemplates] = useState<CaseTemplate[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashboardError, setDashboardError] = useState("");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authPreview, setAuthPreview] = useState<AuthPasswordResetResponse | null>(null);
+  const [authForm, setAuthForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    rememberMe: true,
+    resetToken: "",
+    currentPassword: "",
+    newPassword: ""
+  });
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState("");
+  const [accountForm, setAccountForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  const demoCredentials = {
+    email: "admin@lawai.local",
+    password: "ChangeMe123!"
+  };
 
   const [chatQuestion, setChatQuestion] = useState("Kira alacagi icin nasil bir yol izlemeliyim?");
   const [chatMode, setChatMode] = useState("analysis");
@@ -219,7 +259,30 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (activeTab !== "training" || training || trainingLoading) {
+    let cancelled = false;
+    authMe()
+      .then((user) => {
+        if (!cancelled) {
+          setAuthUser(user);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuthUser(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authUser || activeTab !== "training" || training || trainingLoading) {
       return;
     }
 
@@ -248,10 +311,10 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, training, trainingLoading]);
+  }, [activeTab, authUser, training, trainingLoading]);
 
   useEffect(() => {
-    if (activeTab !== "dashboard" || dashboardCases.length || dashboardTemplates.length || dashboardLoading) {
+    if (!authUser || activeTab !== "dashboard" || dashboardCases.length || dashboardTemplates.length || dashboardLoading) {
       return;
     }
 
@@ -281,7 +344,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
+  }, [activeTab, authUser, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
 
   const dashboardMetrics = useMemo(() => {
     const totalCases = dashboardCases.length;
@@ -308,7 +371,11 @@ export default function Home() {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Beklenmeyen hata");
+      const message = err instanceof Error ? err.message : "Beklenmeyen hata";
+      if (message.toLowerCase().includes("oturum") || message.includes("401")) {
+        setAuthUser(null);
+      }
+      setError(message);
     } finally {
       setLoading("");
     }
@@ -350,6 +417,257 @@ export default function Home() {
     });
   }
 
+  function fillDemoCredentials() {
+    setAuthError("");
+    setAuthMode("login");
+    setAuthForm((current) => ({
+      ...current,
+      email: demoCredentials.email,
+      password: demoCredentials.password,
+      rememberMe: true
+    }));
+  }
+
+  async function submitAuth(event: FormEvent) {
+    event.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      if (authMode === "login") {
+        if (!authForm.email || !authForm.password) throw new Error("E-posta ve sifre gerekli.");
+        const session = await authLogin({
+          email: authForm.email,
+          password: authForm.password,
+          rememberMe: authForm.rememberMe
+        });
+        setAuthUser(session.user);
+        setAuthPreview(null);
+        setActiveTab("dashboard");
+      } else if (authMode === "register") {
+        if (!authForm.name.trim()) throw new Error("Ad soyad gerekli.");
+        if (authForm.password !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
+        const session = await authRegister({
+          name: authForm.name,
+          email: authForm.email,
+          password: authForm.password
+        });
+        setAuthUser(session.user);
+        setAuthPreview(null);
+        setActiveTab("dashboard");
+      } else if (authMode === "forgot") {
+        if (!authForm.email) throw new Error("E-posta gerekli.");
+        const response = await authForgotPassword({ email: authForm.email });
+        setAuthPreview(response);
+        setAuthForm((current) => ({ ...current, resetToken: response.resetTokenPreview ?? current.resetToken }));
+        setAuthMode("reset");
+      } else if (authMode === "reset") {
+        if (!authForm.resetToken.trim()) throw new Error("Sifirlama kodu gerekli.");
+        if (authForm.newPassword !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
+        const session = await authResetPassword({
+          token: authForm.resetToken,
+          newPassword: authForm.newPassword
+        });
+        setAuthUser(session.user);
+        setAuthPreview(null);
+        setActiveTab("dashboard");
+      }
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Giris islemi basarisiz.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await authLogout();
+    } finally {
+      setAuthUser(null);
+      setActiveTab("dashboard");
+      setAuthPreview(null);
+      setAuthMode("login");
+      setAccountOpen(false);
+      setChatResponse(null);
+      setPrecedents([]);
+      setPetitionResult(null);
+      setKnowledgeResult(null);
+      setTraining(null);
+      setDashboardCases([]);
+      setDashboardTemplates([]);
+      setDashboardError("");
+      setTrainingError("");
+      setAuthForm({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        rememberMe: true,
+        resetToken: "",
+        currentPassword: "",
+        newPassword: ""
+      });
+      setAccountForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    }
+  }
+
+  async function handleChangePassword(event: FormEvent) {
+    event.preventDefault();
+    setAccountError("");
+    setAccountLoading(true);
+    try {
+      if (accountForm.newPassword !== accountForm.confirmPassword) {
+        throw new Error("Yeni sifreler eslesmiyor.");
+      }
+      const session = await authChangePassword({
+        currentPassword: accountForm.currentPassword,
+        newPassword: accountForm.newPassword
+      });
+      setAuthUser(session.user);
+      setAccountOpen(false);
+      setAccountForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : "Sifre degistirilemedi.");
+    } finally {
+      setAccountLoading(false);
+    }
+  }
+
+  if (!authReady) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card panel">
+          <LoaderCircle className="spin" size={32} />
+          <h1>LawAI Studio</h1>
+          <p>Oturum bilgisi kontrol ediliyor...</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card panel auth-card-split">
+          <div className="auth-hero">
+            <div className="auth-hero-head">
+              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
+              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
+              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
+            </div>
+
+            <div className="auth-points">
+              <div>
+                <strong>HttpOnly cookie</strong>
+                <span>Parola tarayicida tutulmaz, oturum sunucu tarafinda dogrulanir.</span>
+              </div>
+              <div>
+                <strong>Sifre sifirlama</strong>
+                <span>Tek kullanimli kod ile kontrollu kurtarma akisi saglanir.</span>
+              </div>
+              <div>
+                <strong>Yetkili erisim</strong>
+                <span>Dogrulama olmadan hicbir uygulama ekrani acilmaz.</span>
+              </div>
+            </div>
+
+            <div className="auth-credentials panel">
+              <div className="auth-credentials-head">
+                <strong>Ilk kullanim hesabi</strong>
+                <span>Gelistirme ortami icin hazirlandi.</span>
+              </div>
+              <div className="auth-credentials-grid">
+                <div>
+                  <small>E-posta</small>
+                  <strong>{demoCredentials.email}</strong>
+                </div>
+                <div>
+                  <small>Sifre</small>
+                  <strong>{demoCredentials.password}</strong>
+                </div>
+              </div>
+              <button type="button" className="secondary-button auth-secondary" onClick={fillDemoCredentials}>
+                Ornek hesabi doldur
+              </button>
+            </div>
+          </div>
+
+          <form className="auth-form" onSubmit={submitAuth}>
+            <div className="auth-switch">
+              <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giris</button>
+              <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Hesap ac</button>
+              <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Sifremi unuttum</button>
+              <button type="button" className={authMode === "reset" ? "active" : ""} onClick={() => setAuthMode("reset")}>Sifre sifirla</button>
+            </div>
+
+            <div className="auth-fields">
+              {authMode === "register" && (
+                <label className="field-label">
+                  Ad soyad
+                  <input autoComplete="name" value={authForm.name} onChange={(event) => setAuthForm({ ...authForm, name: event.target.value })} />
+                </label>
+              )}
+              {(authMode === "login" || authMode === "register" || authMode === "forgot") && (
+                <label className="field-label">
+                  E-posta
+                  <input autoComplete="email" type="email" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} />
+                </label>
+              )}
+              {(authMode === "login" || authMode === "register") && (
+                <label className="field-label">
+                  Sifre
+                  <input autoComplete={authMode === "login" ? "current-password" : "new-password"} type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
+                </label>
+              )}
+              {(authMode === "register" || authMode === "reset") && (
+                <label className="field-label">
+                  Sifre tekrar
+                  <input autoComplete="new-password" type="password" value={authForm.confirmPassword} onChange={(event) => setAuthForm({ ...authForm, confirmPassword: event.target.value })} />
+                </label>
+              )}
+              {authMode === "reset" && (
+                <label className="field-label">
+                  Sifirlama kodu
+                  <input autoComplete="one-time-code" value={authForm.resetToken} onChange={(event) => setAuthForm({ ...authForm, resetToken: event.target.value })} />
+                </label>
+              )}
+              {authMode === "reset" && (
+                <label className="field-label">
+                  Yeni sifre
+                  <input autoComplete="new-password" type="password" value={authForm.newPassword} onChange={(event) => setAuthForm({ ...authForm, newPassword: event.target.value })} />
+                </label>
+              )}
+              {authMode === "login" && (
+                <label className="remember-row">
+                  <input type="checkbox" checked={authForm.rememberMe} onChange={(event) => setAuthForm({ ...authForm, rememberMe: event.target.checked })} />
+                  <span>Beni hatirla</span>
+                </label>
+              )}
+            </div>
+
+            {authPreview?.resetTokenPreview ? <div className="auth-preview">Gelistirme tokeni: <strong>{authPreview.resetTokenPreview}</strong></div> : null}
+            {authError ? <div className="error">{authError}</div> : null}
+
+            <button disabled={authLoading} type="submit">
+              {authLoading ? <LoaderCircle className="spin" size={17} /> : null}
+              {authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : authMode === "forgot" ? "Sifirlama baglantisi iste" : "Sifreyi guncelle"}
+            </button>
+            <p className="auth-note">
+              {authMode === "forgot" ? "E-posta adresiniz eslesirse sifirlama akisi baslatilir." : "Hesaplar cookie tabanli oturum ile korunur."}
+            </p>
+          </form>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -377,6 +695,21 @@ export default function Home() {
           <Lock size={17} />
           <span>Gizli mod</span>
         </label>
+
+        <div className="sidebar-user">
+          <div>
+            <strong>{authUser.name}</strong>
+            <span>{authUser.email}</span>
+          </div>
+          <div className="sidebar-user-actions">
+            <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
+              Sifre degistir
+            </button>
+            <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
+              Cikis
+            </button>
+          </div>
+        </div>
       </aside>
 
       <section className="workspace">
@@ -485,7 +818,7 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <p className="empty">Henüz dosya yok. Ornek kayitlari yukleyin.</p>
+                  <p className="empty">Henuz dosya yok. Ornek kayitlari yukleyin.</p>
                 )}
               </article>
 
@@ -493,7 +826,7 @@ export default function Home() {
                 <div className="section-head">
                   <div>
                     <span className="section-label">Kontrol</span>
-                    <h3>Risk ve görevler</h3>
+                    <h3>Risk ve gorevler</h3>
                   </div>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("training")}>
                     Egitim ac
@@ -541,7 +874,7 @@ export default function Home() {
                 <div className="section-head">
                   <div>
                     <span className="section-label">Hizli erisim</span>
-                    <h3>Calisma kisa yolları</h3>
+                    <h3>Calisma kisa yollari</h3>
                   </div>
                 </div>
                 <div className="dashboard-actions">
@@ -679,6 +1012,39 @@ export default function Home() {
               ) : <EmptyState text="OpenAI, Gemini veya Ollama ayarlandiginda dokumanlar burada indekslenir." />}
             </ResultPanel>
           </section>
+        )}
+
+        {accountOpen && (
+          <div className="account-overlay" role="dialog" aria-modal="true" aria-label="Sifre degistir">
+            <form className="panel account-card" onSubmit={handleChangePassword}>
+              <div className="section-head">
+                <div>
+                  <span className="section-label">Hesap</span>
+                  <h3>Sifre degistir</h3>
+                </div>
+                <button className="secondary-button" type="button" onClick={() => setAccountOpen(false)}>
+                  Kapat
+                </button>
+              </div>
+              <label className="field-label">
+                Mevcut sifre
+                <input type="password" value={accountForm.currentPassword} onChange={(event) => setAccountForm({ ...accountForm, currentPassword: event.target.value })} />
+              </label>
+              <label className="field-label">
+                Yeni sifre
+                <input type="password" value={accountForm.newPassword} onChange={(event) => setAccountForm({ ...accountForm, newPassword: event.target.value })} />
+              </label>
+              <label className="field-label">
+                Yeni sifre tekrar
+                <input type="password" value={accountForm.confirmPassword} onChange={(event) => setAccountForm({ ...accountForm, confirmPassword: event.target.value })} />
+              </label>
+              {accountError ? <div className="error">{accountError}</div> : null}
+              <button disabled={accountLoading} type="submit">
+                {accountLoading ? <LoaderCircle className="spin" size={17} /> : null}
+                Sifreyi guncelle
+              </button>
+            </form>
+          </div>
         )}
       </section>
     </main>
@@ -1117,7 +1483,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
             ) : (
               <div className="case-empty-detail">
                 <h3>Liste bos</h3>
-                <p>Listeyi test etmek icin ornek kayıtları yukleyin veya yeni dava ekleyin.</p>
+                <p>Listeyi test etmek icin ornek kayitlari yukleyin veya yeni dava ekleyin.</p>
                 <div className="upload-actions">
                   <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
                     <CheckCircle2 size={17} />
@@ -1238,3 +1604,4 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
