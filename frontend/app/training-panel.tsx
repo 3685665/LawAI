@@ -2,6 +2,7 @@
 
 import { Copy, GraduationCap, RefreshCw, Sparkles } from "lucide-react";
 import { useMemo } from "react";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 export type TrainingTabResponse = {
   title: string;
@@ -30,6 +31,7 @@ export type TrainingTabResponse = {
 };
 
 type Props = {
+  locale: Locale;
   loading: boolean;
   error: string;
   training: TrainingTabResponse | null;
@@ -43,6 +45,7 @@ type Props = {
 };
 
 export function TrainingPanel({
+  locale,
   loading,
   error,
   training,
@@ -54,6 +57,7 @@ export function TrainingPanel({
   onChangeDraft,
   onReload
 }: Props) {
+  const t = getMessages(locale).training;
   const selectedModule = training?.modules[selectedModuleIndex] ?? training?.modules[0] ?? null;
   const selectedPrompt = training?.prompts[selectedPromptIndex] ?? training?.prompts[0] ?? null;
 
@@ -77,31 +81,31 @@ export function TrainingPanel({
       <div className="panel training-hero">
         <div className="training-hero-head">
           <div>
-            <h2>{training?.title ?? "Dilekce egitimi"}</h2>
-            <p>{training?.subtitle ?? "Egitim verisi yukleniyor..."}</p>
+            <h2>{training?.title ?? t.fallbackTitle}</h2>
+            <p>{training?.subtitle ?? t.fallbackSubtitle}</p>
           </div>
           <button className="secondary-button" onClick={onReload} type="button">
             <RefreshCw size={17} />
-            Yenile
+            {t.reload}
           </button>
         </div>
-        <p className="training-summary">{training?.summary ?? "Bu alan, dilekce yazim akisini stajyer mantigiyla parcalara ayirir."}</p>
+        <p className="training-summary">{training?.summary ?? t.fallbackSummary}</p>
         <div className="training-pills">
-          {(training?.audience ?? ["Dosya ogrenme", "Dilekce kurma", "Son kontrol"]).map((item) => (
+          {(training?.audience ?? t.audience).map((item) => (
             <span key={item} className="training-pill">{item}</span>
           ))}
         </div>
         <div className="training-meta">
           <div>
-            <span>Modul</span>
+            <span>{t.module}</span>
             <strong>{training?.modules.length ?? 0}</strong>
           </div>
           <div>
-            <span>Prompt</span>
+            <span>{t.prompt}</span>
             <strong>{training?.prompts.length ?? 0}</strong>
           </div>
           <div>
-            <span>Kontrol noktasi</span>
+            <span>{t.checkpoint}</span>
             <strong>{checklistComplete}</strong>
           </div>
         </div>
@@ -117,11 +121,11 @@ export function TrainingPanel({
       <section className="training-grid">
         <aside className="panel training-nav">
           <div className="training-section-head">
-            <h3><GraduationCap size={18} /> Moduller</h3>
-            <span>{training?.modules.length ?? 0} baslik</span>
+            <h3><GraduationCap size={18} /> {t.modules}</h3>
+            <span>{training?.modules.length ?? 0} {t.headingCount}</span>
           </div>
           {loading && !training ? (
-            <p className="empty">Egitim verisi yukleniyor...</p>
+            <p className="empty">{t.loading}</p>
           ) : (
             <div className="training-list">
               {training?.modules.map((module, index) => (
@@ -141,28 +145,28 @@ export function TrainingPanel({
 
         <article className="panel training-detail">
           <div className="training-section-head">
-            <h3>Stajyer modu</h3>
-            <span>{selectedModule?.id ?? "bekleniyor"}</span>
+            <h3>{t.internMode}</h3>
+            <span>{selectedModule?.id ?? t.waiting}</span>
           </div>
           {selectedModule ? (
             <>
               <p>{selectedModule.summary}</p>
               <div className="training-card-grid">
                 <div className="training-card">
-                  <strong>Ogretim notlari</strong>
+                  <strong>{t.teachingNotes}</strong>
                   <ul>
                     {selectedModule.lessonPoints.map((point) => <li key={point}>{point}</li>)}
                   </ul>
                 </div>
                 <div className="training-card">
-                  <strong>Alistirmalar</strong>
+                  <strong>{t.exercises}</strong>
                   <ul>
                     {selectedModule.exercises.map((exercise) => <li key={exercise}>{exercise}</li>)}
                   </ul>
                 </div>
               </div>
               <div className="training-checklist">
-                <strong>Kontrol listesi</strong>
+                <strong>{t.checklist}</strong>
                 {training?.checklist.map((item) => (
                   <div key={item.label} className={item.required ? "training-check required" : "training-check"}>
                     <span>{item.label}</span>
@@ -172,14 +176,14 @@ export function TrainingPanel({
               </div>
             </>
           ) : (
-            <p className="empty">Modul secin.</p>
+            <p className="empty">{t.selectModule}</p>
           )}
         </article>
 
         <aside className="panel training-studio">
           <div className="training-section-head">
-            <h3><Sparkles size={18} /> Prompt studio</h3>
-            <span>Copy odakli</span>
+            <h3><Sparkles size={18} /> {t.promptStudio}</h3>
+            <span>{t.copyFocused}</span>
           </div>
           <div className="training-prompt-list">
             {training?.prompts.map((prompt, index) => (
@@ -199,23 +203,23 @@ export function TrainingPanel({
             rows={12}
             value={draft}
             onChange={(event) => onChangeDraft(event.target.value)}
-            placeholder="Burada secilen prompt uzerinden calisilacak metin yer alir."
+            placeholder={t.draftPlaceholder}
           />
           <div className="training-actions">
             <button className="secondary-button" onClick={() => void copyDraft()} type="button">
               <Copy size={17} />
-              Kopyala
+              {t.copy}
             </button>
             <button
               type="button"
               onClick={() => void applyPrompt(selectedPrompt?.prompt ?? draft)}
               disabled={!selectedPrompt?.prompt && !draft.trim()}
             >
-              Secimi uygula
+              {t.applySelection}
             </button>
           </div>
           <div className="training-card">
-            <strong>Sik yapilan hatalar</strong>
+            <strong>{t.commonMistakes}</strong>
             <ul>
               {(training?.commonMistakes ?? []).map((item) => <li key={item}>{item}</li>)}
             </ul>

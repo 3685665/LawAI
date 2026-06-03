@@ -1,14 +1,16 @@
 "use client";
 
-import { Suspense, FormEvent, useMemo, useState } from "react";
+import { Suspense, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, LoaderCircle, Lock } from "lucide-react";
 import { authResetPassword } from "@/lib/api";
+import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useMemo(() => searchParams.get("token") ?? "", [searchParams]);
+  const [locale, setLocale] = useState<Locale>("tr");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,6 +19,12 @@ function ResetPasswordForm() {
     password: "",
     confirmPassword: ""
   });
+  const t = getMessages(locale).resetPassword;
+
+  useEffect(() => {
+    const storedLocale = window.localStorage.getItem("lawai-locale");
+    setLocale(isLocale(storedLocale) ? storedLocale : "tr");
+  }, []);
 
   async function submitReset(event: FormEvent) {
     event.preventDefault();
@@ -24,25 +32,25 @@ function ResetPasswordForm() {
     setSuccess("");
 
     if (!token) {
-      setError("Sifirlama baglantisi gecersiz.");
+      setError(t.errors.invalidLink);
       return;
     }
     if (!form.password.trim()) {
-      setError("Yeni sifre gerekli.");
+      setError(t.errors.passwordRequired);
       return;
     }
     if (form.password !== form.confirmPassword) {
-      setError("Sifreler eslesmiyor.");
+      setError(t.errors.passwordMismatch);
       return;
     }
 
     setLoading(true);
     try {
       await authResetPassword({ token, newPassword: form.password });
-      setSuccess("Sifre guncellendi. Giris ekranina yonlendiriliyorsunuz...");
+      setSuccess(t.success);
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sifre guncellenemedi.");
+      setError(err instanceof Error ? err.message : t.errors.updateFailed);
     } finally {
       setLoading(false);
     }
@@ -52,25 +60,25 @@ function ResetPasswordForm() {
     <main className="auth-shell">
       <section className="auth-card panel auth-reset-card">
         <div className="auth-reset-head">
-          <span className="eyebrow">Sifre yenileme</span>
-          <h1>Yeni sifrenizi belirleyin.</h1>
-          <p>Bu sayfa e-posta ile gelen sifirlama baglantisindan acilir. Islem tamamlandiginda hesaba tekrar giris yapabilirsiniz.</p>
+          <span className="eyebrow">{t.eyebrow}</span>
+          <h1>{t.title}</h1>
+          <p>{t.description}</p>
         </div>
 
         <form className="auth-form" onSubmit={submitReset}>
           <div className="auth-form-head">
-            <span className="eyebrow">Baglanti</span>
-            <h2>Baglanti dogrulandi</h2>
-            <p>{token ? "Lutfen yeni sifrenizi belirleyin." : "Token bulunamadi. Lutfen e-postadaki baglantiyi tekrar acin."}</p>
+            <span className="eyebrow">{t.linkEyebrow}</span>
+            <h2>{t.linkVerified}</h2>
+            <p>{token ? t.enterPassword : t.missingToken}</p>
           </div>
 
           <label className="field-label">
-            Yeni sifre
+            {t.newPassword}
             <input autoComplete="new-password" disabled={!token} onChange={(event) => setForm({ ...form, password: event.target.value })} type="password" value={form.password} />
           </label>
 
           <label className="field-label">
-            Yeni sifre tekrar
+            {t.confirmPassword}
             <input autoComplete="new-password" disabled={!token} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} type="password" value={form.confirmPassword} />
           </label>
 
@@ -80,11 +88,11 @@ function ResetPasswordForm() {
           <div className="auth-actions">
             <button disabled={loading || !token} type="submit">
               {loading ? <LoaderCircle className="spin" size={17} /> : <Lock size={17} />}
-              Sifreyi guncelle
+              {t.submit}
             </button>
             <button className="secondary-button" type="button" onClick={() => router.push("/")}>
               <ArrowLeft size={17} />
-              Giris ekranina don
+              {t.backLogin}
             </button>
           </div>
         </form>
@@ -101,7 +109,7 @@ export default function ResetPasswordPage() {
           <section className="auth-card panel">
             <LoaderCircle className="spin" size={32} />
             <h1>LawAI Studio</h1>
-            <p>Sifirlama sayfasi yukleniyor...</p>
+            <p>{getMessages("tr").resetPassword.loading}</p>
           </section>
         </main>
       }

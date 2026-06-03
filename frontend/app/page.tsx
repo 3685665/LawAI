@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -28,6 +28,7 @@ import {
   X
 } from "lucide-react";
 import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
+import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 import {
   authChangePassword,
   authForgotPassword,
@@ -217,6 +218,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [privateMode, setPrivateMode] = useState(true);
   const [themeMode, setThemeMode] = useState<ThemeMode>("original");
+  const [locale, setLocale] = useState<Locale>("tr");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
@@ -259,6 +261,8 @@ export default function Home() {
     email: "admin@lawai.local",
     password: "ChangeMe123!"
   };
+
+  const t = useMemo(() => getMessages(locale), [locale]);
 
   const [chatQuestion, setChatQuestion] = useState("Kira alacagi icin nasil bir yol izlemeliyim?");
   const [chatMode, setChatMode] = useState("analysis");
@@ -305,17 +309,29 @@ export default function Home() {
   const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
 
   const tabs = useMemo(() => [
-    { id: "dashboard" as const, label: "Dashboard", icon: Scale },
-    { id: "chat" as const, label: "Asistan", icon: Bot },
-    { id: "search" as const, label: "Emsal Arama", icon: FileSearch },
-    { id: "petition" as const, label: "Dilekce Taslak", icon: FileText },
-    { id: "training" as const, label: "Egitim", icon: GraduationCap },
-    { id: "cases" as const, label: "Dosyalar", icon: FolderOpen },
-    { id: "document" as const, label: "Belge Isleme", icon: Upload },
-    { id: "knowledge" as const, label: "Bilgi Bankasi", icon: Database },
-    { id: "feedback" as const, label: "Geri Bildirim", icon: MessageSquareMore },
-    { id: "settings" as const, label: "Ayarlar", icon: ShieldAlert }
-  ], []);
+    { id: "dashboard" as const, label: t.tabs.dashboard, icon: Scale },
+    { id: "chat" as const, label: t.tabs.chat, icon: Bot },
+    { id: "search" as const, label: t.tabs.search, icon: FileSearch },
+    { id: "petition" as const, label: t.tabs.petition, icon: FileText },
+    { id: "training" as const, label: t.tabs.training, icon: GraduationCap },
+    { id: "cases" as const, label: t.tabs.cases, icon: FolderOpen },
+    { id: "document" as const, label: t.tabs.document, icon: Upload },
+    { id: "knowledge" as const, label: t.tabs.knowledge, icon: Database },
+    { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
+    { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
+  ], [t]);
+
+  useEffect(() => {
+    const storedLocale = window.localStorage.getItem("lawai-locale");
+    if (isLocale(storedLocale)) {
+      setLocale(storedLocale);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    window.localStorage.setItem("lawai-locale", locale);
+  }, [locale]);
 
   useEffect(() => {
     checkHealth().then(setBackendOnline);
@@ -471,12 +487,12 @@ export default function Home() {
   const feedbackRows = useMemo<FeedbackGridRow[]>(() => {
     return filteredFeedbackItems.map((item) => ({
       ...item,
-      typeLabel: getFeedbackTypeLabel(item.type),
-      statusLabel: getFeedbackStatusLabel(item.status),
-      createdAtLabel: new Date(item.createdAt).toLocaleString("tr-TR"),
+      typeLabel: isFeedbackType(item.type) ? t.feedback.types[item.type] : item.type,
+      statusLabel: isFeedbackStatus(item.status) ? t.feedback.statuses[item.status] : item.status,
+      createdAtLabel: new Date(item.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR"),
       messagePreview: item.message.length > 120 ? `${item.message.slice(0, 120).trim()}...` : item.message
     }));
-  }, [filteredFeedbackItems]);
+  }, [filteredFeedbackItems, locale, t]);
 
   const selectedFeedback = useMemo(() => {
     if (!filteredFeedbackItems.length) {
@@ -732,7 +748,7 @@ export default function Home() {
         <section className="auth-card panel">
           <LoaderCircle className="spin" size={32} />
           <h1>LawAI Studio</h1>
-          <p>Oturum bilgisi kontrol ediliyor...</p>
+          <p>{t.auth.loading}</p>
         </section>
       </main>
     );
@@ -864,10 +880,10 @@ export default function Home() {
           <Scale size={28} />
           <div>
             <strong>LawAI Studio</strong>
-            <span>Avukat calisma alani</span>
+            <span>{t.dashboard.eyebrow}</span>
           </div>
         </div>
-        <div className="nav-label">Uygulamalar</div>
+        <div className="nav-label">{t.common.apps}</div>
         <nav className="tabs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -882,7 +898,7 @@ export default function Home() {
         {authUser.role === "ADMIN" ? (
           <Link className="sidebar-admin-link" href="/feedback-management">
             <ShieldAlert size={18} />
-            <span>Sikayet Yonetimi</span>
+            <span>{t.adminFeedback.title}</span>
           </Link>
         ) : null}
 
@@ -890,14 +906,14 @@ export default function Home() {
           <div>
             <strong>{authUser.name}</strong>
             <span>{authUser.email}</span>
-            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? "Yonetici" : "Kullanici"}</span>
+            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
           </div>
           <div className="sidebar-user-actions">
             <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
-              Sifre degistir
+              {t.common.changePassword}
             </button>
             <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
-              Cikis
+              {t.common.logout}
             </button>
           </div>
         </div>
@@ -907,46 +923,46 @@ export default function Home() {
         {activeTab === "dashboard" && (
           <header className="topbar">
             <div>
-              <span className="eyebrow">Hukuk AI Calisma Sistemi</span>
-              <h1>Dosya, dilekce ve emsal calismasi icin kurumsal arayuz.</h1>
-              <p>Kaynakli yanit, belge inceleme, risk kontrolu ve taslak olusturma tek panelde; resmi ofis kullanimina uygun, sakin ve kontrollu bir akis.</p>
+              <span className="eyebrow">{t.dashboard.eyebrow}</span>
+              <h1>{t.dashboard.title}</h1>
+              <p>{t.dashboard.subtitle}</p>
             </div>
-            <span className={backendOnline === false ? "status offline" : "status"}>{loading ? "Isleniyor" : backendOnline === false ? "Backend yok" : "Hazir"}</span>
+            <span className={backendOnline === false ? "status offline" : "status"}>{loading ? t.dashboard.statusLoading : backendOnline === false ? t.dashboard.statusBackendDown : t.dashboard.statusReady}</span>
           </header>
         )}
 
         {activeTab === "dashboard" && (
           <section className="dashboard-hero panel">
             <div className="dashboard-hero-copy">
-              <h2>Ofis standardinda calisan, kaynakli ve izlenebilir hukuk uygulamasi.</h2>
-              <p>Dilekce, emsal, dosya ve egitim modulleri tek yapida; avukat icin hizli ama resmi is akisi sunar.</p>
+              <h2>{t.dashboard.heroTitle}</h2>
+              <p>{t.dashboard.heroBody}</p>
               <div className="hero-actions">
                 <button type="button" onClick={() => setActiveTab("training")}>
                   <GraduationCap size={17} />
-                  Egitim
+                  {t.tabs.training}
                 </button>
                 <button className="secondary-button" type="button" onClick={() => setActiveTab("petition")}>
                   <FileText size={17} />
-                  Dilekce
+                  {t.tabs.petition}
                 </button>
                 <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
-                  Emsal
+                  {t.tabs.search}
                   <ChevronRight size={16} />
                 </button>
               </div>
             </div>
             <div className="dashboard-hero-side">
               <div className="hero-metric">
-                <span>Durum</span>
-                <strong>{backendOnline === false ? "Baglanti yok" : "AI servisi hazir"}</strong>
+                <span>{t.dashboard.statusLabel}</span>
+                <strong>{backendOnline === false ? t.settings.backendDisconnected : t.dashboard.serviceReady}</strong>
               </div>
               <div className="hero-metric">
-                <span>Calisma modu</span>
-                <strong>{privateMode ? "Gizli mod aktif" : "Standart mod"}</strong>
+                <span>{t.dashboard.workMode}</span>
+                <strong>{privateMode ? t.dashboard.privacyOn : t.dashboard.standardMode}</strong>
               </div>
               <div className="hero-metric">
-                <span>Odak</span>
-                <strong>Kaynak, risk, taslak</strong>
+                <span>{t.dashboard.focus}</span>
+                <strong>{t.dashboard.focusValue}</strong>
               </div>
             </div>
           </section>
@@ -956,24 +972,24 @@ export default function Home() {
           <section className="dashboard-grid">
             <div className="dashboard-stats">
               <article className="panel stat-card">
-                <span>Toplam dosya</span>
+                <span>{t.dashboard.totalCases}</span>
                 <strong>{dashboardLoading ? "..." : dashboardMetrics.totalCases}</strong>
-                <small>Aktif dosya kayitlari</small>
+                <small>{t.dashboard.activeCases}</small>
               </article>
               <article className="panel stat-card">
-                <span>Ortalama ilerleme</span>
+                <span>{t.dashboard.avgProgress}</span>
                 <strong>{dashboardLoading ? "..." : `${dashboardMetrics.avgProgress}%`}</strong>
-                <small>Dosya bazli durum ortalamasi</small>
+                <small>{t.dashboard.avgProgressHint}</small>
               </article>
               <article className="panel stat-card">
-                <span>Tamamlanan zorunlu belge</span>
+                <span>{t.dashboard.completedRequiredDocs}</span>
                 <strong>{dashboardLoading ? "..." : `${dashboardMetrics.completedRequiredDocs}/${dashboardMetrics.requiredDocs}`}</strong>
-                <small>Eksik evrak takibi</small>
+                <small>{t.dashboard.missingDocsHint}</small>
               </article>
               <article className="panel stat-card">
-                <span>Riskli dosya</span>
+                <span>{t.dashboard.riskCases}</span>
                 <strong>{dashboardLoading ? "..." : dashboardMetrics.riskCases.length}</strong>
-                <small>60% altinda kalan dosyalar</small>
+                <small>{t.dashboard.riskCasesHint}</small>
               </article>
             </div>
 
@@ -983,16 +999,16 @@ export default function Home() {
               <article className="panel dashboard-panel dashboard-panel-large">
                 <div className="section-head">
                   <div>
-                    <span className="section-label">Son hareketler</span>
-                    <h3>Son dosyalar</h3>
+                    <span className="section-label">{t.dashboard.recentMovement}</span>
+                    <h3>{t.dashboard.recentCases}</h3>
                   </div>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
-                    Dosyalara git
+                    {t.dashboard.goCases}
                     <ArrowRight size={16} />
                   </button>
                 </div>
                 {dashboardLoading ? (
-                  <p className="empty">Yukleniyor...</p>
+                  <p className="empty">{t.dashboard.loading}</p>
                 ) : dashboardMetrics.recentCases.length ? (
                   <div className="dashboard-list">
                     {dashboardMetrics.recentCases.map((item) => (
@@ -1009,18 +1025,18 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <p className="empty">Henuz dosya yok. Ornek kayitlari yukleyin.</p>
+                  <p className="empty">{t.dashboard.noCases}</p>
                 )}
               </article>
 
               <article className="panel dashboard-panel">
                 <div className="section-head">
                   <div>
-                    <span className="section-label">Kontrol</span>
-                    <h3>Risk ve gorevler</h3>
+                    <span className="section-label">{t.dashboard.controls}</span>
+                    <h3>{t.dashboard.controlsTitle}</h3>
                   </div>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("training")}>
-                    Egitim ac
+                    {t.dashboard.openTraining}
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -1028,22 +1044,22 @@ export default function Home() {
                   <div className="dashboard-check">
                     <ShieldAlert size={18} />
                     <div>
-                      <strong>Usul kontrolu</strong>
-                      <span>Sure, harc ve yetki noktalarini dava acmadan once kontrol edin.</span>
+                      <strong>{t.dashboard.procedureCheck}</strong>
+                      <span>{t.dashboard.procedureCheckDesc}</span>
                     </div>
                   </div>
                   <div className="dashboard-check">
                     <ClipboardList size={18} />
                     <div>
-                      <strong>Belge hazirligi</strong>
-                      <span>Eksik ekleri tamamlama ve dosya siralamasini standardize etme.</span>
+                      <strong>{t.dashboard.documentPrep}</strong>
+                      <span>{t.dashboard.documentPrepDesc}</span>
                     </div>
                   </div>
                   <div className="dashboard-check">
                     <Clock3 size={18} />
                     <div>
-                      <strong>Bugun icin takip</strong>
-                      <span>Oncelikli isler, bekleyen revizyonlar ve acil dosyalar.</span>
+                      <strong>{t.dashboard.readyHint}</strong>
+                      <span>{t.dashboard.readyHintDesc}</span>
                     </div>
                   </div>
                 </div>
@@ -1052,34 +1068,34 @@ export default function Home() {
                     {dashboardMetrics.riskCases.slice(0, 3).map((item) => (
                       <div key={item.id} className="dashboard-risk-item">
                         <strong>{item.caseLabel}</strong>
-                        <span>{item.progress}% tamamlandi</span>
+                        <span>{t.dashboard.caseProgress.replace("{progress}", String(item.progress))}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="empty">Risk seviyesi dusuk dosya yok.</p>
+                  <p className="empty">{t.dashboard.noRisk}</p>
                 )}
               </article>
 
               <article className="panel dashboard-panel">
                 <div className="section-head">
                   <div>
-                    <span className="section-label">Hizli erisim</span>
-                    <h3>Calisma kisa yollari</h3>
+                    <span className="section-label">{t.dashboard.quickAccess}</span>
+                    <h3>{t.dashboard.workShortcuts}</h3>
                   </div>
                 </div>
                 <div className="dashboard-actions">
                   <button type="button" onClick={() => setActiveTab("petition")}>
-                    Dilekce baslat
+                    {t.dashboard.startPetition}
                   </button>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("search")}>
-                    Emsal ara
+                    {t.dashboard.searchPrecedent}
                   </button>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("document")}>
-                    Belge yukle
+                    {t.dashboard.uploadDocument}
                   </button>
                   <button className="secondary-button" type="button" onClick={() => setActiveTab("knowledge")}>
-                    Bilgi bankasi
+                    {t.dashboard.knowledgeBase}
                   </button>
                 </div>
                 <div className="dashboard-template-list">
@@ -1101,24 +1117,24 @@ export default function Home() {
         {activeTab === "chat" && (
           <section className="tool-grid">
             <form className="panel primary-panel" onSubmit={submitChat}>
-              <PanelTitle icon={<Bot size={20} />} title="Hukuk asistanina sor" />
+              <PanelTitle icon={<Bot size={20} />} title={t.tools.chatTitle} />
               <textarea value={chatQuestion} onChange={(event) => setChatQuestion(event.target.value)} rows={8} />
               <div className="row">
                 <select value={chatMode} onChange={(event) => setChatMode(event.target.value)}>
-                  <option value="analysis">Analiz</option>
-                  <option value="draft">Dilekce yardimi</option>
+                  <option value="analysis">{t.tools.modeAnalysis}</option>
+                  <option value="draft">{t.tools.modeDraft}</option>
                 </select>
-                <button disabled={loading === "chat"} type="submit"><Send size={17} />Gonder</button>
+                <button disabled={loading === "chat"} type="submit"><Send size={17} />{t.tools.chatSubmit}</button>
               </div>
             </form>
-            <ResultPanel title="Yanit">
+            <ResultPanel title={t.tools.chatAnswer}>
               {chatResponse ? (
                 <>
                   <pre>{chatResponse.answer}</pre>
                   <CitationList citations={chatResponse.citations} />
                   <small>{chatResponse.disclaimer}</small>
                 </>
-              ) : <EmptyState text="Soruyu gonderince analiz burada gorunur." />}
+              ) : <EmptyState text={t.tools.chatEmpty} />}
             </ResultPanel>
           </section>
         )}
@@ -1126,12 +1142,12 @@ export default function Home() {
         {activeTab === "search" && (
           <section className="tool-grid">
             <form className="panel primary-panel" onSubmit={submitSearch}>
-              <PanelTitle icon={<Search size={20} />} title="Emsal karar ara" />
-              <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Orn: is sozlesmesi fesih ispat" />
-              <button disabled={loading === "search"} type="submit"><Search size={17} />Ara</button>
+              <PanelTitle icon={<Search size={20} />} title={t.tools.searchTitle} />
+              <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t.tools.searchPlaceholder} />
+              <button disabled={loading === "search"} type="submit"><Search size={17} />{t.tools.searchSubmit}</button>
             </form>
-            <ResultPanel title="Kararlar">
-              {precedents.length ? <CitationList citations={precedents} /> : <EmptyState text="Arama sonucu burada listelenir." />}
+            <ResultPanel title={t.tools.searchResults}>
+              {precedents.length ? <CitationList citations={precedents} /> : <EmptyState text={t.tools.searchEmpty} />}
             </ResultPanel>
           </section>
         )}
@@ -1139,27 +1155,28 @@ export default function Home() {
         {activeTab === "petition" && (
           <section className="tool-grid">
             <form className="panel primary-panel" onSubmit={submitPetition}>
-              <PanelTitle icon={<FileText size={20} />} title="Dilekce uret" />
+              <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
               <input value={petition.petitionType} onChange={(event) => setPetition({ ...petition, petitionType: event.target.value })} />
               <input value={petition.court} onChange={(event) => setPetition({ ...petition, court: event.target.value })} />
               <textarea rows={4} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
               <textarea rows={6} value={petition.facts} onChange={(event) => setPetition({ ...petition, facts: event.target.value })} />
               <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
-              <button disabled={loading === "petition"} type="submit"><FileText size={17} />Taslak olustur</button>
+              <button disabled={loading === "petition"} type="submit"><FileText size={17} />{t.tools.petitionSubmit}</button>
             </form>
-            <ResultPanel title={petitionResult?.title ?? "Taslak"}>
+            <ResultPanel title={petitionResult?.title ?? t.tools.petitionDraft}>
               {petitionResult ? (
                 <>
                   <pre>{petitionResult.body}</pre>
                   <CitationList citations={petitionResult.citedPrecedents} />
                 </>
-              ) : <EmptyState text="Dilekce taslagi burada gorunur." />}
+              ) : <EmptyState text={t.tools.petitionEmpty} />}
             </ResultPanel>
           </section>
         )}
 
         {activeTab === "training" && (
           <TrainingPanel
+            locale={locale}
             loading={trainingLoading}
             error={trainingError}
             training={training}
@@ -1179,28 +1196,28 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "cases" && <CasesPanel onGoToDocuments={() => setActiveTab("document")} />}
+        {activeTab === "cases" && <CasesPanel locale={locale} onGoToDocuments={() => setActiveTab("document")} />}
 
-        {activeTab === "document" && <DocumentPanel loading={loading} run={run} onGoToChat={() => setActiveTab("chat")} />}
+        {activeTab === "document" && <DocumentPanel locale={locale} loading={loading} run={run} onGoToChat={() => setActiveTab("chat")} />}
 
         {activeTab === "knowledge" && (
           <section className="tool-grid">
             <form className="panel primary-panel" onSubmit={submitKnowledge}>
-              <PanelTitle icon={<Database size={20} />} title="Bilgi bankasi indeksle" />
+              <PanelTitle icon={<Database size={20} />} title={t.tools.knowledgeTitle} />
               <textarea value={knowledgeJson} onChange={(event) => setKnowledgeJson(event.target.value)} rows={16} />
               <div className="row">
-                <button disabled={loading === "knowledge"} type="button" onClick={seedKnowledge}><Database size={17} />Ornekleri indeksle</button>
-                <button disabled={loading === "knowledge"} type="submit"><Upload size={17} />JSON indeksle</button>
+                <button disabled={loading === "knowledge"} type="button" onClick={seedKnowledge}><Database size={17} />{t.tools.knowledgeSeed}</button>
+                <button disabled={loading === "knowledge"} type="submit"><Upload size={17} />{t.tools.knowledgeSubmit}</button>
               </div>
             </form>
-            <ResultPanel title="Indeks sonucu">
+            <ResultPanel title={t.tools.knowledgeResult}>
               {knowledgeResult ? (
                 <div className="document-summary">
                   <strong>{knowledgeResult.storage}</strong>
-                  <span>{knowledgeResult.indexed} kayit</span>
+                  <span>{knowledgeResult.indexed} {t.tools.records}</span>
                   <p>{knowledgeResult.message}</p>
                 </div>
-              ) : <EmptyState text="OpenAI, Gemini veya Ollama ayarlandiginda dokumanlar burada indekslenir." />}
+              ) : <EmptyState text={t.tools.knowledgeEmpty} />}
             </ResultPanel>
           </section>
         )}
@@ -1208,44 +1225,44 @@ export default function Home() {
         {activeTab === "feedback" && (
           <section className="feedback-workspace">
             <form className="panel primary-panel feedback-compose" onSubmit={submitFeedback}>
-              <PanelTitle icon={<MessageSquareMore size={20} />} title="Geri bildirim gonder" />
-              <p className="panel-subtitle">Hata bildirimi, ozellik istegi veya genel geri bildirim ilet; kayit gecmisin burada saklansin.</p>
+              <PanelTitle icon={<MessageSquareMore size={20} />} title={t.feedback.composeTitle} />
+              <p className="panel-subtitle">{t.feedback.composeSubtitle}</p>
               <div className="feedback-types">
                 <button type="button" className={feedbackForm.type === "hata" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "hata" }))}>
-                  Hata bildirimi
+                  {t.feedback.types.hata}
                 </button>
                 <button type="button" className={feedbackForm.type === "ozellik" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "ozellik" }))}>
-                  Ozellik istegi
+                  {t.feedback.types.ozellik}
                 </button>
                 <button type="button" className={feedbackForm.type === "genel" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "genel" }))}>
-                  Genel geri bildirim
+                  {t.feedback.types.genel}
                 </button>
               </div>
               <label className="field-label">
-                Baslik
-                <input value={feedbackForm.subject} onChange={(event) => setFeedbackForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Orn: Belge yukleme ekraninda hata" />
+                {t.feedback.subject}
+                <input value={feedbackForm.subject} onChange={(event) => setFeedbackForm((current) => ({ ...current, subject: event.target.value }))} placeholder={t.feedback.placeholderSubject} />
               </label>
               <label className="field-label">
-                Detay
-                <textarea rows={11} value={feedbackForm.message} onChange={(event) => setFeedbackForm((current) => ({ ...current, message: event.target.value }))} placeholder="Sorunu, istegi veya gorusunuzu detayli yazin." />
+                {t.feedback.details}
+                <textarea rows={11} value={feedbackForm.message} onChange={(event) => setFeedbackForm((current) => ({ ...current, message: event.target.value }))} placeholder={t.feedback.placeholderMessage} />
               </label>
               <div className="row feedback-compose-actions">
                 <button disabled={loading === "feedback"} type="submit">
                   <Send size={17} />
-                  Gonder
+                  {t.feedback.send}
                 </button>
-                {feedbackSubmitted ? <div className="auth-preview feedback-success">Son kayit: <strong>{feedbackSubmitted.subject}</strong></div> : null}
+                {feedbackSubmitted ? <div className="auth-preview feedback-success">{t.feedback.lastRecord}: <strong>{feedbackSubmitted.subject}</strong></div> : null}
               </div>
             </form>
 
             <section className="panel dashboard-panel feedback-history-panel">
               <div className="section-head feedback-history-head">
                 <div>
-                  <span className="section-label">Gecmis</span>
-                  <h3>Sikayet gecmisi</h3>
+                  <span className="section-label">{t.feedback.history}</span>
+                  <h3>{t.feedback.historyTitle}</h3>
                 </div>
                 <div className="feedback-history-actions">
-                  <span className="status">{filteredFeedbackItems.length} kayit</span>
+                  <span className="status">{filteredFeedbackItems.length} {t.feedback.recordCount}</span>
                   <button
                     className="secondary-button"
                     type="button"
@@ -1255,7 +1272,7 @@ export default function Home() {
                     }}
                   >
                     <ClipboardList size={16} />
-                    {feedbackHistoryOpen ? "Gecmisi gizle" : "Gecmisi goster"}
+                    {feedbackHistoryOpen ? t.feedback.hideHistory : t.feedback.showHistory}
                   </button>
                 </div>
               </div>
@@ -1264,29 +1281,29 @@ export default function Home() {
                 <>
                   <div className="feedback-toolbar">
                     <label className="field-label">
-                      Arama
+                      {t.feedback.search}
                       <input
                         value={feedbackSearch}
                         onChange={(event) => setFeedbackSearch(event.target.value)}
-                        placeholder="Baslik, mesaj, durum veya tip ara"
+                        placeholder={t.feedback.searchPlaceholder}
                       />
                     </label>
                     <label className="field-label">
-                      Tip
+                      {t.feedback.type}
                       <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
-                        <option value="all">Tum tipler</option>
-                        <option value="hata">Hata bildirimi</option>
-                        <option value="ozellik">Ozellik istegi</option>
-                        <option value="genel">Genel geri bildirim</option>
+                        <option value="all">{t.feedback.allTypes}</option>
+                        <option value="hata">{t.feedback.types.hata}</option>
+                        <option value="ozellik">{t.feedback.types.ozellik}</option>
+                        <option value="genel">{t.feedback.types.genel}</option>
                       </select>
                     </label>
                     <label className="field-label">
-                      Durum
+                      {t.feedback.status}
                       <select value={feedbackStatusFilter} onChange={(event) => setFeedbackStatusFilter(event.target.value as FeedbackStatusFilter)}>
-                        <option value="all">Tum durumlar</option>
-                        <option value="received">Alindi</option>
-                        <option value="read">Incelendi</option>
-                        <option value="resolved">Cozuldu</option>
+                        <option value="all">{t.feedback.allStatuses}</option>
+                        <option value="received">{t.feedback.statuses.received}</option>
+                        <option value="read">{t.feedback.statuses.read}</option>
+                        <option value="resolved">{t.feedback.statuses.resolved}</option>
                       </select>
                     </label>
                   </div>
@@ -1336,27 +1353,27 @@ export default function Home() {
                     <article className="panel feedback-detail-panel feedback-detail-panel-wide">
                       <div className="section-head">
                         <div>
-                          <span className="section-label">Detay</span>
-                          <h3>Secili kayit</h3>
+                          <span className="section-label">{t.feedback.detail}</span>
+                          <h3>{t.feedback.selectedRecord}</h3>
                         </div>
                       </div>
                       <div className="feedback-detail">
                         <div className="feedback-detail-head">
                           <strong>{selectedFeedback.subject}</strong>
-                          <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{getFeedbackTypeLabel(selectedFeedback.type)}</span>
+                          <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{isFeedbackType(selectedFeedback.type) ? t.feedback.types[selectedFeedback.type] : selectedFeedback.type}</span>
                         </div>
                         <div className="feedback-detail-meta">
                           <div>
-                            <small>Durum</small>
-                            <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{getFeedbackStatusLabel(selectedFeedback.status)}</strong>
+                            <small>{t.feedback.status}</small>
+                            <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{isFeedbackStatus(selectedFeedback.status) ? t.feedback.statuses[selectedFeedback.status] : selectedFeedback.status}</strong>
                           </div>
                           <div>
-                            <small>Tarih</small>
+                            <small>{t.feedback.date}</small>
                             <strong>{new Date(selectedFeedback.createdAt).toLocaleString("tr-TR")}</strong>
                           </div>
                         </div>
                         <div className="feedback-detail-body">
-                          <small>Mesaj</small>
+                          <small>{t.feedback.message}</small>
                           <p>{selectedFeedback.message}</p>
                         </div>
                       </div>
@@ -1365,7 +1382,7 @@ export default function Home() {
                 </>
               ) : (
                 <div className="feedback-history-closed">
-                  <p>Gecmis gizli. Eski kayitlari ve detaylarini goruntulemek icin butonu kullan.</p>
+                  <p>{t.feedback.historyEmpty}</p>
                 </div>
               )}
             </section>
@@ -1376,9 +1393,9 @@ export default function Home() {
           <section className="settings-workspace">
             <header className="panel settings-header">
               <div>
-                <span className="eyebrow">Ayarlar</span>
-                <h1>Uygulama ayarlarini tek merkezde yonetin.</h1>
-                <p>Gorunum, gizlilik, hesap ve uygulama davranisi ayarlari alt menulere ayrildi.</p>
+                <span className="eyebrow">{t.settings.title}</span>
+                <h1>{t.settings.headline}</h1>
+                <p>{t.settings.subtitle}</p>
               </div>
             </header>
 
@@ -1386,19 +1403,19 @@ export default function Home() {
               <aside className="panel settings-menu">
                 <button type="button" className={settingsSection === "view" ? "active" : ""} onClick={() => setSettingsSection("view")}>
                   <Scale size={16} />
-                  Gorunum
+                  {t.settings.sections.view}
                 </button>
                 <button type="button" className={settingsSection === "privacy" ? "active" : ""} onClick={() => setSettingsSection("privacy")}>
                   <Lock size={16} />
-                  Gizlilik
+                  {t.settings.sections.privacy}
                 </button>
                 <button type="button" className={settingsSection === "account" ? "active" : ""} onClick={() => setSettingsSection("account")}>
                   <BarChart3 size={16} />
-                  Hesap
+                  {t.settings.sections.account}
                 </button>
                 <button type="button" className={settingsSection === "app" ? "active" : ""} onClick={() => setSettingsSection("app")}>
                   <ShieldAlert size={16} />
-                  Uygulama
+                  {t.settings.sections.app}
                 </button>
               </aside>
 
@@ -1407,24 +1424,31 @@ export default function Home() {
                   <article className="panel settings-card">
                     <div className="section-head">
                       <div>
-                        <span className="section-label">Gorunum</span>
-                        <h3>Tema ve arayuz</h3>
+                        <span className="section-label">{t.settings.sections.view}</span>
+                        <h3>{t.settings.themeInterface}</h3>
                       </div>
                     </div>
                     <label className="field-label">
-                      Tema
+                      {t.settings.theme}
                       <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
-                        <option value="original">Orijinal tema</option>
-                        <option value="light">Açık tema</option>
-                        <option value="dark">Koyu tema</option>
+                        <option value="original">{t.settings.localeOriginal}</option>
+                        <option value="light">{t.settings.themeLight}</option>
+                        <option value="dark">{t.settings.themeDark}</option>
                       </select>
                     </label>
                     <label className="field-label">
-                      Sekme yogunlugu
+                      {t.settings.localeView}
                       <select defaultValue="comfortable">
-                        <option value="compact">Sik</option>
-                        <option value="comfortable">Dengeli</option>
-                        <option value="spacious">Genis</option>
+                        <option value="compact">{t.settings.themeCompact}</option>
+                        <option value="comfortable">{t.settings.themeBalanced}</option>
+                        <option value="spacious">{t.settings.themeSpacious}</option>
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      {t.settings.language}
+                      <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
+                        <option value="tr">{t.settings.tr}</option>
+                        <option value="en">{t.settings.en}</option>
                       </select>
                     </label>
                   </article>
@@ -1434,23 +1458,23 @@ export default function Home() {
                   <article className="panel settings-card">
                     <div className="section-head">
                       <div>
-                        <span className="section-label">Gizlilik</span>
-                        <h3>Oturum ve gizli mod</h3>
+                        <span className="section-label">{t.settings.sections.privacy}</span>
+                        <h3>{t.settings.privacySession}</h3>
                       </div>
                     </div>
                     <label className="setting-row">
                       <div>
-                        <strong>Gizli mod</strong>
-                        <span>Hassas veri gorunumunu kisitlar.</span>
+                        <strong>{t.settings.privacyMode}</strong>
+                        <span>{t.settings.privacyModeDesc}</span>
                       </div>
                       <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
                     </label>
                     <label className="setting-row">
                       <div>
-                        <strong>Oturum guvenligi</strong>
-                        <span>HttpOnly cookie oturum yapisi aktif.</span>
+                        <strong>{t.settings.sessionSecurity}</strong>
+                        <span>{t.settings.sessionSecurityDesc}</span>
                       </div>
-                      <span className="status">Aktif</span>
+                      <span className="status">{t.settings.modeActive}</span>
                     </label>
                   </article>
                 )}
@@ -1459,25 +1483,25 @@ export default function Home() {
                   <article className="panel settings-card">
                     <div className="section-head">
                       <div>
-                        <span className="section-label">Hesap</span>
-                        <h3>Kullanici ve erisim</h3>
+                        <span className="section-label">{t.settings.sections.account}</span>
+                        <h3>{t.settings.accountAccess}</h3>
                       </div>
                     </div>
                     <label className="setting-row">
                       <div>
-                        <strong>Mevcut kullanici</strong>
+                        <strong>{t.settings.currentUser}</strong>
                         <span>{authUser.name}</span>
                       </div>
                       <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
-                        Sifre degistir
+                        {t.common.changePassword}
                       </button>
                     </label>
                     <label className="setting-row">
                       <div>
-                        <strong>E-posta</strong>
+                        <strong>{t.auth.labels.email}</strong>
                         <span>{authUser.email}</span>
                       </div>
-                      <span className="status">{authUser.role === "ADMIN" ? "Yonetici" : "Kullanici"}</span>
+                      <span className="status">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
                     </label>
                   </article>
                 )}
@@ -1486,21 +1510,21 @@ export default function Home() {
                   <article className="panel settings-card">
                     <div className="section-head">
                       <div>
-                        <span className="section-label">Uygulama</span>
-                        <h3>Davranis ayarlari</h3>
+                        <span className="section-label">{t.settings.sections.app}</span>
+                        <h3>{t.settings.behavior}</h3>
                       </div>
                     </div>
                     <label className="setting-row">
                       <div>
-                        <strong>Backend durumu</strong>
-                        <span>{backendOnline === false ? "Baglanti yok" : "Bagli"}</span>
+                        <strong>{t.settings.backendStatus}</strong>
+                        <span>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</span>
                       </div>
-                      <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? "Kapali" : "Acilik"}</span>
+                      <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? t.settings.modeClosed : t.settings.modeActive}</span>
                     </label>
                     <label className="setting-row">
                       <div>
-                        <strong>Gizli mod kestirme</strong>
-                        <span>Sidebar uzerinden hizli erisim.</span>
+                        <strong>{t.settings.quickPrivate}</strong>
+                        <span>{t.settings.quickPrivateDesc}</span>
                       </div>
                       <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
                     </label>
@@ -1548,7 +1572,8 @@ export default function Home() {
   );
 }
 
-function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (action: string, fn: () => Promise<void>) => void; onGoToChat: () => void }) {
+function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; loading: string; run: (action: string, fn: () => Promise<void>) => void; onGoToChat: () => void }) {
+  const t = getMessages(locale).document;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
@@ -1557,7 +1582,7 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
   const [result, setResult] = useState<UploadResponse | null>(null);
 
   function applyFile(nextFile: File | null) {
-    const validationError = validateFile(nextFile);
+    const validationError = validateFile(nextFile, locale);
     if (validationError) {
       setLocalError(validationError);
       setFile(null);
@@ -1572,7 +1597,7 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
 
   function runUpload(action: "analyze" | "ingest") {
     if (!file) {
-      setLocalError("Once bir dosya secin.");
+      setLocalError(t.errors.selectFirst);
       return;
     }
     run(action, async () => {
@@ -1593,7 +1618,7 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
   return (
     <section className="pdf-upload-layout">
       <div className="panel primary-panel pdf-upload-form">
-        <PanelTitle icon={<Upload size={20} />} title="Dokuman yukle ve bilgi bankasina ekle" />
+        <PanelTitle icon={<Upload size={20} />} title={t.title} />
         <input ref={inputRef} accept={acceptedExtensions.join(",")} onChange={(event) => applyFile(event.target.files?.[0] ?? null)} type="file" />
         <div className="dropzone" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
           {file ? (
@@ -1605,35 +1630,35 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
           ) : (
             <>
               <Upload size={32} />
-              <strong>Dosyanizi secin</strong>
-              <span>PDF, Word, TXT - en fazla 25 MB</span>
+              <strong>{t.chooseFile}</strong>
+              <span>{t.fileHint}</span>
             </>
           )}
         </div>
-        <label className="field-label">Konu basligi<input disabled={isBusy} onChange={(event) => setTopic(event.target.value)} value={topic} /></label>
-        <label className="field-label">Mahkeme (opsiyonel)<input disabled={isBusy} onChange={(event) => setCourt(event.target.value)} value={court} /></label>
+        <label className="field-label">{t.topic}<input disabled={isBusy} onChange={(event) => setTopic(event.target.value)} value={topic} /></label>
+        <label className="field-label">{t.court}<input disabled={isBusy} onChange={(event) => setCourt(event.target.value)} value={court} /></label>
         <div className="upload-actions">
-          <button className="secondary-button" disabled={!file || isBusy} onClick={() => runUpload("analyze")} type="button">{loading === "analyze" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}On kontrol</button>
-          <button disabled={!file || isBusy} onClick={() => runUpload("ingest")} type="button">{loading === "ingest" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}Bilgi bankasina ekle</button>
+          <button className="secondary-button" disabled={!file || isBusy} onClick={() => runUpload("analyze")} type="button">{loading === "analyze" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}{t.analyze}</button>
+          <button disabled={!file || isBusy} onClick={() => runUpload("ingest")} type="button">{loading === "ingest" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}{t.ingest}</button>
         </div>
         {localError && <div className="inline-error"><AlertCircle size={18} /><span>{localError}</span></div>}
       </div>
-      <ResultPanel title="Sonuc">
-        {!result && !loading && <EmptyState text="Dosya yukleyip islem baslatinca ozet burada gorunur." />}
-        {loading && <div className="result-loading"><LoaderCircle className="spin" size={36} /><strong>Isleniyor...</strong></div>}
+      <ResultPanel title={t.result}>
+        {!result && !loading && <EmptyState text={t.empty} />}
+        {loading && <div className="result-loading"><LoaderCircle className="spin" size={36} /><strong>{t.processing}</strong></div>}
         {result && !loading && (
           <div className="document-summary">
-            {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{result.indexed} parca indekslendi</span></div>}
+            {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{t.indexedParts.replace("{count}", String(result.indexed))}</span></div>}
             <div className="result-stats">
-              <div><span>Dosya</span><strong>{result.filename}</strong></div>
-              <div><span>Tip</span><strong>{result.contentType}</strong></div>
-              <div><span>Boyut</span><strong>{formatBytes(result.size)}</strong></div>
-              {result.extractedCharacters != null && <div><span>Cikarilan metin</span><strong>{result.extractedCharacters.toLocaleString("tr-TR")} karakter</strong></div>}
+              <div><span>{t.file}</span><strong>{result.filename}</strong></div>
+              <div><span>{t.type}</span><strong>{result.contentType}</strong></div>
+              <div><span>{t.size}</span><strong>{formatBytes(result.size)}</strong></div>
+              {result.extractedCharacters != null && <div><span>{t.extractedText}</span><strong>{result.extractedCharacters.toLocaleString(locale === "en" ? "en-US" : "tr-TR")} {t.characters}</strong></div>}
             </div>
             <p>{result.message || result.summary}</p>
             {result.textPreview && <pre>{result.textPreview}</pre>}
             {issues.length > 0 && <ul className="issue-list">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
-            {ingestSuccess && <button className="chat-cta" onClick={onGoToChat} type="button"><Bot size={17} />Sohbete git</button>}
+            {ingestSuccess && <button className="chat-cta" onClick={onGoToChat} type="button"><Bot size={17} />{t.goChat}</button>}
           </div>
         )}
       </ResultPanel>
@@ -1641,7 +1666,8 @@ function DocumentPanel({ loading, run, onGoToChat }: { loading: string; run: (ac
   );
 }
 
-function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
+function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocuments: () => void }) {
+  const t = getMessages(locale).cases;
   const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
   const [caseType, setCaseType] = useState<CaseType>("genel");
   const [clientName, setClientName] = useState("");
@@ -1696,7 +1722,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
         setSelectedCase(firstCase);
       } catch (error) {
         if (!cancelled) {
-          setLocalError(error instanceof Error ? error.message : "Davalar yuklenemedi.");
+          setLocalError(error instanceof Error ? error.message : t.errors.load);
         }
       } finally {
         if (!cancelled) {
@@ -1731,7 +1757,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       setSelectedCase(detail);
       setCaseScreen("detail");
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Dava acilamadi.");
+      setLocalError(error instanceof Error ? error.message : t.errors.open);
     }
   }
 
@@ -1769,7 +1795,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       setCaseScreen("list");
       setCaseType(created.caseType as CaseType);
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Dava kaydedilemedi.");
+      setLocalError(error instanceof Error ? error.message : t.errors.save);
     } finally {
       setSaving(false);
     }
@@ -1783,12 +1809,12 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       setSelectedCase(response.caseRecord);
       setSelectedCaseId(response.caseRecord.id);
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Belge durumu guncellenemedi.");
+      setLocalError(error instanceof Error ? error.message : t.errors.document);
     }
   }
 
   async function deleteCase(caseId: string) {
-    const confirmed = window.confirm("Bu davayi silmek istiyor musunuz?");
+    const confirmed = window.confirm(t.confirmDelete);
     if (!confirmed) return;
     setLocalError("");
     try {
@@ -1799,7 +1825,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       setSelectedCase(nextSelected);
       setCaseScreen("list");
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Dava silinemedi.");
+      setLocalError(error instanceof Error ? error.message : t.errors.delete);
     }
   }
 
@@ -1814,7 +1840,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       setSelectedCase(firstCase);
       setCaseScreen("list");
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Ornek davalar yuklenemedi.");
+      setLocalError(error instanceof Error ? error.message : t.errors.samples);
     } finally {
       setLoadingCases(false);
     }
@@ -1824,12 +1850,12 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
     <section className="cases-shell">
       <div className="cases-toolbar panel">
         <div>
-          <h2>Davalar</h2>
-          <p>Dava kaydi, listeleme, goruntuleme ve silme islemleri.</p>
+          <h2>{t.title}</h2>
+          <p>{t.subtitle}</p>
         </div>
         <div className="cases-toolbar-actions">
-          <button className={caseScreen === "list" ? "active" : ""} onClick={openListScreen} type="button">Liste</button>
-          <button className={caseScreen === "create" ? "active" : ""} onClick={openCreateScreen} type="button">Dava ekle</button>
+          <button className={caseScreen === "list" ? "active" : ""} onClick={openListScreen} type="button">{t.list}</button>
+          <button className={caseScreen === "create" ? "active" : ""} onClick={openCreateScreen} type="button">{t.addCase}</button>
         </div>
       </div>
 
@@ -1838,9 +1864,9 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
       {caseScreen === "create" && (
         <section className="cases-grid">
           <form className="panel primary-panel case-form case-form-large" onSubmit={submitCase}>
-            <PanelTitle icon={<FolderOpen size={20} />} title="Dava ekle" />
+            <PanelTitle icon={<FolderOpen size={20} />} title={t.addCase} />
             <label className="field-label">
-              Dava turu
+              {t.caseType}
               <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
                 {Object.entries(caseTypeLabels).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -1848,71 +1874,71 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
               </select>
             </label>
             <label className="field-label">
-              Musteri / vekil olunan kisi
-              <input value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ad soyad / unvan" />
+              {t.client}
+              <input value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder={t.clientPlaceholder} />
             </label>
             <label className="field-label">
-              Karsi taraf
-              <input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="Davali / alacakli / borclu" />
+              {t.opponent}
+              <input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder={t.opponentPlaceholder} />
             </label>
             <label className="field-label">
-              Mahkeme / kurum
+              {t.court}
               <input value={courtName} onChange={(event) => setCourtName(event.target.value)} />
             </label>
             <label className="field-label">
-              Konu / talep
+              {t.subject}
               <input value={subject} onChange={(event) => setSubject(event.target.value)} />
             </label>
             <label className="field-label">
-              Dosya ozeti
+              {t.summary}
               <textarea rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} />
             </label>
             <div className="case-template">
               <strong>{selectedTemplate.title}</strong>
               <p>{selectedTemplate.summary}</p>
-              <small>Mahkeme ipucu: {selectedTemplate.courtHint}</small>
+              <small>{t.courtHint.replace("{court}", selectedTemplate.courtHint)}</small>
             </div>
             <div className="upload-actions">
               <button className="secondary-button" type="button" onClick={onGoToDocuments}>
                 <Upload size={17} />
-                Belge yukleme
+                {t.uploadDocument}
               </button>
               <button type="button" onClick={markAll}>
                 <CheckCircle2 size={17} />
-                Tumunu isaretle
+                {t.markAll}
               </button>
               <button disabled={saving} type="submit">
                 {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
-                Kaydet ve listele
+                {t.saveAndList}
               </button>
             </div>
           </form>
 
           <div className="panel result-panel case-summary-panel">
             <div className="cases-preview-head">
-              <h2>Hazirlik ozeti</h2>
-              <button className="secondary-button" onClick={openListScreen} type="button">Listeye don</button>
+              <h2>{t.prepSummary}</h2>
+              <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
             </div>
             <div className="case-score">
               <strong>{completion}%</strong>
-              <span>Zorunlu belgeler tamamlanma orani</span>
+              <span>{t.requiredCompletion}</span>
             </div>
             <div className="meter" aria-hidden="true">
               <div className="meter-fill" style={{ width: `${completion}%` }} />
             </div>
             <div className="case-stats">
-              <div><span>Musteri</span><strong>{clientName || "-"}</strong></div>
-              <div><span>Karsi taraf</span><strong>{opponentName || "-"}</strong></div>
-              <div><span>Konu</span><strong>{subject || "-"}</strong></div>
-              <div><span>Mahkeme</span><strong>{courtName || selectedTemplate.courtHint}</strong></div>
+              <div><span>{t.client}</span><strong>{clientName || "-"}</strong></div>
+              <div><span>{t.opponent}</span><strong>{opponentName || "-"}</strong></div>
+              <div><span>{t.subject}</span><strong>{subject || "-"}</strong></div>
+              <div><span>{t.court}</span><strong>{courtName || selectedTemplate.courtHint}</strong></div>
             </div>
             <div className="check-note">
               <CheckCircle2 size={18} />
-              <span>{missingRequired.length === 0 ? "Zorunlu belgeler tamam." : `${missingRequired.length} zorunlu belge eksik.`}</span>
+              <span>{missingRequired.length === 0 ? t.requiredComplete : t.requiredMissing.replace("{count}", String(missingRequired.length))}</span>
             </div>
             <div className="check-note muted">
               <AlertCircle size={18} />
-              <span>Kayit tamamlandiginda sistem otomatik olarak liste ekranina donecek.</span>
+              <span>{t.saveNotice}</span>
             </div>
             <div className="case-detail-documents">
               {groupedDocs.map(([groupName, items]) => (
@@ -1926,7 +1952,7 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
                           <strong>{item.title}</strong>
                           <span>{item.detail}</span>
                         </div>
-                        <em>{item.required ? "Zorunlu" : "Opsiyonel"}</em>
+                        <em>{item.required ? t.required : t.optional}</em>
                       </label>
                     ))}
                   </div>
@@ -1942,22 +1968,22 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
           <div className="panel case-list-panel">
             <div className="case-list-head">
               <div>
-                <h2>Listeleme</h2>
-                <p>{savedCases.length} dava kaydi</p>
+                <h2>{t.listing}</h2>
+                <p>{savedCases.length} {t.caseRecord}</p>
               </div>
               <div className="case-list-head-actions">
                 <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
                   <CheckCircle2 size={17} />
-                  Ornekleri yukle
+                  {t.loadSamples}
                 </button>
                 <button className="secondary-button" onClick={openCreateScreen} type="button">
                   <FolderOpen size={17} />
-                  Dava ekle
+                  {t.addCase}
                 </button>
               </div>
             </div>
             {loadingCases ? (
-              <p className="empty">Davalar yukleniyor...</p>
+              <p className="empty">{t.loading}</p>
             ) : allCases.length ? (
               <div className="case-list">
                 {allCases.map((item) => (
@@ -1965,30 +1991,30 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
                     <button className="case-list-main" onClick={() => void openCase(item.id)} type="button">
                       <div className="case-list-title">
                         <strong>{item.caseLabel}</strong>
-                        <span>{item.progress}% tamamlandi</span>
+                        <span>{getMessages(locale).dashboard.caseProgress.replace("{progress}", String(item.progress))}</span>
                       </div>
                       <p>{item.clientName} - {item.opponentName}</p>
                       <small>{item.courtName}</small>
                     </button>
                     <div className="case-list-actions">
-                      <button className="secondary-button" onClick={() => void openCase(item.id)} type="button">Goruntule</button>
-                      <button className="danger-button" onClick={() => void deleteCase(item.id)} type="button">Sil</button>
+                      <button className="secondary-button" onClick={() => void openCase(item.id)} type="button">{t.view}</button>
+                      <button className="danger-button" onClick={() => void deleteCase(item.id)} type="button">{t.delete}</button>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
               <div className="case-empty-detail">
-                <h3>Liste bos</h3>
-                <p>Listeyi test etmek icin ornek kayitlari yukleyin veya yeni dava ekleyin.</p>
+                <h3>{t.emptyList}</h3>
+                <p>{t.emptyListDesc}</p>
                 <div className="upload-actions">
                   <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
                     <CheckCircle2 size={17} />
-                    Ornekleri yukle
+                    {t.loadSamples}
                   </button>
                   <button onClick={openCreateScreen} type="button">
                     <FolderOpen size={17} />
-                    Dava ekle
+                    {t.addCase}
                   </button>
                 </div>
               </div>
@@ -2000,26 +2026,26 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
               <>
                 <div className="case-detail-head">
                   <div>
-                    <h2>Goruntuleme</h2>
+                    <h2>{t.view}</h2>
                     <p>{selectedCase.caseLabel}</p>
                   </div>
                   <div className="case-detail-actions">
-                    <button className="secondary-button" onClick={openListScreen} type="button">Listeye don</button>
-                    <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">Sil</button>
+                    <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
+                    <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">{t.delete}</button>
                   </div>
                 </div>
                 <div className="case-score compact">
                   <strong>{selectedCase.progress}%</strong>
-                  <span>Genel tamamlanma</span>
+                  <span>{t.overallCompletion}</span>
                 </div>
                 <div className="meter" aria-hidden="true">
                   <div className="meter-fill" style={{ width: `${selectedCase.progress}%` }} />
                 </div>
                 <div className="case-stats case-detail-stats">
-                  <div><span>Musteri</span><strong>{selectedCase.clientName}</strong></div>
-                  <div><span>Karsi taraf</span><strong>{selectedCase.opponentName}</strong></div>
-                  <div><span>Mahkeme</span><strong>{selectedCase.courtName}</strong></div>
-                  <div><span>Konu</span><strong>{selectedCase.subject}</strong></div>
+                  <div><span>{t.client}</span><strong>{selectedCase.clientName}</strong></div>
+                  <div><span>{t.opponent}</span><strong>{selectedCase.opponentName}</strong></div>
+                  <div><span>{t.court}</span><strong>{selectedCase.courtName}</strong></div>
+                  <div><span>{t.subject}</span><strong>{selectedCase.subject}</strong></div>
                 </div>
                 <p>{selectedCase.summary}</p>
                 <div className="case-detail-documents">
@@ -2030,15 +2056,15 @@ function CasesPanel({ onGoToDocuments }: { onGoToDocuments: () => void }) {
                         <strong>{document.title}</strong>
                         <span>{document.detail}</span>
                       </div>
-                      <em>{document.required ? "Zorunlu" : "Opsiyonel"}</em>
+                      <em>{document.required ? t.required : t.optional}</em>
                     </label>
                   ))}
                 </div>
               </>
             ) : (
               <div className="case-empty-detail">
-                <h2>Goruntuleme</h2>
-                <p>Listedeki bir davayi secerek detaylari burada goruntuleyin.</p>
+                <h2>{t.view}</h2>
+                <p>{t.selectCase}</p>
               </div>
             )}
           </div>
@@ -2087,12 +2113,13 @@ function EmptyState({ text }: { text: string }) {
   return <p className="empty">{text}</p>;
 }
 
-function validateFile(file: File | null) {
-  if (!file) return "Dosya secilmedi.";
+function validateFile(file: File | null, locale: Locale = "tr") {
+  const t = getMessages(locale).document.errors;
+  if (!file) return t.noFile;
   const extension = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
-  if (!acceptedExtensions.includes(extension)) return "Sadece PDF, Word ve metin dosyalari desteklenir.";
-  if (file.size > maxFileBytes) return "Dosya 25 MB sinirini asiyor.";
-  if (file.size === 0) return "Dosya bos gorunuyor.";
+  if (!acceptedExtensions.includes(extension)) return t.unsupported;
+  if (file.size > maxFileBytes) return t.tooLarge;
+  if (file.size === 0) return t.empty;
   return null;
 }
 

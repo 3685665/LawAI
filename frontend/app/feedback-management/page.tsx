@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import { AlertCircle, ArrowLeft, LoaderCircle, Trash2 } from "lucide-react";
+import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
 import {
   authMe,
   deleteFeedback,
@@ -18,18 +19,6 @@ import {
 
 type FilterStatus = "all" | FeedbackStatus;
 type FilterType = "all" | FeedbackType;
-
-const typeLabels: Record<FeedbackType, string> = {
-  hata: "Hata bildirimi",
-  ozellik: "Ozellik istegi",
-  genel: "Genel geri bildirim"
-};
-
-const statusLabels: Record<FeedbackStatus, string> = {
-  received: "Alindi",
-  read: "Incelendi",
-  resolved: "Cozuldu"
-};
 
 function isFeedbackType(value: string): value is FeedbackType {
   return value === "hata" || value === "ozellik" || value === "genel";
@@ -49,6 +38,7 @@ function badgeClassStatus(value: string) {
 
 export default function FeedbackManagementPage() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [locale, setLocale] = useState<Locale>("tr");
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [items, setItems] = useState<FeedbackRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,6 +56,9 @@ export default function FeedbackManagementPage() {
   });
 
   useEffect(() => {
+    const storedLocale = window.localStorage.getItem("lawai-locale");
+    setLocale(isLocale(storedLocale) ? storedLocale : "tr");
+
     let cancelled = false;
     authMe()
       .then((user) => {
@@ -82,6 +75,8 @@ export default function FeedbackManagementPage() {
     };
   }, []);
 
+  const t = getMessages(locale);
+
   useEffect(() => {
     if (!authUser || authUser.role !== "ADMIN") {
       return;
@@ -97,7 +92,7 @@ export default function FeedbackManagementPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
+          setError(err instanceof Error ? err.message : t.adminFeedback.loadError);
         }
       })
       .finally(() => {
@@ -142,7 +137,7 @@ export default function FeedbackManagementPage() {
   const columns = useMemo<GridColDef[]>(() => [
     {
       field: "subject",
-      headerName: "Baslik",
+      headerName: t.feedback.subject,
       flex: 1.4,
       minWidth: 220,
       editable: true,
@@ -155,38 +150,38 @@ export default function FeedbackManagementPage() {
     },
     {
       field: "type",
-      headerName: "Tip",
+      headerName: t.feedback.type,
       width: 170,
       editable: true,
       type: "singleSelect",
       valueOptions: ["hata", "ozellik", "genel"],
-      renderCell: (params) => <span className={badgeClassType(String(params.value ?? ""))}>{typeLabels[String(params.value ?? "genel") as FeedbackType]}</span>
+      renderCell: (params) => <span className={badgeClassType(String(params.value ?? ""))}>{t.feedback.types[String(params.value ?? "genel") as FeedbackType]}</span>
     },
     {
       field: "status",
-      headerName: "Durum",
+      headerName: t.feedback.status,
       width: 150,
       editable: true,
       type: "singleSelect",
       valueOptions: ["received", "read", "resolved"],
-      renderCell: (params) => <span className={badgeClassStatus(String(params.value ?? ""))}>{statusLabels[String(params.value ?? "received") as FeedbackStatus]}</span>
+      renderCell: (params) => <span className={badgeClassStatus(String(params.value ?? ""))}>{t.feedback.statuses[String(params.value ?? "received") as FeedbackStatus]}</span>
     },
     {
       field: "owner",
-      headerName: "Sahip",
+      headerName: t.adminFeedback.owner,
       minWidth: 220,
       flex: 1,
       renderCell: (params) => <span className="feedback-owner">{String(params.value ?? "-")}</span>
     },
     {
       field: "createdAt",
-      headerName: "Tarih",
+      headerName: t.adminFeedback.date,
       width: 180,
-      valueGetter: (_, row) => new Date(String(row.createdAt)).toLocaleString("tr-TR")
+      valueGetter: (_, row) => new Date(String(row.createdAt)).toLocaleString(localeToDateTag(locale))
     },
     {
       field: "actions",
-      headerName: "Islem",
+      headerName: t.adminFeedback.action,
       width: 170,
       sortable: false,
       filterable: false,
@@ -196,7 +191,7 @@ export default function FeedbackManagementPage() {
             event.stopPropagation();
             setSelectedId(String(params.id));
           }}>
-            Ac
+            {t.adminFeedback.open}
           </button>
           <button type="button" className="danger-button" onClick={(event) => {
             event.stopPropagation();
@@ -207,7 +202,7 @@ export default function FeedbackManagementPage() {
         </div>
       )
     }
-  ], []);
+  ], [locale, t]);
 
   function refreshFrom(updated: FeedbackRecord) {
     setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -226,7 +221,7 @@ export default function FeedbackManagementPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Bu kaydi silmek istiyor musunuz?")) {
+    if (!window.confirm(t.adminFeedback.deleteConfirm)) {
       return;
     }
     await deleteFeedback(id);
@@ -245,7 +240,7 @@ export default function FeedbackManagementPage() {
       });
       refreshFrom(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Geri bildirim guncellenemedi.");
+      setError(err instanceof Error ? err.message : t.adminFeedback.updateError);
     } finally {
       setSaving(false);
     }
@@ -261,8 +256,8 @@ export default function FeedbackManagementPage() {
       <main className="auth-shell">
         <section className="auth-card panel">
           <LoaderCircle className="spin" size={32} />
-          <h1>Şikayet Yönetimi</h1>
-          <p>Yetki bilgisi kontrol ediliyor...</p>
+          <h1>{t.adminFeedback.title}</h1>
+          <p>{t.adminFeedback.checking}</p>
         </section>
       </main>
     );
@@ -273,9 +268,9 @@ export default function FeedbackManagementPage() {
       <main className="auth-shell">
         <section className="auth-card panel">
           <AlertCircle size={32} />
-          <h1>Şikayet Yönetimi</h1>
-          <p>Oturum gerekli.</p>
-          <Link className="secondary-button" href="/">Ana ekrana dön</Link>
+          <h1>{t.adminFeedback.title}</h1>
+          <p>{t.adminFeedback.sessionRequired}</p>
+          <Link className="secondary-button" href="/">{t.adminFeedback.backHome}</Link>
         </section>
       </main>
     );
@@ -286,9 +281,9 @@ export default function FeedbackManagementPage() {
       <main className="auth-shell">
         <section className="auth-card panel">
           <AlertCircle size={32} />
-          <h1>Şikayet Yönetimi</h1>
-          <p>Bu sayfa yalnızca yönetici hesabına açıktır.</p>
-          <Link className="secondary-button" href="/">Ana ekrana dön</Link>
+          <h1>{t.adminFeedback.title}</h1>
+          <p>{t.adminFeedback.adminOnly}</p>
+          <Link className="secondary-button" href="/">{t.adminFeedback.backHome}</Link>
         </section>
       </main>
     );
@@ -298,34 +293,34 @@ export default function FeedbackManagementPage() {
     <main className="workspace admin-feedback-shell">
       <div className="topbar">
         <div>
-          <span className="eyebrow">Yonetici paneli</span>
-          <h1>Şikayet Yönetimi</h1>
-          <p>Arama, filtreleme, satır içi düzenleme ve durum yönetimi tek ekranda.</p>
+          <span className="eyebrow">{t.adminFeedback.eyebrow}</span>
+          <h1>{t.adminFeedback.title}</h1>
+          <p>{t.adminFeedback.description}</p>
         </div>
         <div className="hero-actions">
           <Link className="ghost-button" href="/">
             <ArrowLeft size={17} />
-            Ana uygulamaya dön
+            {t.adminFeedback.backApp}
           </Link>
         </div>
       </div>
 
       <div className="feedback-admin-filters">
         <label className="field-label">
-          Arama
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Baslik, mesaj, sahip..." />
+          {t.feedback.search}
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.adminFeedback.searchPlaceholder} />
         </label>
         <div className="feedback-quick-filters">
-          <button type="button" className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")}>Tümü</button>
-          <button type="button" className={statusFilter === "received" ? "active" : ""} onClick={() => setStatusFilter("received")}>Alındı</button>
-          <button type="button" className={statusFilter === "read" ? "active" : ""} onClick={() => setStatusFilter("read")}>İncelendi</button>
-          <button type="button" className={statusFilter === "resolved" ? "active" : ""} onClick={() => setStatusFilter("resolved")}>Çözüldü</button>
+          <button type="button" className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")}>{t.adminFeedback.all}</button>
+          <button type="button" className={statusFilter === "received" ? "active" : ""} onClick={() => setStatusFilter("received")}>{t.feedback.statuses.received}</button>
+          <button type="button" className={statusFilter === "read" ? "active" : ""} onClick={() => setStatusFilter("read")}>{t.feedback.statuses.read}</button>
+          <button type="button" className={statusFilter === "resolved" ? "active" : ""} onClick={() => setStatusFilter("resolved")}>{t.feedback.statuses.resolved}</button>
         </div>
         <div className="feedback-quick-filters">
-          <button type="button" className={typeFilter === "all" ? "active" : ""} onClick={() => setTypeFilter("all")}>Tüm tipler</button>
-          <button type="button" className={typeFilter === "hata" ? "active" : ""} onClick={() => setTypeFilter("hata")}>Hata</button>
-          <button type="button" className={typeFilter === "ozellik" ? "active" : ""} onClick={() => setTypeFilter("ozellik")}>Özellik</button>
-          <button type="button" className={typeFilter === "genel" ? "active" : ""} onClick={() => setTypeFilter("genel")}>Genel</button>
+          <button type="button" className={typeFilter === "all" ? "active" : ""} onClick={() => setTypeFilter("all")}>{t.adminFeedback.allTypes}</button>
+          <button type="button" className={typeFilter === "hata" ? "active" : ""} onClick={() => setTypeFilter("hata")}>{t.feedback.types.hata}</button>
+          <button type="button" className={typeFilter === "ozellik" ? "active" : ""} onClick={() => setTypeFilter("ozellik")}>{t.feedback.types.ozellik}</button>
+          <button type="button" className={typeFilter === "genel" ? "active" : ""} onClick={() => setTypeFilter("genel")}>{t.feedback.types.genel}</button>
         </div>
       </div>
 
@@ -335,13 +330,13 @@ export default function FeedbackManagementPage() {
         <div className="panel feedback-admin-table">
           <div className="section-head">
             <div>
-              <span className="section-label">Kayıtlar</span>
-              <h3>Görünen şikayetler</h3>
+              <span className="section-label">{t.adminFeedback.records}</span>
+              <h3>{t.adminFeedback.visibleRecords}</h3>
             </div>
-            <span className="status">{filteredItems.length}/{items.length} kayıt</span>
+            <span className="status">{filteredItems.length}/{items.length} {t.feedback.recordCount}</span>
           </div>
           {loading ? (
-            <p className="empty">Geri bildirimler yükleniyor...</p>
+            <p className="empty">{t.adminFeedback.loading}</p>
           ) : (
             <div className="feedback-datagrid-wrap">
               <DataGrid
@@ -350,7 +345,7 @@ export default function FeedbackManagementPage() {
                 columns={columns}
                 disableRowSelectionOnClick
                 processRowUpdate={handleRowUpdate}
-                onProcessRowUpdateError={(err) => setError(err instanceof Error ? err.message : "Satır güncellenemedi.")}
+                onProcessRowUpdateError={(err) => setError(err instanceof Error ? err.message : t.adminFeedback.rowUpdateError)}
                 onRowClick={(params: GridRowParams) => setSelectedId(String(params.id))}
                 initialState={{ pagination: { paginationModel: { page: 0, pageSize: 8 } } }}
                 pageSizeOptions={[8, 15, 25]}
@@ -375,73 +370,75 @@ export default function FeedbackManagementPage() {
         <div className="panel feedback-admin-detail">
           <div className="section-head">
             <div>
-              <span className="section-label">Detay</span>
-              <h3>Seçili kayıt</h3>
+              <span className="section-label">{t.adminFeedback.detail}</span>
+              <h3>{t.adminFeedback.selectedRecord}</h3>
             </div>
           </div>
           {selected ? (
             <form className="feedback-edit-form" onSubmit={handleSave}>
               <div className="feedback-detail-meta">
                 <div>
-                  <small>Durum</small>
-                  <strong className={badgeClassStatus(selected.status)}>{statusLabels[selected.status as FeedbackStatus] ?? selected.status}</strong>
+                  <small>{t.feedback.status}</small>
+                  <strong className={badgeClassStatus(selected.status)}>{t.feedback.statuses[selected.status as FeedbackStatus] ?? selected.status}</strong>
                 </div>
                 <div>
-                  <small>Tip</small>
-                  <strong className={badgeClassType(selected.type)}>{typeLabels[selected.type as FeedbackType] ?? selected.type}</strong>
+                  <small>{t.feedback.type}</small>
+                  <strong className={badgeClassType(selected.type)}>{t.feedback.types[selected.type as FeedbackType] ?? selected.type}</strong>
                 </div>
                 <div>
-                  <small>Sahip</small>
+                  <small>{t.adminFeedback.owner}</small>
                   <strong>{selected.userName ?? "-"}{selected.userEmail ? ` (${selected.userEmail})` : ""}</strong>
                 </div>
               </div>
               <div className="feedback-edit-grid">
                 <label className="field-label">
-                  Tip
+                  {t.feedback.type}
                   <select value={editForm.type} onChange={(event) => setEditForm((current) => ({ ...current, type: event.target.value as FeedbackType }))}>
-                    <option value="hata">Hata bildirimi</option>
-                    <option value="ozellik">Özellik isteği</option>
-                    <option value="genel">Genel geri bildirim</option>
+                    <option value="hata">{t.feedback.types.hata}</option>
+                    <option value="ozellik">{t.feedback.types.ozellik}</option>
+                    <option value="genel">{t.feedback.types.genel}</option>
                   </select>
                 </label>
                 <label className="field-label">
-                  Durum
+                  {t.feedback.status}
                   <select value={editForm.status} onChange={(event) => setEditForm((current) => ({ ...current, status: event.target.value as FeedbackStatus }))}>
-                    <option value="received">Alındı</option>
-                    <option value="read">İncelendi</option>
-                    <option value="resolved">Çözüldü</option>
+                    <option value="received">{t.feedback.statuses.received}</option>
+                    <option value="read">{t.feedback.statuses.read}</option>
+                    <option value="resolved">{t.feedback.statuses.resolved}</option>
                   </select>
                 </label>
               </div>
               <label className="field-label">
-                Başlık
+                {t.feedback.subject}
                 <input value={editForm.subject} onChange={(event) => setEditForm((current) => ({ ...current, subject: event.target.value }))} />
               </label>
               <label className="field-label">
-                Mesaj
+                {t.feedback.message}
                 <textarea rows={8} value={editForm.message} onChange={(event) => setEditForm((current) => ({ ...current, message: event.target.value }))} />
               </label>
               <div className="feedback-detail-actions">
                 <button type="submit" disabled={saving}>
                   {saving ? <LoaderCircle className="spin" size={17} /> : null}
-                  Kaydet
+                  {t.adminFeedback.save}
                 </button>
                 <button type="button" className="secondary-button" onClick={() => updateStatus(selected.id, "read")}>
-                  Okundu
+                  {t.adminFeedback.markRead}
                 </button>
                 <button type="button" className="secondary-button" onClick={() => updateStatus(selected.id, "resolved")}>
-                  Çözüldü
+                  {t.feedback.statuses.resolved}
                 </button>
                 <button type="button" className="danger-button" onClick={() => void handleDelete(selected.id)}>
-                  Sil
+                  {t.cases.delete}
                 </button>
               </div>
             </form>
           ) : (
-            <p className="empty">Listeden bir kayıt seçin.</p>
+            <p className="empty">{t.adminFeedback.emptySelection}</p>
           )}
         </div>
       </section>
     </main>
   );
 }
+
+

@@ -1,0 +1,39 @@
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '705236994'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3509817542'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3509817542'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3509817542'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '705236994'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '705236994'
+}
+ ⨯ [TypeError: __webpack_modules__[moduleId] is not a function] {
+  digest: '1627392427'
+}
+ ⨯ Error: Could not find the module "C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\frontend\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '705236994'
+}
+[TypeError: __webpack_modules__[moduleId] is not a function]
+ ⨯ [TypeError: __webpack_modules__[moduleId] is not a function]
+ ⨯ [TypeError: __webpack_modules__[moduleId] is not a function] {
+  page: '/'
+}

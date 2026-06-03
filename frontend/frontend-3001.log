@@ -1,0 +1,21 @@
+
+> lawai-next-langchain-frontend@0.1.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.26:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.6s (2848 modules)
+ GET / 200 in 5721ms
+ ✓ Compiled in 1441ms (2848 modules)
+ ✓ Compiled in 430ms (1356 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 852ms (1492 modules)
+ ○ Compiling /_error ...
+ GET / 500 in 52450ms
+[?25h
