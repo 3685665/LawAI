@@ -15,6 +15,91 @@
   --shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
   --shadow-soft: 0 8px 18px rgba(15, 23, 42, 0.04);
 }
+body[data-theme="dark"] {
+  --bg: #0c1118;
+  --bg-2: #121923;
+  --panel: #121b27;
+  --panel-strong: #152131;
+  --ink: #edf3f9;
+  --muted: #a4afba;
+  --line: #274055;
+  --accent: #7eaad4;
+  --accent-strong: #9cbfe3;
+  --accent-soft: #183047;
+  --danger: #f0a29d;
+  --warning-bg: #271a16;
+  --success-bg: #10271c;
+  --shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+  --shadow-soft: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+body[data-theme="dark"] .sidebar {
+  background: #0d1724;
+}
+
+body[data-theme="dark"] .brand,
+body[data-theme="dark"] .sidebar-admin-link,
+body[data-theme="dark"] .theme-toggle select {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body[data-theme="dark"] .tabs button {
+  color: #d9e4ef;
+}
+
+body[data-theme="dark"] .tabs button.active,
+body[data-theme="dark"] .tabs button:hover,
+body[data-theme="dark"] .sidebar-admin-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme="dark"] .privacy-toggle,
+body[data-theme="dark"] .theme-toggle {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: #d9e4ef;
+}
+
+body[data-theme="dark"] .theme-toggle select,
+body[data-theme="dark"] input,
+body[data-theme="dark"] textarea,
+body[data-theme="dark"] select {
+  background: #0f1723;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+body[data-theme="dark"] .panel,
+body[data-theme="dark"] .auth-card-split,
+body[data-theme="dark"] .auth-reset-card,
+body[data-theme="dark"] .feedback-card,
+body[data-theme="dark"] .feedback-history-closed,
+body[data-theme="dark"] .feedback-datagrid-wrap,
+body[data-theme="dark"] .auth-credentials,
+body[data-theme="dark"] .training-pill,
+body[data-theme="dark"] .training-modes span {
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+body[data-theme="dark"] .feedback-datagrid-wrap .MuiDataGrid-virtualScroller {
+  background: linear-gradient(180deg, #111a26 0%, #0f1723 100%);
+}
+
+body[data-theme="dark"] .feedback-datagrid-wrap .MuiDataGrid-columnHeaders {
+  background-color: #101925;
+}
+
+body[data-theme="dark"] .status {
+  background: #12321f;
+  border-color: #1d4d2f;
+  color: #c8f0d3;
+}
+
+body[data-theme="dark"] .status.offline {
+  background: #301e1b;
+  border-color: #5c312e;
+  color: #ffbbb4;
+}
 
 * {
   box-sizing: border-box;
@@ -188,6 +273,27 @@ pre {
 .privacy-toggle input {
   accent-color: var(--accent);
   width: auto;
+}
+
+.theme-toggle {
+  display: grid;
+  gap: 8px;
+  padding: 14px 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dce5e1;
+}
+
+.theme-toggle span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.theme-toggle select {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8faf7;
 }
 
 .workspace {
@@ -2241,4 +2347,6 @@ pre {
     grid-column: 2;
   }
 }
+
+
 

@@ -70,6 +70,7 @@ type FeedbackGridRow = FeedbackRecord & {
   createdAtLabel: string;
   messagePreview: string;
 };
+type ThemeMode = "original" | "light" | "dark";
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
 type CaseDocument = {
@@ -215,6 +216,7 @@ function getFeedbackStatusLabel(value: string) {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [privateMode, setPrivateMode] = useState(true);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("original");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
@@ -316,6 +318,23 @@ export default function Home() {
   useEffect(() => {
     checkHealth().then(setBackendOnline);
   }, []);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("lawai-theme");
+    const initialTheme = storedTheme === "dark" || storedTheme === "light" || storedTheme === "original"
+      ? storedTheme
+      : "original";
+    setThemeMode(initialTheme);
+  }, []);
+
+  useEffect(() => {
+    if (themeMode === "original") {
+      delete document.body.dataset.theme;
+    } else {
+      document.body.dataset.theme = themeMode;
+    }
+    window.localStorage.setItem("lawai-theme", themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -868,6 +887,15 @@ export default function Home() {
           <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
           <Lock size={17} />
           <span>Gizli mod</span>
+        </label>
+
+        <label className="theme-toggle">
+          <span>Tema</span>
+          <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
+            <option value="original">Orijinal tema</option>
+            <option value="light">Açık tema</option>
+            <option value="dark">Koyu tema</option>
+          </select>
         </label>
 
         <div className="sidebar-user">
