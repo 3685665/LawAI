@@ -60,6 +60,8 @@ export type AuthSessionResponse = { user: AuthUser };
 export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null; resetLinkPreview?: string | null };
 export type FeedbackRecord = {
   id: string;
+  userName?: string | null;
+  userEmail?: string | null;
   type: string;
   subject: string;
   message: string;
@@ -68,6 +70,13 @@ export type FeedbackRecord = {
 };
 export type FeedbackSubmissionResponse = { message: string; feedback: FeedbackRecord };
 export type FeedbackStatus = "received" | "read" | "resolved";
+export type FeedbackType = "hata" | "ozellik" | "genel";
+export type FeedbackUpdatePayload = {
+  type: FeedbackType;
+  subject: string;
+  message: string;
+  status: FeedbackStatus;
+};
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -184,6 +193,14 @@ export async function listFeedback(): Promise<FeedbackRecord[]> {
 
 export async function updateFeedbackStatus(id: string, status: FeedbackStatus): Promise<FeedbackRecord> {
   return patchJson<FeedbackRecord>(`/feedback/${id}/status`, { status });
+}
+
+export async function updateFeedback(id: string, payload: FeedbackUpdatePayload): Promise<FeedbackRecord> {
+  return patchJson<FeedbackRecord>(`/feedback/${id}`, payload);
+}
+
+export async function deleteFeedback(id: string): Promise<void> {
+  await deleteJson<void>(`/feedback/${id}`);
 }
 
 async function readError(response: Response): Promise<string> {

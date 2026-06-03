@@ -1,6 +1,8 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import {
   ArrowRight,
   AlertCircle,
@@ -46,7 +48,6 @@ import {
   patchJson,
   postJson,
   listFeedback,
-  updateFeedbackStatus as patchFeedbackStatus,
   Precedent,
   seedSamples,
   submitFeedback as postFeedback,
@@ -63,6 +64,12 @@ type KnowledgeResponse = { indexed: number; storage: string; message: string };
 type FeedbackType = "hata" | "ozellik" | "genel";
 type FeedbackFilter = "all" | FeedbackType;
 type FeedbackStatusFilter = "all" | FeedbackStatus;
+type FeedbackGridRow = FeedbackRecord & {
+  typeLabel: string;
+  statusLabel: string;
+  createdAtLabel: string;
+  messagePreview: string;
+};
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
 type CaseDocument = {
@@ -282,6 +289,7 @@ export default function Home() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<FeedbackRecord | null>(null);
+  const [feedbackHistoryOpen, setFeedbackHistoryOpen] = useState(false);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [feedbackSearch, setFeedbackSearch] = useState("");
   const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<FeedbackFilter>("all");
@@ -446,8 +454,6 @@ export default function Home() {
     };
   }, [dashboardCases, dashboardTemplates]);
 
-  const canModerateFeedback = authUser?.role === "ADMIN";
-
   const filteredFeedbackItems = useMemo(() => {
     const query = feedbackSearch.trim().toLowerCase();
     return feedbackItems.filter((item) => {
@@ -462,6 +468,18 @@ export default function Home() {
     });
   }, [feedbackItems, feedbackSearch, feedbackTypeFilter, feedbackStatusFilter]);
 
+  
+
+  const feedbackRows = useMemo<FeedbackGridRow[]>(() => {
+    return filteredFeedbackItems.map((item) => ({
+      ...item,
+      typeLabel: getFeedbackTypeLabel(item.type),
+      statusLabel: getFeedbackStatusLabel(item.status),
+      createdAtLabel: new Date(item.createdAt).toLocaleString("tr-TR"),
+      messagePreview: item.message.length > 120 ? `${item.message.slice(0, 120).trim()}...` : item.message
+    }));
+  }, [filteredFeedbackItems]);
+
   const selectedFeedback = useMemo(() => {
     if (!filteredFeedbackItems.length) {
       return null;
@@ -469,17 +487,39 @@ export default function Home() {
     return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? filteredFeedbackItems[0];
   }, [filteredFeedbackItems, selectedFeedbackId]);
 
-  useEffect(() => {
-    if (activeTab !== "feedback") {
-      return;
+  const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [
+    {
+        field: "subject",
+        headerName: "Baslik",
+        flex: 1.35,
+        minWidth: 220,
+        renderCell: (params) => (
+          <div className="feedback-grid-cell">
+            <strong>{String(params.value ?? "")}</strong>
+            <span>{String(params.row.messagePreview ?? "")}</span>
+          </div>
+        )
+      },
+    {
+      field: "typeLabel",
+      headerName: "Tip",
+      width: 180,
+      sortable: false,
+      renderCell: (params) => <span className={`feedback-pill feedback-pill-type feedback-type-${params.row.type}`}>{String(params.value ?? "")}</span>
+    },
+    {
+      field: "statusLabel",
+      headerName: "Durum",
+      width: 150,
+      sortable: false,
+      renderCell: (params) => <span className={`feedback-pill feedback-pill-status feedback-status-${params.row.status}`}>{String(params.value ?? "")}</span>
+    },
+    {
+      field: "createdAtLabel",
+      headerName: "Tarih",
+      width: 185
     }
-    const nextSelected = filteredFeedbackItems.find((item) => item.id === selectedFeedbackId)?.id
-      ?? filteredFeedbackItems[0]?.id
-      ?? null;
-    if (nextSelected !== selectedFeedbackId) {
-      setSelectedFeedbackId(nextSelected);
-    }
-  }, [activeTab, filteredFeedbackItems, selectedFeedbackId]);
+  ], []);
 
   async function run(action: string, fn: () => Promise<void>) {
     setLoading(action);
@@ -538,16 +578,8 @@ export default function Home() {
       setFeedbackSubmitted(response.feedback);
       setFeedbackItems((current) => [response.feedback, ...current.filter((item) => item.id !== response.feedback.id)]);
       setSelectedFeedbackId(response.feedback.id);
+      setFeedbackHistoryOpen(true);
       setFeedbackForm({ type: "genel", subject: "", message: "" });
-    });
-  }
-
-  function updateFeedbackItemStatus(id: string, status: FeedbackStatus) {
-    run("feedback-status", async () => {
-      const updated = await patchFeedbackStatus(id, status);
-      setFeedbackItems((current) => current.map((item) => (item.id === id ? updated : item)));
-      setFeedbackSubmitted((current) => (current?.id === id ? updated : current));
-      setSelectedFeedbackId(id);
     });
   }
 
@@ -622,6 +654,7 @@ export default function Home() {
       setFeedbackItems([]);
       setFeedbackError("");
       setFeedbackSubmitted(null);
+      setFeedbackHistoryOpen(false);
       setSelectedFeedbackId(null);
       setFeedbackSearch("");
       setFeedbackTypeFilter("all");
@@ -1153,10 +1186,11 @@ export default function Home() {
           </section>
         )}
 
-                {activeTab === "feedback" && (
-          <section className="tool-grid">
+        {activeTab === "feedback" && (
+          <section className="feedback-workspace">
             <form className="panel primary-panel feedback-compose" onSubmit={submitFeedback}>
               <PanelTitle icon={<MessageSquareMore size={20} />} title="Geri bildirim gonder" />
+              <p className="panel-subtitle">Hata bildirimi, ozellik istegi veya genel geri bildirim ilet; kayit gecmisin burada saklansin.</p>
               <div className="feedback-types">
                 <button type="button" className={feedbackForm.type === "hata" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "hata" }))}>
                   Hata bildirimi
@@ -1174,43 +1208,56 @@ export default function Home() {
               </label>
               <label className="field-label">
                 Detay
-                <textarea rows={10} value={feedbackForm.message} onChange={(event) => setFeedbackForm((current) => ({ ...current, message: event.target.value }))} placeholder="Sorunu, istegi veya gorusunuzu detayli yazin." />
+                <textarea rows={11} value={feedbackForm.message} onChange={(event) => setFeedbackForm((current) => ({ ...current, message: event.target.value }))} placeholder="Sorunu, istegi veya gorusunuzu detayli yazin." />
               </label>
-              <div className="row">
+              <div className="row feedback-compose-actions">
                 <button disabled={loading === "feedback"} type="submit">
                   <Send size={17} />
                   Gonder
                 </button>
+                {feedbackSubmitted ? <div className="auth-preview feedback-success">Son kayit: <strong>{feedbackSubmitted.subject}</strong></div> : null}
               </div>
             </form>
-            <section className="feedback-board">
-              <article className="panel dashboard-panel feedback-list-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">Kayitlar</span>
-                    <h3>Gonderilen geri bildirimler</h3>
-                  </div>
-                  <span className="status">{canModerateFeedback ? "Yonetici gorunumu" : "Kendi kayitlariniz"}</span>
+
+            <section className="panel dashboard-panel feedback-history-panel">
+              <div className="section-head feedback-history-head">
+                <div>
+                  <span className="section-label">Gecmis</span>
+                  <h3>Sikayet gecmisi</h3>
                 </div>
-                <div className="feedback-toolbar">
-                  <label className="field-label">
-                    Arama
-                    <input
-                      value={feedbackSearch}
-                      onChange={(event) => setFeedbackSearch(event.target.value)}
-                      placeholder="Baslik, mesaj, durum veya tip ara"
-                    />
-                  </label>
-                  <label className="field-label">
-                    Tip
-                    <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
-                      <option value="all">Tum tipler</option>
-                      <option value="hata">Hata bildirimi</option>
-                      <option value="ozellik">Ozellik istegi</option>
-                      <option value="genel">Genel geri bildirim</option>
-                    </select>
-                  </label>
-                  {canModerateFeedback ? (
+                <div className="feedback-history-actions">
+                  <span className="status">{filteredFeedbackItems.length} kayit</span>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => setFeedbackHistoryOpen((current) => !current)}
+                  >
+                    <ClipboardList size={16} />
+                    {feedbackHistoryOpen ? "Gecmisi gizle" : "Gecmisi goster"}
+                  </button>
+                </div>
+              </div>
+
+              {feedbackHistoryOpen ? (
+                <>
+                  <div className="feedback-toolbar">
+                    <label className="field-label">
+                      Arama
+                      <input
+                        value={feedbackSearch}
+                        onChange={(event) => setFeedbackSearch(event.target.value)}
+                        placeholder="Baslik, mesaj, durum veya tip ara"
+                      />
+                    </label>
+                    <label className="field-label">
+                      Tip
+                      <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
+                        <option value="all">Tum tipler</option>
+                        <option value="hata">Hata bildirimi</option>
+                        <option value="ozellik">Ozellik istegi</option>
+                        <option value="genel">Genel geri bildirim</option>
+                      </select>
+                    </label>
                     <label className="field-label">
                       Durum
                       <select value={feedbackStatusFilter} onChange={(event) => setFeedbackStatusFilter(event.target.value as FeedbackStatusFilter)}>
@@ -1220,98 +1267,89 @@ export default function Home() {
                         <option value="resolved">Cozuldu</option>
                       </select>
                     </label>
+                  </div>
+                  {feedbackError ? <div className="error">{feedbackError}</div> : null}
+                  <div className="feedback-datagrid-wrap">
+                    <DataGrid
+                      rows={feedbackRows}
+                      columns={feedbackColumns}
+                      loading={feedbackLoading}
+                      autoHeight
+                      hideFooter
+                      disableRowSelectionOnClick
+                      disableColumnMenu
+                      rowHeight={72}
+                      columnHeaderHeight={42}
+                      onRowClick={(params: GridRowParams<FeedbackGridRow>) => setSelectedFeedbackId(String(params.id))}
+                      sx={{
+                        border: "none",
+                        color: "var(--ink)",
+                        fontFamily: "inherit",
+                        "& .MuiDataGrid-columnHeaders": {
+                          backgroundColor: "#f6f8fb",
+                          borderBottom: "1px solid var(--line)",
+                          color: "var(--muted)",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          letterSpacing: "0.04em",
+                          textTransform: "uppercase"
+                        },
+                        "& .MuiDataGrid-cell": {
+                          borderBottom: "1px solid rgba(212, 220, 230, 0.72)",
+                          outline: "none"
+                        },
+                        "& .MuiDataGrid-row": {
+                          cursor: "pointer"
+                        },
+                        "& .MuiDataGrid-row:hover": {
+                          backgroundColor: "#f4f8fc"
+                        },
+                        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                          outline: "none"
+                        }
+                      }}
+                    />
+                  </div>
+                  {selectedFeedback ? (
+                    <article className="panel feedback-detail-panel feedback-detail-panel-wide">
+                      <div className="section-head">
+                        <div>
+                          <span className="section-label">Detay</span>
+                          <h3>Secili kayit</h3>
+                        </div>
+                      </div>
+                      <div className="feedback-detail">
+                        <div className="feedback-detail-head">
+                          <strong>{selectedFeedback.subject}</strong>
+                          <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{getFeedbackTypeLabel(selectedFeedback.type)}</span>
+                        </div>
+                        <div className="feedback-detail-meta">
+                          <div>
+                            <small>Durum</small>
+                            <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{getFeedbackStatusLabel(selectedFeedback.status)}</strong>
+                          </div>
+                          <div>
+                            <small>Tarih</small>
+                            <strong>{new Date(selectedFeedback.createdAt).toLocaleString("tr-TR")}</strong>
+                          </div>
+                        </div>
+                        <div className="feedback-detail-body">
+                          <small>Mesaj</small>
+                          <p>{selectedFeedback.message}</p>
+                        </div>
+                      </div>
+                    </article>
                   ) : null}
+                </>
+              ) : (
+                <div className="feedback-history-closed">
+                  <p>Gecmis gizli. Eski kayitlari ve detaylarini goruntulemek icin butonu kullan.</p>
                 </div>
-                {feedbackSubmitted ? <div className="auth-preview">Son kayit: <strong>{feedbackSubmitted.subject}</strong></div> : null}
-                {feedbackError ? <div className="error">{feedbackError}</div> : null}
-                {feedbackLoading ? (
-                  <EmptyState text="Geri bildirimler yukleniyor..." />
-                ) : filteredFeedbackItems.length ? (
-                  <div className="feedback-grid">
-                    {filteredFeedbackItems.map((item) => {
-                      const selected = item.id === selectedFeedbackId;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={`feedback-card ${selected ? "selected" : ""}`}
-                          onClick={() => setSelectedFeedbackId(item.id)}
-                        >
-                          <div className="feedback-card-top">
-                            <strong>{item.subject}</strong>
-                            <span className={`feedback-pill feedback-pill-status feedback-status-${item.status}`}>{getFeedbackStatusLabel(item.status)}</span>
-                          </div>
-                          <div className="feedback-card-meta">
-                            <span className={`feedback-pill feedback-pill-type feedback-type-${item.type}`}>{getFeedbackTypeLabel(item.type)}</span>
-                            <small>{new Date(item.createdAt).toLocaleDateString("tr-TR")}</small>
-                          </div>
-                          <p>{item.message}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState text="Filtreye uygun geri bildirim bulunamadi." />
-                )}
-              </article>
-              <article className="panel feedback-detail-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">Detay</span>
-                    <h3>Secili kayit</h3>
-                  </div>
-                </div>
-                {selectedFeedback ? (
-                  <div className="feedback-detail">
-                    <div className="feedback-detail-head">
-                      <strong>{selectedFeedback.subject}</strong>
-                      <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{getFeedbackTypeLabel(selectedFeedback.type)}</span>
-                    </div>
-                    <div className="feedback-detail-meta">
-                      <div>
-                        <small>Durum</small>
-                        <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{getFeedbackStatusLabel(selectedFeedback.status)}</strong>
-                      </div>
-                      <div>
-                        <small>Tarih</small>
-                        <strong>{new Date(selectedFeedback.createdAt).toLocaleString("tr-TR")}</strong>
-                      </div>
-                    </div>
-                    <div className="feedback-detail-body">
-                      <small>Mesaj</small>
-                      <p>{selectedFeedback.message}</p>
-                    </div>
-                    {canModerateFeedback ? (
-                      <div className="feedback-detail-actions">
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          disabled={loading === "feedback-status" || selectedFeedback.status === "read" || selectedFeedback.status === "resolved"}
-                          onClick={() => updateFeedbackItemStatus(selectedFeedback.id, "read")}
-                        >
-                          Okundu olarak isaretle
-                        </button>
-                        <button
-                          type="button"
-                          disabled={loading === "feedback-status" || selectedFeedback.status === "resolved"}
-                          onClick={() => updateFeedbackItemStatus(selectedFeedback.id, "resolved")}
-                        >
-                          Cozuldu olarak isaretle
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="feedback-detail-actions feedback-detail-note">
-                        <span>Bu kayit sadece goruntulenebilir. Islem yetkisi yonetici hesaptadir.</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <EmptyState text="Soldan bir geri bildirim secin." />
-                )}
-              </article>
+              )}
             </section>
           </section>
         )}
+
         {accountOpen && (
           <div className="account-overlay" role="dialog" aria-modal="true" aria-label="Sifre degistir">
             <form className="panel account-card" onSubmit={handleChangePassword}>
@@ -1902,3 +1940,9 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+
+
+
+
+

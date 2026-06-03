@@ -3,6 +3,7 @@ package com.lawai.api.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.api.dto.FeedbackCreateRequest;
 import com.lawai.api.dto.FeedbackRecordDto;
+import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.dto.FeedbackStatusUpdateRequest;
 import com.lawai.api.model.FeedbackRecord;
 import com.lawai.api.model.FeedbackStorePayload;
@@ -125,8 +126,77 @@ public class FeedbackService {
         .orElseThrow(() -> new IllegalStateException("Geri bildirim guncellenemedi."));
   }
 
+  public FeedbackRecordDto update(AuthenticatedUser user, String feedbackId, FeedbackUpdateRequest request) {
+    if (!user.isAdmin()) {
+      throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
+    }
+    String type = normalize(request.type());
+    String subject = request.subject().trim();
+    String message = request.message().trim();
+    String status = normalizeStatus(request.status());
+    if (!StringUtils.hasText(type)) {
+      throw new IllegalArgumentException("Geri bildirim tipi gerekli.");
+    }
+    if (!StringUtils.hasText(subject)) {
+      throw new IllegalArgumentException("Baslik gerekli.");
+    }
+    if (!StringUtils.hasText(message)) {
+      throw new IllegalArgumentException("Mesaj gerekli.");
+    }
+    if (!StringUtils.hasText(status)) {
+      throw new IllegalArgumentException("Durum gerekli.");
+    }
+
+    List<FeedbackRecord> items = new ArrayList<>(load());
+    boolean updated = false;
+    List<FeedbackRecord> rewritten = new ArrayList<>(items.size());
+    for (FeedbackRecord item : items) {
+      if (item.id().equals(feedbackId)) {
+        rewritten.add(new FeedbackRecord(
+            item.id(),
+            item.userId(),
+            item.userName(),
+            item.userEmail(),
+            type,
+            subject,
+            message,
+            status,
+            item.createdAt()
+        ));
+        updated = true;
+      } else {
+        rewritten.add(item);
+      }
+    }
+
+    if (!updated) {
+      throw new IllegalArgumentException("Geri bildirim bulunamadi.");
+    }
+
+    save(rewritten);
+    return rewritten.stream()
+        .filter(item -> item.id().equals(feedbackId))
+        .findFirst()
+        .map(this::toDto)
+        .orElseThrow(() -> new IllegalStateException("Geri bildirim guncellenemedi."));
+  }
+
+  public void delete(AuthenticatedUser user, String feedbackId) {
+    if (!user.isAdmin()) {
+      throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
+    }
+    List<FeedbackRecord> items = new ArrayList<>(load());
+    List<FeedbackRecord> rewritten = items.stream()
+        .filter(item -> !item.id().equals(feedbackId))
+        .toList();
+    if (rewritten.size() == items.size()) {
+      throw new IllegalArgumentException("Geri bildirim bulunamadi.");
+    }
+    save(rewritten);
+  }
+
   private FeedbackRecordDto toDto(FeedbackRecord record) {
-    return new FeedbackRecordDto(record.id(), record.type(), record.subject(), record.message(), record.status(), record.createdAt());
+    return new FeedbackRecordDto(record.id(), record.userName(), record.userEmail(), record.type(), record.subject(), record.message(), record.status(), record.createdAt());
   }
 
   private List<FeedbackRecord> load() {

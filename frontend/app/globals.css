@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f4f6f8;
   --bg-2: #edf1f5;
   --panel: #ffffff;
@@ -809,6 +809,63 @@ pre {
   align-items: start;
 }
 
+.feedback-workspace {
+  align-items: start;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.panel-subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: -2px 0 0;
+}
+
+.feedback-compose-actions {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.feedback-success {
+  margin: 0;
+}
+
+.feedback-datagrid-wrap {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.feedback-datagrid-wrap .MuiDataGrid-root {
+  border: 0;
+}
+
+.feedback-datagrid-wrap .MuiDataGrid-virtualScroller {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+}
+
+.feedback-detail-panel-wide {
+  margin-top: 2px;
+}
+
+.feedback-history-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.feedback-history-closed {
+  background: #fafbfd;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  padding: 18px 20px;
+}
+
 .feedback-list-panel,
 .feedback-detail-panel {
   display: grid;
@@ -861,6 +918,128 @@ pre {
 .feedback-toolbar input,
 .feedback-toolbar select {
   margin-top: 6px;
+}
+
+.feedback-admin-callout {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.feedback-admin-callout p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.feedback-admin-shell {
+  max-width: 1700px;
+}
+
+.feedback-admin-filters {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.1fr) repeat(2, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.feedback-admin-filters .field-label {
+  margin: 0;
+}
+
+.feedback-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.feedback-quick-filters button {
+  background: #eef3f7;
+  color: var(--accent-strong);
+  box-shadow: none;
+}
+
+.feedback-quick-filters button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.feedback-admin-layout {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
+}
+
+.feedback-admin-table,
+.feedback-admin-detail {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.feedback-admin-detail {
+  position: sticky;
+  top: 24px;
+}
+
+.feedback-datagrid-wrap {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.feedback-grid-cell {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+}
+
+.feedback-grid-cell strong {
+  font-size: 14px;
+}
+
+.feedback-grid-cell span,
+.feedback-owner {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.feedback-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-row-actions .danger-button,
+.feedback-row-actions .secondary-button {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.feedback-edit-form {
+  display: grid;
+  gap: 14px;
+}
+
+.feedback-edit-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feedback-detail-note {
+  background: #f7f9fb;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  justify-content: flex-start;
+  padding: 12px 14px;
+}
+
+.feedback-admin-detail .feedback-detail-meta {
+  flex-wrap: wrap;
 }
 
 .feedback-card.selected {
@@ -1962,6 +2141,20 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .feedback-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-admin-filters,
+  .feedback-admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-admin-detail {
+    position: static;
+    top: auto;
+  }
+
   .row select {
     max-width: none;
   }
@@ -2007,7 +2200,8 @@ pre {
   }
 
   .feedback-board,
-  .feedback-grid {
+  .feedback-grid,
+  .feedback-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -2028,3 +2222,4 @@ pre {
     grid-column: 2;
   }
 }
+
