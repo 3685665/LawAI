@@ -138,7 +138,15 @@
     "documentPrepDesc": "Complete missing attachments and standardize file ordering.",
     "readyHint": "Today's follow-up",
     "readyHintDesc": "Priority work, pending revisions and urgent cases.",
-    "caseProgress": "{progress}% complete"
+      "caseProgress": "{progress}% complete"
+      ,"lawyerDeskTitle": "Today's workbench"
+      ,"lawyerDeskSubtitle": "At-risk files first, then recent activity and work to produce."
+      ,"priorityWork": "Priority work"
+      ,"openCaseFile": "Open file"
+      ,"prepareHearing": "Hearing note"
+      ,"caseSnapshot": "Case snapshot"
+      ,"actionQueue": "Action queue"
+      ,"noActionNoise": "Only the information you need to decide today is shown."
   },
   "tools": {
     "chatTitle": "Smart Notes",
@@ -191,7 +199,14 @@
     "researchUseText": "Add the selected decision to the petition context so it can be used in draft work.",
     "researchTechnicalNotice": "Important Technical Note",
     "researchTechnicalNoticeText": "Precedent research can ONLY be performed from the Precedent page. Instructions in the petition assistant such as \"find precedent and add it to the petition\" do not access the precedent database. These two systems operate independently.",
-    "researchSummaryEmpty": "Run a search before creating an AI summary.",
+      "researchSummaryEmpty": "Run a search before creating an AI summary.",
+      "advancedOptions": "Details",
+      "technicalInfo": "Technical information",
+      "showExamples": "Example queries",
+      "lawyerQuestion": "Which legal question are you trying to answer?",
+      "outputPanel": "Output",
+      "caseContext": "Case context",
+      "draftControls": "Draft controls",
     "petitionTitle": "Generate petition",
     "petitionSubmit": "Create draft",
     "petitionDraft": "Draft",

@@ -138,7 +138,15 @@
     "documentPrepDesc": "Eksik ekleri tamamlama ve dosya siralamasini standardize etme.",
     "readyHint": "Bugun icin takip",
     "readyHintDesc": "Oncelikli isler, bekleyen revizyonlar ve acil dosyalar.",
-    "caseProgress": "{progress}% tamamlandi"
+      "caseProgress": "{progress}% tamamlandi"
+      ,"lawyerDeskTitle": "Bugunku calisma masasi"
+      ,"lawyerDeskSubtitle": "Once riskli dosyalar, sonra son hareketler ve uretilecek isler."
+      ,"priorityWork": "Oncelikli is"
+      ,"openCaseFile": "Dosya ac"
+      ,"prepareHearing": "Durusma notu"
+      ,"caseSnapshot": "Dosya ozeti"
+      ,"actionQueue": "Islem kuyruğu"
+      ,"noActionNoise": "Yalnizca bugun karar vermeniz gereken bilgiler gosterilir."
   },
   "tools": {
     "chatTitle": "Akilli Notlar",
@@ -191,7 +199,14 @@
     "researchUseText": "Secili karari dilekce baglamina ekleyerek taslak calismasinda kullanabilirsiniz.",
     "researchTechnicalNotice": "Onemli Teknik Bilgi",
     "researchTechnicalNoticeText": "Ictihat arastirmasi YALNIZCA Ictihat sayfasindan yapilabilir. Dilekce asistaninda \"bana su konuda ictihat bul ve dilekceye yaz\" gibi talimatlar vermek, ictihat veritabanina erisim saglamaz. Bu iki sistem birbirinden bagimsiz calisir.",
-    "researchSummaryEmpty": "AI ozeti olusturmak icin once arama yapin.",
+      "researchSummaryEmpty": "AI ozeti olusturmak icin once arama yapin.",
+      "advancedOptions": "Ayrintilar",
+      "technicalInfo": "Teknik bilgi",
+      "showExamples": "Ornek sorgular",
+      "lawyerQuestion": "Hangi hukuki soruya cevap ariyorsunuz?",
+      "outputPanel": "Cikti",
+      "caseContext": "Dosya baglami",
+      "draftControls": "Taslak islemleri",
     "petitionTitle": "Dilekce uret",
     "petitionSubmit": "Taslak olustur",
     "petitionDraft": "Taslak",

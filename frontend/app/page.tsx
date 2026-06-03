@@ -1248,9 +1248,9 @@ export default function Home() {
         {activeTab === "dashboard" && (
           <header className="topbar">
             <div>
-              <span className="eyebrow">{t.dashboard.eyebrow}</span>
-              <h1>{t.dashboard.title}</h1>
-              <p>{t.dashboard.subtitle}</p>
+              <span className="eyebrow">{t.dashboard.noActionNoise}</span>
+              <h1>{t.dashboard.lawyerDeskTitle}</h1>
+              <p>{t.dashboard.lawyerDeskSubtitle}</p>
             </div>
             <span className={backendOnline === false ? "status offline" : "status"}>{loading ? t.dashboard.statusLoading : backendOnline === false ? t.dashboard.statusBackendDown : t.dashboard.statusReady}</span>
           </header>
@@ -1259,20 +1259,20 @@ export default function Home() {
         {activeTab === "dashboard" && (
           <section className="dashboard-hero panel">
             <div className="dashboard-hero-copy">
-              <h2>{t.dashboard.heroTitle}</h2>
-              <p>{t.dashboard.heroBody}</p>
+              <h2>{dashboardMetrics.riskCases.length ? t.dashboard.priorityWork : t.dashboard.caseSnapshot}</h2>
+              <p>{dashboardMetrics.riskCases.length ? `${dashboardMetrics.riskCases.length} ${t.dashboard.riskCases.toLowerCase()}` : t.dashboard.noRisk}</p>
               <div className="hero-actions">
-                <button type="button" onClick={() => setActiveTab("training")}>
-                  <GraduationCap size={17} />
-                  {t.tabs.training}
+                <button type="button" onClick={() => setActiveTab("cases")}>
+                  <FolderOpen size={17} />
+                  {t.dashboard.openCaseFile}
                 </button>
                 <button className="secondary-button" type="button" onClick={() => setActiveTab("petition")}>
                   <FileText size={17} />
-                  {t.tabs.petition}
+                  {t.dashboard.startPetition}
                 </button>
-                <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
-                  {t.tabs.search}
-                  <ChevronRight size={16} />
+                <button className="secondary-button" type="button" onClick={() => setActiveTab("chat")}>
+                  <ClipboardList size={17} />
+                  {t.dashboard.prepareHearing}
                 </button>
               </div>
             </div>
@@ -1286,8 +1286,8 @@ export default function Home() {
                 <strong>{privateMode ? t.dashboard.privacyOn : t.dashboard.standardMode}</strong>
               </div>
               <div className="hero-metric">
-                <span>{t.dashboard.focus}</span>
-                <strong>{t.dashboard.focusValue}</strong>
+                <span>{t.dashboard.riskCases}</span>
+                <strong>{dashboardLoading ? "..." : dashboardMetrics.riskCases.length}</strong>
               </div>
             </div>
           </section>
@@ -1357,36 +1357,13 @@ export default function Home() {
               <article className="panel dashboard-panel">
                 <div className="section-head">
                   <div>
-                    <span className="section-label">{t.dashboard.controls}</span>
-                    <h3>{t.dashboard.controlsTitle}</h3>
+                    <span className="section-label">{t.dashboard.priorityWork}</span>
+                    <h3>{t.dashboard.riskCases}</h3>
                   </div>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("training")}>
-                    {t.dashboard.openTraining}
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
+                    {t.dashboard.goCases}
                     <ArrowRight size={16} />
                   </button>
-                </div>
-                <div className="dashboard-checks">
-                  <div className="dashboard-check">
-                    <ShieldAlert size={18} />
-                    <div>
-                      <strong>{t.dashboard.procedureCheck}</strong>
-                      <span>{t.dashboard.procedureCheckDesc}</span>
-                    </div>
-                  </div>
-                  <div className="dashboard-check">
-                    <ClipboardList size={18} />
-                    <div>
-                      <strong>{t.dashboard.documentPrep}</strong>
-                      <span>{t.dashboard.documentPrepDesc}</span>
-                    </div>
-                  </div>
-                  <div className="dashboard-check">
-                    <Clock3 size={18} />
-                    <div>
-                      <strong>{t.dashboard.readyHint}</strong>
-                      <span>{t.dashboard.readyHintDesc}</span>
-                    </div>
-                  </div>
                 </div>
                 {dashboardMetrics.riskCases.length ? (
                   <div className="dashboard-risk-list">
@@ -1405,7 +1382,7 @@ export default function Home() {
               <article className="panel dashboard-panel">
                 <div className="section-head">
                   <div>
-                    <span className="section-label">{t.dashboard.quickAccess}</span>
+                    <span className="section-label">{t.dashboard.actionQueue}</span>
                     <h3>{t.dashboard.workShortcuts}</h3>
                   </div>
                 </div>
@@ -1423,15 +1400,6 @@ export default function Home() {
                     {t.dashboard.knowledgeBase}
                   </button>
                 </div>
-                <div className="dashboard-template-list">
-                  {dashboardMetrics.templates.map((template) => (
-                    <article key={template.caseType} className="dashboard-template">
-                      <strong>{template.label}</strong>
-                      <span>{template.title}</span>
-                      <small>{template.summary}</small>
-                    </article>
-                  ))}
-                </div>
               </article>
             </div>
           </section>
@@ -1445,7 +1413,6 @@ export default function Home() {
               <div>
                 <span className="eyebrow">{t.tabs.chat}</span>
                 <h1>{t.tools.chatTitle}</h1>
-                <p>{t.tools.smartNotesSubtitle}</p>
               </div>
               <div className="smart-notes-summary">
                 <div>
@@ -1554,16 +1521,15 @@ export default function Home() {
               <div>
                 <span className="eyebrow">{t.tabs.search}</span>
                 <h1>{t.tools.searchTitle}</h1>
-                <p>{t.tools.researchSubtitle}</p>
               </div>
               <div className="smart-notes-summary">
                 <div>
                   <span>{t.tools.searchResults}</span>
-                  <strong>{t.tools.researchMaxResults}</strong>
+                  <strong>{precedents.length} {t.tools.records}</strong>
                 </div>
                 <div>
-                  <span>{t.tools.researchMethods}</span>
-                  <strong>{t.tools.researchAiSearch} / {t.tools.researchManualSearch}</strong>
+                  <span>{t.tools.researchAiSummary}</span>
+                  <strong>{precedentSummary ? t.dashboard.statusReady : "-"}</strong>
                 </div>
               </div>
             </header>
@@ -1581,23 +1547,24 @@ export default function Home() {
                     {t.tools.researchManualSearch}
                   </button>
                 </div>
-                <p className="panel-subtitle">{researchMode === "ai" ? t.tools.researchAiSearchDesc : t.tools.researchManualSearchDesc}</p>
-
-                {researchMode === "ai" ? (
-                  <section className="precedent-examples">
-                    <span className="section-label">{t.tools.researchExamples}</span>
-                    {[t.tools.researchExampleJewelry, t.tools.researchExampleMunicipality, t.tools.researchExampleDocket].map((example) => (
-                      <button key={example} className="secondary-button" type="button" onClick={() => setSearchQuery(example)}>
-                        {example}
-                      </button>
-                    ))}
-                  </section>
-                ) : null}
 
                 <label className="field-label">
-                  {researchMode === "ai" ? t.tools.researchAiSearch : t.tools.researchKeywords}
+                  {researchMode === "ai" ? t.tools.lawyerQuestion : t.tools.researchKeywords}
                   <textarea rows={researchMode === "ai" ? 6 : 4} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t.tools.searchPlaceholder} />
                 </label>
+
+                {researchMode === "ai" ? (
+                  <details className="compact-details">
+                    <summary>{t.tools.showExamples}</summary>
+                    <section className="precedent-examples">
+                      {[t.tools.researchExampleJewelry, t.tools.researchExampleMunicipality, t.tools.researchExampleDocket].map((example) => (
+                        <button key={example} className="secondary-button" type="button" onClick={() => setSearchQuery(example)}>
+                          {example}
+                        </button>
+                      ))}
+                    </section>
+                  </details>
+                ) : null}
 
                 <div className="precedent-manual-grid">
                   <label className="field-label">
@@ -1632,10 +1599,13 @@ export default function Home() {
                   </div>
                 ) : null}
 
-                <section className="precedent-notice">
-                  <strong>{t.tools.researchTechnicalNotice}</strong>
-                  <p>{t.tools.researchTechnicalNoticeText}</p>
-                </section>
+                <details className="compact-details">
+                  <summary>{t.tools.technicalInfo}</summary>
+                  <section className="precedent-notice">
+                    <strong>{t.tools.researchTechnicalNotice}</strong>
+                    <p>{t.tools.researchTechnicalNoticeText}</p>
+                  </section>
+                </details>
 
                 <button disabled={loading === "search"} type="submit">
                   {loading === "search" ? <LoaderCircle className="spin" size={17} /> : <Search size={17} />}
@@ -1723,7 +1693,6 @@ export default function Home() {
               <div>
                 <span className="eyebrow">{t.tabs.petition}</span>
                 <h1>{t.tools.petitionAssistantTitle}</h1>
-                <p>{t.tools.petitionAssistantSubtitle}</p>
               </div>
               <div className="smart-notes-summary">
                 <div>
@@ -1749,11 +1718,9 @@ export default function Home() {
                 <div className="petition-model-grid">
                   <button className={petitionModel === "standard" ? "active" : ""} type="button" onClick={() => setPetitionModel("standard")}>
                     <strong>{t.tools.petitionStandardModel}</strong>
-                    <span>{t.tools.petitionStandardDesc}</span>
                   </button>
                   <button className={petitionModel === "premium" ? "active" : ""} type="button" onClick={() => setPetitionModel("premium")}>
                     <strong>{t.tools.petitionPremiumModel}</strong>
-                    <span>{t.tools.petitionPremiumDesc}</span>
                   </button>
                 </div>
 
@@ -1817,8 +1784,11 @@ export default function Home() {
               </form>
 
               <aside className="panel petition-edit-panel">
-                <PanelTitle icon={<Bot size={20} />} title={t.tools.petitionSmartEdit} />
-                <p className="panel-subtitle">{t.tools.petitionQualityHint}</p>
+                <PanelTitle icon={<Bot size={20} />} title={t.tools.draftControls} />
+                <details className="compact-details">
+                  <summary>{t.tools.advancedOptions}</summary>
+                  <p className="panel-subtitle">{t.tools.petitionQualityHint}</p>
+                </details>
                 <label className="field-label">
                   {t.tools.petitionEditInstruction}
                   <textarea rows={7} value={petitionEditInstruction} onChange={(event) => setPetitionEditInstruction(event.target.value)} placeholder={t.tools.petitionEditPlaceholder} />

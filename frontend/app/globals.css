@@ -342,6 +342,7 @@ pre {
 
 .dashboard-hero-copy p {
   color: var(--muted);
+  font-size: 14px;
   margin: 0;
   max-width: 70ch;
 }
@@ -1597,7 +1598,7 @@ pre {
   align-content: start;
   display: grid;
   gap: 6px;
-  min-height: 104px;
+  min-height: 52px;
   padding: 14px;
 }
 
@@ -1605,6 +1606,33 @@ pre {
   font-size: 12px;
   line-height: 1.45;
   opacity: 0.86;
+}
+
+.compact-details {
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.compact-details summary {
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.compact-details[open] {
+  padding-bottom: 12px;
+}
+
+.compact-details .precedent-examples,
+.compact-details .precedent-notice {
+  border: 0;
+  padding: 8px 0 0;
 }
 
 .petition-form-grid {
