@@ -62,6 +62,11 @@ import {
 type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
+type SmartNote = {
+  id: string;
+  text: string;
+  createdAt: string;
+};
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
 type FeedbackType = "hata" | "ozellik" | "genel";
@@ -273,8 +278,9 @@ export default function Home() {
 
   const t = useMemo(() => getMessages(locale), [locale]);
 
-  const [chatQuestion, setChatQuestion] = useState("Kira alacagi icin nasil bir yol izlemeliyim?");
-  const [chatMode, setChatMode] = useState("analysis");
+  const [smartNoteCaseTitle, setSmartNoteCaseTitle] = useState("Kira alacagi dosyasi");
+  const [smartNoteDraft, setSmartNoteDraft] = useState("Yarin bu dosyanin durusmasi var, lutfen benim icin durusma notlari cikar. Bu dosyada eksik hususlar neler, bu durusmada dikkat edilmesi gereken hususlar neler?");
+  const [smartNotes, setSmartNotes] = useState<SmartNote[]>([]);
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("ise iade fesih ispat");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
@@ -342,6 +348,23 @@ export default function Home() {
     document.documentElement.lang = locale;
     window.localStorage.setItem("lawai-locale", locale);
   }, [locale]);
+
+  useEffect(() => {
+    const storedNotes = window.localStorage.getItem("lawai-smart-notes");
+    if (!storedNotes) return;
+    try {
+      const parsed = JSON.parse(storedNotes) as SmartNote[];
+      if (Array.isArray(parsed)) {
+        setSmartNotes(parsed.filter((item) => typeof item.id === "string" && typeof item.text === "string"));
+      }
+    } catch {
+      setSmartNotes([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("lawai-smart-notes", JSON.stringify(smartNotes));
+  }, [smartNotes]);
 
   useEffect(() => {
     checkHealth().then(setBackendOnline);
@@ -593,11 +616,82 @@ export default function Home() {
     }
   }
 
+  function addSmartNote() {
+    const text = smartNoteDraft.trim();
+    if (!text) return;
+    setSmartNotes((current) => [
+      {
+        id: crypto.randomUUID(),
+        text,
+        createdAt: new Date().toISOString()
+      },
+      ...current
+    ]);
+    setSmartNoteDraft("");
+  }
+
+  function useSampleSmartNote() {
+    setSmartNoteDraft("Taniklardan Ahmet Ornek dinlenecek. Dosyadaki tum belgeleri oku, analiz et ve bu taniga sorulabilecek soru onerileri hazirla.");
+  }
+
+  function buildSmartNotesPrompt() {
+    const notesText = smartNotes
+      .map((note, index) => `${index + 1}. ${note.text}`)
+      .join("\n");
+    return [
+      t.tools.smartNotesAnalysisPrompt,
+      "",
+      `Dosya: ${smartNoteCaseTitle.trim() || "-"}`,
+      "",
+      "Notlar:",
+      notesText
+    ].join("\n");
+  }
+
   function submitChat(event: FormEvent) {
     event.preventDefault();
+    if (!smartNotes.length) {
+      setError(t.tools.smartNotesNoNotes);
+      return;
+    }
     run("chat", async () => {
-      setChatResponse(await postJson<ChatResponse>("/chat", { question: chatQuestion, mode: chatMode, privateMode }));
+      setChatResponse(await postJson<ChatResponse>("/chat", { question: buildSmartNotesPrompt(), mode: "smart-notes", privateMode }));
     });
+  }
+
+  function downloadSmartNotesPdf() {
+    const analysis = chatResponse?.answer ?? t.tools.chatEmpty;
+    const notesHtml = smartNotes
+      .map((note, index) => `<li><strong>${index + 1}.</strong> ${escapeHtml(note.text)}<br><small>${new Date(note.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR")}</small></li>`)
+      .join("");
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="${locale}">
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(t.tools.chatTitle)}</title>
+          <style>
+            body { color: #1f2a37; font-family: Georgia, serif; line-height: 1.55; margin: 36px; }
+            h1, h2 { margin: 0 0 12px; }
+            .meta { color: #5c6673; margin-bottom: 24px; }
+            li { margin-bottom: 12px; }
+            pre { white-space: pre-wrap; font-family: inherit; border-top: 1px solid #d8dee6; padding-top: 18px; }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(t.tools.chatTitle)}</h1>
+          <p class="meta">${escapeHtml(smartNoteCaseTitle || "-")}</p>
+          <h2>${escapeHtml(t.tools.smartNotesSaved)}</h2>
+          <ol>${notesHtml || `<li>${escapeHtml(t.tools.smartNotesEmpty)}</li>`}</ol>
+          <h2>${escapeHtml(t.tools.chatAnswer)}</h2>
+          <pre>${escapeHtml(analysis)}</pre>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   function submitSearch(event: FormEvent) {
@@ -1170,27 +1264,111 @@ export default function Home() {
         {error && <div className="error">{error}</div>}
 
         {activeTab === "chat" && (
-          <section className="tool-grid">
-            <form className="panel primary-panel" onSubmit={submitChat}>
-              <PanelTitle icon={<Bot size={20} />} title={t.tools.chatTitle} />
-              <textarea value={chatQuestion} onChange={(event) => setChatQuestion(event.target.value)} rows={8} />
-              <div className="row">
-                <select value={chatMode} onChange={(event) => setChatMode(event.target.value)}>
-                  <option value="analysis">{t.tools.modeAnalysis}</option>
-                  <option value="draft">{t.tools.modeDraft}</option>
-                </select>
-                <button disabled={loading === "chat"} type="submit"><Send size={17} />{t.tools.chatSubmit}</button>
+          <section className="smart-notes-workspace">
+            <header className="panel smart-notes-header">
+              <div>
+                <span className="eyebrow">{t.tabs.chat}</span>
+                <h1>{t.tools.chatTitle}</h1>
+                <p>{t.tools.smartNotesSubtitle}</p>
               </div>
-            </form>
-            <ResultPanel title={t.tools.chatAnswer}>
-              {chatResponse ? (
-                <>
-                  <pre>{chatResponse.answer}</pre>
-                  <CitationList citations={chatResponse.citations} />
-                  <small>{chatResponse.disclaimer}</small>
-                </>
-              ) : <EmptyState text={t.tools.chatEmpty} />}
-            </ResultPanel>
+              <div className="smart-notes-summary">
+                <div>
+                  <span>{t.tools.smartNotesCase}</span>
+                  <strong>{smartNoteCaseTitle || "-"}</strong>
+                </div>
+                <div>
+                  <span>{t.tools.smartNotesSaved}</span>
+                  <strong>{smartNotes.length}</strong>
+                </div>
+              </div>
+            </header>
+
+            <div className="smart-notes-layout">
+              <form className="panel smart-notes-compose" onSubmit={submitChat}>
+                <PanelTitle icon={<ClipboardList size={20} />} title={t.tools.smartNotesDraft} />
+                <label className="field-label">
+                  {t.tools.smartNotesCase}
+                  <input
+                    value={smartNoteCaseTitle}
+                    onChange={(event) => setSmartNoteCaseTitle(event.target.value)}
+                    placeholder={t.tools.smartNotesCasePlaceholder}
+                  />
+                </label>
+                <label className="field-label">
+                  {t.tools.smartNotesDraft}
+                  <textarea
+                    value={smartNoteDraft}
+                    onChange={(event) => setSmartNoteDraft(event.target.value)}
+                    placeholder={t.tools.smartNotesDraftPlaceholder}
+                    rows={8}
+                  />
+                </label>
+                <div className="smart-notes-actions">
+                  <button className="secondary-button" type="button" onClick={useSampleSmartNote}>
+                    <ClipboardList size={17} />
+                    {t.tools.smartNotesScenario}
+                  </button>
+                  <button type="button" onClick={addSmartNote} disabled={!smartNoteDraft.trim()}>
+                    <CheckCircle2 size={17} />
+                    {t.tools.smartNotesAdd}
+                  </button>
+                </div>
+                <button className="smart-notes-analyze" disabled={loading === "chat" || !smartNotes.length} type="submit">
+                  {loading === "chat" ? <LoaderCircle className="spin" size={17} /> : <Send size={17} />}
+                  {t.tools.chatSubmit}
+                </button>
+              </form>
+
+              <section className="panel smart-notes-list-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.tools.smartNotesSaved}</span>
+                    <h3>{smartNotes.length} {t.tools.records}</h3>
+                  </div>
+                </div>
+                {smartNotes.length ? (
+                  <div className="smart-note-cards">
+                    {smartNotes.map((note, index) => (
+                      <article className="smart-note-card" key={note.id}>
+                        <div className="smart-note-card-head">
+                          <span>{String(index + 1).padStart(2, "0")}</span>
+                          <small>{new Date(note.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR")}</small>
+                        </div>
+                        <p>{note.text}</p>
+                        <button className="danger-button" type="button" onClick={() => setSmartNotes((current) => current.filter((item) => item.id !== note.id))}>
+                          {t.tools.smartNotesDelete}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty">{t.tools.smartNotesEmpty}</p>
+                )}
+              </section>
+
+              <section className="panel smart-notes-analysis">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.tools.chatAnswer}</span>
+                    <h3>{t.tools.chatTitle}</h3>
+                  </div>
+                  {chatResponse ? (
+                    <button className="secondary-button" type="button" onClick={downloadSmartNotesPdf}>
+                      <FileText size={17} />
+                      {t.tools.smartNotesDownload}
+                    </button>
+                  ) : null}
+                </div>
+                {chatResponse ? (
+                  <>
+                    <pre className="smart-notes-analysis-body">{chatResponse.answer}</pre>
+                    <CitationList citations={chatResponse.citations} />
+                    <small>{chatResponse.disclaimer}</small>
+                    <small className="smart-notes-print-hint">{t.tools.smartNotesDownloadHint}</small>
+                  </>
+                ) : <EmptyState text={t.tools.chatEmpty} />}
+              </section>
+            </div>
           </section>
         )}
 
@@ -2239,6 +2417,15 @@ function formatBytes(bytes: number) {
 function formatDateTime(value: string | null | undefined, locale: Locale, fallback: string) {
   if (!value) return fallback;
   return new Date(value).toLocaleString(locale === "en" ? "en-US" : "tr-TR");
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 
