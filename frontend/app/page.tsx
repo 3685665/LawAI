@@ -56,7 +56,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback";
+type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "settings";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
@@ -302,6 +302,7 @@ export default function Home() {
     subject: "",
     message: ""
   });
+  const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
 
   const tabs = useMemo(() => [
     { id: "dashboard" as const, label: "Dashboard", icon: Scale },
@@ -312,7 +313,8 @@ export default function Home() {
     { id: "cases" as const, label: "Dosyalar", icon: FolderOpen },
     { id: "document" as const, label: "Belge Isleme", icon: Upload },
     { id: "knowledge" as const, label: "Bilgi Bankasi", icon: Database },
-    { id: "feedback" as const, label: "Geri Bildirim", icon: MessageSquareMore }
+    { id: "feedback" as const, label: "Geri Bildirim", icon: MessageSquareMore },
+    { id: "settings" as const, label: "Ayarlar", icon: ShieldAlert }
   ], []);
 
   useEffect(() => {
@@ -883,20 +885,6 @@ export default function Home() {
             <span>Sikayet Yonetimi</span>
           </Link>
         ) : null}
-        <label className="privacy-toggle">
-          <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
-          <Lock size={17} />
-          <span>Gizli mod</span>
-        </label>
-
-        <label className="theme-toggle">
-          <span>Tema</span>
-          <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
-            <option value="original">Orijinal tema</option>
-            <option value="light">Açık tema</option>
-            <option value="dark">Koyu tema</option>
-          </select>
-        </label>
 
         <div className="sidebar-user">
           <div>
@@ -1381,6 +1369,145 @@ export default function Home() {
                 </div>
               )}
             </section>
+          </section>
+        )}
+
+        {activeTab === "settings" && (
+          <section className="settings-workspace">
+            <header className="panel settings-header">
+              <div>
+                <span className="eyebrow">Ayarlar</span>
+                <h1>Uygulama ayarlarini tek merkezde yonetin.</h1>
+                <p>Gorunum, gizlilik, hesap ve uygulama davranisi ayarlari alt menulere ayrildi.</p>
+              </div>
+            </header>
+
+            <div className="settings-layout">
+              <aside className="panel settings-menu">
+                <button type="button" className={settingsSection === "view" ? "active" : ""} onClick={() => setSettingsSection("view")}>
+                  <Scale size={16} />
+                  Gorunum
+                </button>
+                <button type="button" className={settingsSection === "privacy" ? "active" : ""} onClick={() => setSettingsSection("privacy")}>
+                  <Lock size={16} />
+                  Gizlilik
+                </button>
+                <button type="button" className={settingsSection === "account" ? "active" : ""} onClick={() => setSettingsSection("account")}>
+                  <BarChart3 size={16} />
+                  Hesap
+                </button>
+                <button type="button" className={settingsSection === "app" ? "active" : ""} onClick={() => setSettingsSection("app")}>
+                  <ShieldAlert size={16} />
+                  Uygulama
+                </button>
+              </aside>
+
+              <section className="settings-content">
+                {settingsSection === "view" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">Gorunum</span>
+                        <h3>Tema ve arayuz</h3>
+                      </div>
+                    </div>
+                    <label className="field-label">
+                      Tema
+                      <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
+                        <option value="original">Orijinal tema</option>
+                        <option value="light">Açık tema</option>
+                        <option value="dark">Koyu tema</option>
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      Sekme yogunlugu
+                      <select defaultValue="comfortable">
+                        <option value="compact">Sik</option>
+                        <option value="comfortable">Dengeli</option>
+                        <option value="spacious">Genis</option>
+                      </select>
+                    </label>
+                  </article>
+                )}
+
+                {settingsSection === "privacy" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">Gizlilik</span>
+                        <h3>Oturum ve gizli mod</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>Gizli mod</strong>
+                        <span>Hassas veri gorunumunu kisitlar.</span>
+                      </div>
+                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>Oturum guvenligi</strong>
+                        <span>HttpOnly cookie oturum yapisi aktif.</span>
+                      </div>
+                      <span className="status">Aktif</span>
+                    </label>
+                  </article>
+                )}
+
+                {settingsSection === "account" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">Hesap</span>
+                        <h3>Kullanici ve erisim</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>Mevcut kullanici</strong>
+                        <span>{authUser.name}</span>
+                      </div>
+                      <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
+                        Sifre degistir
+                      </button>
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>E-posta</strong>
+                        <span>{authUser.email}</span>
+                      </div>
+                      <span className="status">{authUser.role === "ADMIN" ? "Yonetici" : "Kullanici"}</span>
+                    </label>
+                  </article>
+                )}
+
+                {settingsSection === "app" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">Uygulama</span>
+                        <h3>Davranis ayarlari</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>Backend durumu</strong>
+                        <span>{backendOnline === false ? "Baglanti yok" : "Bagli"}</span>
+                      </div>
+                      <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? "Kapali" : "Acilik"}</span>
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>Gizli mod kestirme</strong>
+                        <span>Sidebar uzerinden hizli erisim.</span>
+                      </div>
+                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
+                    </label>
+                  </article>
+                )}
+              </section>
+            </div>
           </section>
         )}
 
