@@ -5,13 +5,13 @@
     "email" : "admin@lawai.local",
     "passwordHash" : "$2a$10$8jBnxrT3MQ5lBRolF45ZK.Fgs6JfOjjKfyBNrFMRti9JIU94XqdEK",
     "createdAt" : "2026-06-02T22:49:20.4135034Z",
-    "lastLoginAt" : "2026-06-02T22:57:33.9927119Z"
+    "lastLoginAt" : "2026-06-03T06:53:10.8901095Z"
   } ],
   "sessions" : [ {
-    "tokenHash" : "$2a$10$FtzOktAVel.8LvqPtCgizOfui0Kl0EppDbq1vxmqZb9joBcWYN1LW",
+    "tokenHash" : "$2a$10$rd5nTf1QpVu2mGIyKozWUuxDjbyFKFGMJk/3TdfVYwSOs/KfvW92q",
     "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
-    "expiresAt" : "2026-07-02T22:57:33.9927119Z",
-    "createdAt" : "2026-06-02T22:57:33.9927119Z"
+    "expiresAt" : "2026-07-03T06:53:10.8901095Z",
+    "createdAt" : "2026-06-03T06:53:10.8901095Z"
   } ],
   "passwordResets" : [ ]
 }

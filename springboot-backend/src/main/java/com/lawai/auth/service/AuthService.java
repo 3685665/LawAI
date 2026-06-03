@@ -22,6 +22,8 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -38,11 +40,17 @@ public class AuthService {
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
   private final Path storagePath;
   private final boolean previewResetToken;
+  private final String resetPasswordUrlBase;
 
-  public AuthService(ObjectMapper objectMapper, @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken) {
+  public AuthService(
+      ObjectMapper objectMapper,
+      @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken,
+      @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase
+  ) {
     this.objectMapper = objectMapper;
     this.storagePath = Path.of(System.getProperty("user.dir"), "data", "auth-store.json");
     this.previewResetToken = previewResetToken;
+    this.resetPasswordUrlBase = resetPasswordUrlBase;
   }
 
   public AuthSessionResponse register(AuthRegisterRequest request) {
@@ -101,7 +109,7 @@ public class AuthService {
     String email = normalizeEmail(request.email());
     Optional<UserRecord> userOptional = findUserByEmail(email);
     if (userOptional.isEmpty()) {
-      return new AuthPasswordResetResponse("E-posta adresi sistemde bulunuyorsa sifirlama adimi olusturuldu.", null, null);
+      return new AuthPasswordResetResponse("E-posta adresi sistemde bulunuyorsa sifirlama baglantisi olusturuldu.", null, null, null);
     }
 
     UserRecord user = userOptional.get();
@@ -120,10 +128,12 @@ public class AuthService {
     resets.removeIf(item -> item.userId().equals(user.id()) && !item.used());
     resets.add(resetRecord);
     save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets));
+    String resetLink = buildResetLink(resetToken);
     return new AuthPasswordResetResponse(
-        "Sifre sifirlama baglantisi olusturuldu. Gelistirme ortaminda token ayrica gosteriliyor.",
+        "Sifre sifirlama baglantisi olusturuldu. Baglanti e-posta ile iletilir.",
         previewResetToken ? resetToken : null,
-        resetRecord.expiresAt()
+        resetRecord.expiresAt(),
+        previewResetToken ? resetLink : null
     );
   }
 
@@ -308,6 +318,11 @@ public class AuthService {
 
   private String hash(String value) {
     return passwordEncoder.encode(value);
+  }
+
+  private String buildResetLink(String token) {
+    String baseUrl = resetPasswordUrlBase == null ? "" : resetPasswordUrlBase.trim().replaceAll("/+$", "");
+    return baseUrl + "/reset-password?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
   }
 
   private <T> List<T> safeList(List<T> items) {

@@ -56,7 +56,7 @@ export type AuthUser = {
 };
 
 export type AuthSessionResponse = { user: AuthUser };
-export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null };
+export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null; resetLinkPreview?: string | null };
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {

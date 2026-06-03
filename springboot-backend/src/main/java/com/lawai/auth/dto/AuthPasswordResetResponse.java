@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 public record AuthPasswordResetResponse(
     String message,
     String resetTokenPreview,
-    OffsetDateTime expiresAt
+    OffsetDateTime expiresAt,
+    String resetLinkPreview
 ) {
 }

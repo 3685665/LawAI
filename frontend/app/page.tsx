@@ -32,7 +32,6 @@ import {
   authLogout,
   authMe,
   authRegister,
-  authResetPassword,
   CaseDocument as ApiCaseDocument,
   CaseRecord,
   CaseTemplate,
@@ -51,7 +50,7 @@ import {
 } from "@/lib/api";
 
 type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
-type AuthMode = "login" | "register" | "forgot" | "reset";
+type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
@@ -458,18 +457,6 @@ export default function Home() {
         if (!authForm.email) throw new Error("E-posta gerekli.");
         const response = await authForgotPassword({ email: authForm.email });
         setAuthPreview(response);
-        setAuthForm((current) => ({ ...current, resetToken: response.resetTokenPreview ?? current.resetToken }));
-        setAuthMode("reset");
-      } else if (authMode === "reset") {
-        if (!authForm.resetToken.trim()) throw new Error("Sifirlama kodu gerekli.");
-        if (authForm.newPassword !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
-        const session = await authResetPassword({
-          token: authForm.resetToken,
-          newPassword: authForm.newPassword
-        });
-        setAuthUser(session.user);
-        setAuthPreview(null);
-        setActiveTab("dashboard");
       }
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "Giris islemi basarisiz.");
@@ -558,9 +545,9 @@ export default function Home() {
         <section className="auth-card panel auth-card-split">
           <div className="auth-hero">
             <div className="auth-hero-head">
-              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
-              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
-              <p>Oturumlar HttpOnly cookie ile korunur. Sifre sifirlama, hesap yonetimi ve ilk kullanim icin hazir yonetici hesabi bulunur.</p>
+              <span className="eyebrow">Kurumsal erisim</span>
+              <h1>Avukat ofisi icin guvenli oturum.</h1>
+              <p>Oturumlar HttpOnly cookie ile korunur. Hesap yonetimi, sifre kurtarma ve ilk kullanim akisi tek bir resmi panelde sunulur.</p>
             </div>
 
             <div className="auth-points">
@@ -569,8 +556,8 @@ export default function Home() {
                 <span>Parola tarayicida tutulmaz, oturum sunucu tarafinda dogrulanir.</span>
               </div>
               <div>
-                <strong>Sifre sifirlama</strong>
-                <span>Tek kullanimli kod ile kontrollu kurtarma akisi saglanir.</span>
+                <strong>Resmi akis</strong>
+                <span>Giris, hesap acma ve sifre kurtarma adimlari tek duzende ilerler.</span>
               </div>
               <div>
                 <strong>Yetkili erisim</strong>
@@ -600,11 +587,15 @@ export default function Home() {
           </div>
 
           <form className="auth-form" onSubmit={submitAuth}>
+            <div className="auth-form-head">
+              <span className="eyebrow">Oturum</span>
+              <h2>{authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : "Sifremi unuttum"}</h2>
+              <p>{authMode === "login" ? "Kurum hesabiniza guvenli sekilde giris yapin." : authMode === "register" ? "Yeni kullanici hesabi olusturun." : "Sifirlama baglantisi e-posta ile iletilir."}</p>
+            </div>
             <div className="auth-switch">
               <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giris</button>
               <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Hesap ac</button>
               <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Sifremi unuttum</button>
-              <button type="button" className={authMode === "reset" ? "active" : ""} onClick={() => setAuthMode("reset")}>Sifre sifirla</button>
             </div>
 
             <div className="auth-fields">
@@ -626,22 +617,10 @@ export default function Home() {
                   <input autoComplete={authMode === "login" ? "current-password" : "new-password"} type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
                 </label>
               )}
-              {(authMode === "register" || authMode === "reset") && (
+              {authMode === "register" && (
                 <label className="field-label">
                   Sifre tekrar
                   <input autoComplete="new-password" type="password" value={authForm.confirmPassword} onChange={(event) => setAuthForm({ ...authForm, confirmPassword: event.target.value })} />
-                </label>
-              )}
-              {authMode === "reset" && (
-                <label className="field-label">
-                  Sifirlama kodu
-                  <input autoComplete="one-time-code" value={authForm.resetToken} onChange={(event) => setAuthForm({ ...authForm, resetToken: event.target.value })} />
-                </label>
-              )}
-              {authMode === "reset" && (
-                <label className="field-label">
-                  Yeni sifre
-                  <input autoComplete="new-password" type="password" value={authForm.newPassword} onChange={(event) => setAuthForm({ ...authForm, newPassword: event.target.value })} />
                 </label>
               )}
               {authMode === "login" && (
@@ -652,15 +631,26 @@ export default function Home() {
               )}
             </div>
 
-            {authPreview?.resetTokenPreview ? <div className="auth-preview">Gelistirme tokeni: <strong>{authPreview.resetTokenPreview}</strong></div> : null}
+            {authPreview?.resetLinkPreview ? (
+              <div className="auth-recovery-card">
+                <strong>Sifirlama baglantisi hazir</strong>
+                <span>
+                  E-posta ile iletilen baglanti:{" "}
+                  <a href={authPreview.resetLinkPreview}>{authPreview.resetLinkPreview}</a>
+                </span>
+              </div>
+            ) : null}
             {authError ? <div className="error">{authError}</div> : null}
 
-            <button disabled={authLoading} type="submit">
-              {authLoading ? <LoaderCircle className="spin" size={17} /> : null}
-              {authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : authMode === "forgot" ? "Sifirlama baglantisi iste" : "Sifreyi guncelle"}
-            </button>
+            <div className="auth-actions">
+              <button disabled={authLoading} type="submit">
+                {authLoading ? <LoaderCircle className="spin" size={17} /> : null}
+                {authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : "Sifirlama baglantisi iste"}
+              </button>
+            </div>
+
             <p className="auth-note">
-              {authMode === "forgot" ? "E-posta adresiniz eslesirse sifirlama akisi baslatilir." : "Hesaplar cookie tabanli oturum ile korunur."}
+              {authMode === "forgot" ? "E-posta adresiniz eslesirse sifirlama baglantisi iletilir." : "Hesaplar cookie tabanli oturum ile korunur."}
             </p>
           </form>
         </section>
