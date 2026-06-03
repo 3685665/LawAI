@@ -22,4 +22,8 @@ public record UserRecord(
   public UserRecord withRole(String value) {
     return new UserRecord(id, name, email, passwordHash, value, createdAt, lastLoginAt);
   }
+
+  public UserRecord withProfile(String name, String email) {
+    return new UserRecord(id, name, email, passwordHash, role, createdAt, lastLoginAt);
+  }
 }

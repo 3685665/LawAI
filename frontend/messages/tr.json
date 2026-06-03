@@ -9,6 +9,7 @@
     "document": "Belge Isleme",
     "knowledge": "Bilgi Bankasi",
     "feedback": "Geri Bildirim",
+    "profile": "Profil",
     "settings": "Ayarlar"
   },
   "auth": {
@@ -343,6 +344,27 @@
       "updateFailed": "Sifre guncellenemedi."
     },
     "success": "Sifre guncellendi. Giris ekranina yonlendiriliyorsunuz..."
+  },
+  "profile": {
+    "title": "Profil",
+    "headline": "Kullanici profilinizi yonetin.",
+    "subtitle": "Ad soyad ve e-posta bilgilerinizi guncelleyebilir, hesap rolunuzu ve oturum tarihlerinizi gorebilirsiniz.",
+    "formTitle": "Profil bilgileri",
+    "readonlyTitle": "Hesap ozeti",
+    "name": "Ad soyad",
+    "email": "E-posta",
+    "role": "Rol",
+    "createdAt": "Olusturma tarihi",
+    "lastLoginAt": "Son giris",
+    "notAvailable": "Yok",
+    "save": "Profili guncelle",
+    "saving": "Guncelleniyor...",
+    "success": "Profil guncellendi.",
+    "errors": {
+      "nameRequired": "Ad soyad gerekli.",
+      "emailRequired": "E-posta gerekli.",
+      "updateFailed": "Profil guncellenemedi."
+    }
   },
   "common": {
     "loading": "Yukleniyor",

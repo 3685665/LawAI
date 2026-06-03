@@ -5,6 +5,7 @@ import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
 import com.lawai.auth.dto.AuthPasswordResetResponse;
+import com.lawai.auth.dto.AuthProfileUpdateRequest;
 import com.lawai.auth.dto.AuthRegisterRequest;
 import com.lawai.auth.dto.AuthSessionResponse;
 import com.lawai.auth.dto.AuthUserDto;
@@ -115,6 +116,25 @@ public class AuthService {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
     return toDto(user);
+  }
+
+  public AuthUserDto updateProfile(String sessionToken, AuthProfileUpdateRequest request) {
+    SessionRecord session = requireSession(sessionToken);
+    UserRecord user = requireUser(session.userId());
+    String nextName = request.name().trim();
+    String nextEmail = normalizeEmail(request.email());
+
+    safeList(load().users()).stream()
+        .filter(item -> !item.id().equals(user.id()))
+        .filter(item -> item.email().equalsIgnoreCase(nextEmail))
+        .findFirst()
+        .ifPresent(item -> {
+          throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+        });
+
+    UserRecord updatedUser = user.withProfile(nextName, nextEmail);
+    replaceUser(updatedUser);
+    return toDto(updatedUser);
   }
 
   public AuthPasswordResetResponse requestPasswordReset(AuthForgotPasswordRequest request) {

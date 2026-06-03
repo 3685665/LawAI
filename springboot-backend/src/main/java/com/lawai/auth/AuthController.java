@@ -4,6 +4,7 @@ import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
 import com.lawai.auth.dto.AuthPasswordResetResponse;
+import com.lawai.auth.dto.AuthProfileUpdateRequest;
 import com.lawai.auth.dto.AuthRegisterRequest;
 import com.lawai.auth.dto.AuthSessionResponse;
 import com.lawai.auth.dto.AuthUserDto;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,6 +63,11 @@ public class AuthController {
   @GetMapping("/me")
   public AuthUserDto me(HttpServletRequest request) {
     return authService.currentUser(extractSessionToken(request));
+  }
+
+  @PutMapping("/me")
+  public AuthUserDto updateMe(@Valid @RequestBody AuthProfileUpdateRequest request, HttpServletRequest httpRequest) {
+    return authService.updateProfile(extractSessionToken(httpRequest), request);
   }
 
   @PostMapping("/password/forgot")

@@ -167,6 +167,19 @@ export async function authMe(): Promise<AuthUser> {
   return getJson<AuthUser>("/auth/me");
 }
 
+export async function authUpdateProfile(payload: { name: string; email: string }): Promise<AuthUser> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
 export async function authLogout(): Promise<{ message: string }> {
   return postJson<{ message: string }>("/auth/logout", {});
 }

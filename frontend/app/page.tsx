@@ -25,6 +25,7 @@ import {
   Send,
   ShieldAlert,
   Upload,
+  UserRound,
   X
 } from "lucide-react";
 import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
@@ -36,6 +37,7 @@ import {
   authLogout,
   authMe,
   authRegister,
+  authUpdateProfile,
   CaseDocument as ApiCaseDocument,
   CaseRecord,
   CaseTemplate,
@@ -57,7 +59,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "settings";
+type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
@@ -256,6 +258,13 @@ export default function Home() {
     newPassword: "",
     confirmPassword: ""
   });
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: ""
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
 
   const demoCredentials = {
     email: "admin@lawai.local",
@@ -318,6 +327,7 @@ export default function Home() {
     { id: "document" as const, label: t.tabs.document, icon: Upload },
     { id: "knowledge" as const, label: t.tabs.knowledge, icon: Database },
     { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
+    { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
     { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
   ], [t]);
 
@@ -376,6 +386,19 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setProfileForm({ name: "", email: "" });
+      setProfileError("");
+      setProfileSuccess("");
+      return;
+    }
+    setProfileForm({
+      name: authUser.name,
+      email: authUser.email
+    });
+  }, [authUser]);
 
   useEffect(() => {
     if (!authUser || activeTab !== "training" || training || trainingLoading) {
@@ -713,6 +736,12 @@ export default function Home() {
         newPassword: "",
         confirmPassword: ""
       });
+      setProfileForm({
+        name: "",
+        email: ""
+      });
+      setProfileError("");
+      setProfileSuccess("");
     }
   }
 
@@ -739,6 +768,35 @@ export default function Home() {
       setAccountError(err instanceof Error ? err.message : "Sifre degistirilemedi.");
     } finally {
       setAccountLoading(false);
+    }
+  }
+
+  async function submitProfile(event: FormEvent) {
+    event.preventDefault();
+    setProfileError("");
+    setProfileSuccess("");
+
+    if (!profileForm.name.trim()) {
+      setProfileError(t.profile.errors.nameRequired);
+      return;
+    }
+    if (!profileForm.email.trim()) {
+      setProfileError(t.profile.errors.emailRequired);
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const updatedUser = await authUpdateProfile({
+        name: profileForm.name,
+        email: profileForm.email
+      });
+      setAuthUser(updatedUser);
+      setProfileSuccess(t.profile.success);
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : t.profile.errors.updateFailed);
+    } finally {
+      setProfileLoading(false);
     }
   }
 
@@ -1382,6 +1440,58 @@ export default function Home() {
                   <p>{t.feedback.historyEmpty}</p>
                 </div>
               )}
+            </section>
+          </section>
+        )}
+
+        {activeTab === "profile" && (
+          <section className="settings-workspace">
+            <header className="panel settings-header">
+              <div>
+                <span className="eyebrow">{t.profile.title}</span>
+                <h1>{t.profile.headline}</h1>
+                <p>{t.profile.subtitle}</p>
+              </div>
+            </header>
+
+            <section className="tool-grid">
+              <form className="panel primary-panel" onSubmit={submitProfile}>
+                <PanelTitle icon={<UserRound size={20} />} title={t.profile.formTitle} />
+                <label className="field-label">
+                  {t.profile.name}
+                  <input
+                    autoComplete="name"
+                    value={profileForm.name}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
+                  />
+                </label>
+                <label className="field-label">
+                  {t.profile.email}
+                  <input
+                    autoComplete="email"
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))}
+                  />
+                </label>
+                {profileError ? <div className="error">{profileError}</div> : null}
+                {profileSuccess ? <div className="auth-preview">{profileSuccess}</div> : null}
+                <button disabled={profileLoading} type="submit">
+                  {profileLoading ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}
+                  {profileLoading ? t.profile.saving : t.profile.save}
+                </button>
+              </form>
+
+              <section className="panel result-panel">
+                <h2>{t.profile.readonlyTitle}</h2>
+                <div className="case-stats">
+                  <div><span>{t.profile.name}</span><strong>{authUser.name}</strong></div>
+                  <div><span>{t.profile.email}</span><strong>{authUser.email}</strong></div>
+                  <div><span>{t.profile.role}</span><strong>{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</strong></div>
+                  <div><span>{t.profile.createdAt}</span><strong>{formatDateTime(authUser.createdAt, locale, t.profile.notAvailable)}</strong></div>
+                  <div><span>{t.profile.lastLoginAt}</span><strong>{formatDateTime(authUser.lastLoginAt, locale, t.profile.notAvailable)}</strong></div>
+                </div>
+              </section>
             </section>
           </section>
         )}
@@ -2124,6 +2234,11 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDateTime(value: string | null | undefined, locale: Locale, fallback: string) {
+  if (!value) return fallback;
+  return new Date(value).toLocaleString(locale === "en" ? "en-US" : "tr-TR");
 }
 
 

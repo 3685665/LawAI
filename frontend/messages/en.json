@@ -9,6 +9,7 @@
     "document": "Document Processing",
     "knowledge": "Knowledge Base",
     "feedback": "Feedback",
+    "profile": "Profile",
     "settings": "Settings"
   },
   "auth": {
@@ -343,6 +344,27 @@
       "updateFailed": "Password could not be updated."
     },
     "success": "Password updated. Redirecting to sign in..."
+  },
+  "profile": {
+    "title": "Profile",
+    "headline": "Manage your user profile.",
+    "subtitle": "Update your full name and email, and review your role and session dates.",
+    "formTitle": "Profile information",
+    "readonlyTitle": "Account summary",
+    "name": "Full name",
+    "email": "Email",
+    "role": "Role",
+    "createdAt": "Created at",
+    "lastLoginAt": "Last sign-in",
+    "notAvailable": "Not available",
+    "save": "Update profile",
+    "saving": "Updating...",
+    "success": "Profile updated.",
+    "errors": {
+      "nameRequired": "Full name is required.",
+      "emailRequired": "Email is required.",
+      "updateFailed": "Profile could not be updated."
+    }
   },
   "common": {
     "loading": "Loading",
