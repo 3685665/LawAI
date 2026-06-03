@@ -909,9 +909,6 @@ export default function Home() {
             <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
           </div>
           <div className="sidebar-user-actions">
-            <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
-              {t.common.changePassword}
-            </button>
             <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
               {t.common.logout}
             </button>
