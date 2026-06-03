@@ -156,6 +156,25 @@ pre {
   box-shadow: none;
 }
 
+.sidebar-admin-link {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #f4f8f7;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 11px 12px;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-admin-link:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 .privacy-toggle {
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.08);

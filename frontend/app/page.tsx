@@ -290,6 +290,7 @@ export default function Home() {
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<FeedbackRecord | null>(null);
   const [feedbackHistoryOpen, setFeedbackHistoryOpen] = useState(false);
+  const [feedbackLoaded, setFeedbackLoaded] = useState(false);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [feedbackSearch, setFeedbackSearch] = useState("");
   const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<FeedbackFilter>("all");
@@ -405,35 +406,11 @@ export default function Home() {
   }, [activeTab, authUser, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
 
   useEffect(() => {
-    if (!authUser || activeTab !== "feedback" || feedbackItems.length || feedbackLoading) {
+    if (!authUser || activeTab !== "feedback" || feedbackLoaded || feedbackLoading) {
       return;
     }
-
-    let cancelled = false;
-    setFeedbackLoading(true);
-    setFeedbackError("");
-    listFeedback()
-      .then((items) => {
-        if (!cancelled) {
-          setFeedbackItems(items);
-          setSelectedFeedbackId((current) => current ?? items[0]?.id ?? null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setFeedbackError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setFeedbackLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, authUser, feedbackItems.length, feedbackLoading]);
+    void loadFeedbackHistory();
+  }, [activeTab, authUser, feedbackLoaded, feedbackLoading]);
 
   const dashboardMetrics = useMemo(() => {
     const totalCases = dashboardCases.length;
@@ -520,6 +497,25 @@ export default function Home() {
       width: 185
     }
   ], []);
+
+  async function loadFeedbackHistory() {
+    if (!authUser || feedbackLoading) {
+      return;
+    }
+
+    setFeedbackLoading(true);
+    setFeedbackError("");
+    try {
+      const items = await listFeedback();
+      setFeedbackItems(items);
+      setSelectedFeedbackId((current) => current ?? items[0]?.id ?? null);
+      setFeedbackLoaded(true);
+    } catch (err) {
+      setFeedbackError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }
 
   async function run(action: string, fn: () => Promise<void>) {
     setLoading(action);
@@ -655,6 +651,7 @@ export default function Home() {
       setFeedbackError("");
       setFeedbackSubmitted(null);
       setFeedbackHistoryOpen(false);
+      setFeedbackLoaded(false);
       setSelectedFeedbackId(null);
       setFeedbackSearch("");
       setFeedbackTypeFilter("all");
@@ -861,6 +858,12 @@ export default function Home() {
             );
           })}
         </nav>
+        {authUser.role === "ADMIN" ? (
+          <Link className="sidebar-admin-link" href="/feedback-management">
+            <ShieldAlert size={18} />
+            <span>Sikayet Yonetimi</span>
+          </Link>
+        ) : null}
         <label className="privacy-toggle">
           <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
           <Lock size={17} />
@@ -1230,7 +1233,10 @@ export default function Home() {
                   <button
                     className="secondary-button"
                     type="button"
-                    onClick={() => setFeedbackHistoryOpen((current) => !current)}
+                    onClick={() => {
+                      setFeedbackHistoryOpen((current) => !current);
+                      void loadFeedbackHistory();
+                    }}
                   >
                     <ClipboardList size={16} />
                     {feedbackHistoryOpen ? "Gecmisi gizle" : "Gecmisi goster"}
