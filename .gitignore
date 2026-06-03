@@ -12,6 +12,7 @@ __pycache__/
 .env.local
 .tmp-upload.docx
 backend/data/cases.json
+frontend/*.log
 
 # Local Spark/Python runtime output
 spark-warehouse/
