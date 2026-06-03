@@ -41,19 +41,30 @@ public class AuthService {
   private final Path storagePath;
   private final boolean previewResetToken;
   private final String resetPasswordUrlBase;
+  private final String bootstrapEmail;
 
   public AuthService(
       ObjectMapper objectMapper,
       @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken,
-      @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase
+      @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase,
+      @Value("${app.auth.bootstrap-email:admin@lawai.local}") String bootstrapEmail
   ) {
     this.objectMapper = objectMapper;
     this.storagePath = Path.of(System.getProperty("user.dir"), "data", "auth-store.json");
     this.previewResetToken = previewResetToken;
     this.resetPasswordUrlBase = resetPasswordUrlBase;
+    this.bootstrapEmail = normalizeEmail(bootstrapEmail);
   }
 
   public AuthSessionResponse register(AuthRegisterRequest request) {
+    return registerInternal(request, "USER");
+  }
+
+  public AuthSessionResponse registerAdmin(AuthRegisterRequest request) {
+    return registerInternal(request, "ADMIN");
+  }
+
+  private AuthSessionResponse registerInternal(AuthRegisterRequest request, String role) {
     String email = normalizeEmail(request.email());
     if (findUserByEmail(email).isPresent()) {
       throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
@@ -65,6 +76,7 @@ public class AuthService {
         request.name().trim(),
         email,
         passwordEncoder.encode(request.password()),
+        role == null ? "USER" : role.trim().toUpperCase(),
         now,
         now
     );
@@ -182,7 +194,7 @@ public class AuthService {
   public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
-    return new AuthenticatedUser(user.id(), user.name(), user.email());
+    return new AuthenticatedUser(user.id(), user.name(), user.email(), effectiveRole(user));
   }
 
   public boolean hasUsers() {
@@ -190,7 +202,7 @@ public class AuthService {
   }
 
   private AuthUserDto toDto(UserRecord user) {
-    return new AuthUserDto(user.id(), user.name(), user.email(), user.createdAt(), user.lastLoginAt());
+    return new AuthUserDto(user.id(), user.name(), user.email(), effectiveRole(user), user.createdAt(), user.lastLoginAt());
   }
 
   private UserRecord requireUser(String userId) {
@@ -287,13 +299,23 @@ public class AuthService {
         .findFirst();
   }
 
+  private String effectiveRole(UserRecord user) {
+    if (StringUtils.hasText(user.role())) {
+      return user.role().trim().toUpperCase();
+    }
+    return user.email().equalsIgnoreCase(bootstrapEmail) ? "ADMIN" : "USER";
+  }
+
   private AuthStorePayload load() {
     if (!Files.exists(storagePath)) {
       return new AuthStorePayload(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
     try {
       AuthStorePayload payload = objectMapper.readValue(Files.readString(storagePath), AuthStorePayload.class);
-      return new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), safeList(payload.passwordResets()));
+      List<UserRecord> users = safeList(payload.users()).stream()
+          .map(this::normalizeUserRole)
+          .toList();
+      return new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets()));
     } catch (IOException exception) {
       throw new IllegalStateException("Auth verisi yuklenemedi: " + exception.getMessage(), exception);
     }
@@ -327,6 +349,15 @@ public class AuthService {
 
   private <T> List<T> safeList(List<T> items) {
     return items == null ? List.of() : new ArrayList<>(items);
+  }
+
+  private UserRecord normalizeUserRole(UserRecord user) {
+    String role = StringUtils.hasText(user.role())
+        ? user.role().trim().toUpperCase()
+        : (user.email().equalsIgnoreCase(bootstrapEmail) ? "ADMIN" : "USER");
+    return StringUtils.hasText(user.role()) && role.equals(user.role().trim().toUpperCase())
+        ? user
+        : user.withRole(role);
   }
 }
 

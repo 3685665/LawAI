@@ -17,6 +17,7 @@ import {
   Lock,
   Clock3,
   ClipboardList,
+  MessageSquareMore,
   Scale,
   Search,
   Send,
@@ -44,16 +45,24 @@ import {
   getJson,
   patchJson,
   postJson,
+  listFeedback,
+  updateFeedbackStatus as patchFeedbackStatus,
   Precedent,
   seedSamples,
+  submitFeedback as postFeedback,
+  type FeedbackStatus,
+  type FeedbackRecord,
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge";
+type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
 type KnowledgeResponse = { indexed: number; storage: string; message: string };
+type FeedbackType = "hata" | "ozellik" | "genel";
+type FeedbackFilter = "all" | FeedbackType;
+type FeedbackStatusFilter = "all" | FeedbackStatus;
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
 type CaseDocument = {
@@ -168,6 +177,34 @@ const caseDocuments: Record<CaseType, CaseDocument[]> = {
   ]
 };
 
+const feedbackTypeLabels: Record<FeedbackType, string> = {
+  hata: "Hata bildirimi",
+  ozellik: "Ozellik istegi",
+  genel: "Genel geri bildirim"
+};
+
+const feedbackStatusLabels: Record<FeedbackStatus, string> = {
+  received: "Alindi",
+  read: "Incelendi",
+  resolved: "Cozuldu"
+};
+
+function isFeedbackType(value: string): value is FeedbackType {
+  return value === "hata" || value === "ozellik" || value === "genel";
+}
+
+function isFeedbackStatus(value: string): value is FeedbackStatus {
+  return value === "received" || value === "read" || value === "resolved";
+}
+
+function getFeedbackTypeLabel(value: string) {
+  return isFeedbackType(value) ? feedbackTypeLabels[value] : value;
+}
+
+function getFeedbackStatusLabel(value: string) {
+  return isFeedbackStatus(value) ? feedbackStatusLabels[value] : value;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [privateMode, setPrivateMode] = useState(true);
@@ -241,6 +278,19 @@ export default function Home() {
   }
 ]`);
   const [knowledgeResult, setKnowledgeResult] = useState<KnowledgeResponse | null>(null);
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackRecord[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<FeedbackRecord | null>(null);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
+  const [feedbackSearch, setFeedbackSearch] = useState("");
+  const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<FeedbackFilter>("all");
+  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState<FeedbackStatusFilter>("all");
+  const [feedbackForm, setFeedbackForm] = useState({
+    type: "genel" as FeedbackType,
+    subject: "",
+    message: ""
+  });
 
   const tabs = useMemo(() => [
     { id: "dashboard" as const, label: "Dashboard", icon: Scale },
@@ -250,7 +300,8 @@ export default function Home() {
     { id: "training" as const, label: "Egitim", icon: GraduationCap },
     { id: "cases" as const, label: "Dosyalar", icon: FolderOpen },
     { id: "document" as const, label: "Belge Isleme", icon: Upload },
-    { id: "knowledge" as const, label: "Bilgi Bankasi", icon: Database }
+    { id: "knowledge" as const, label: "Bilgi Bankasi", icon: Database },
+    { id: "feedback" as const, label: "Geri Bildirim", icon: MessageSquareMore }
   ], []);
 
   useEffect(() => {
@@ -345,6 +396,37 @@ export default function Home() {
     };
   }, [activeTab, authUser, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
 
+  useEffect(() => {
+    if (!authUser || activeTab !== "feedback" || feedbackItems.length || feedbackLoading) {
+      return;
+    }
+
+    let cancelled = false;
+    setFeedbackLoading(true);
+    setFeedbackError("");
+    listFeedback()
+      .then((items) => {
+        if (!cancelled) {
+          setFeedbackItems(items);
+          setSelectedFeedbackId((current) => current ?? items[0]?.id ?? null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setFeedbackError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setFeedbackLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, authUser, feedbackItems.length, feedbackLoading]);
+
   const dashboardMetrics = useMemo(() => {
     const totalCases = dashboardCases.length;
     const avgProgress = totalCases
@@ -363,6 +445,41 @@ export default function Home() {
       templates: dashboardTemplates.slice(0, 4)
     };
   }, [dashboardCases, dashboardTemplates]);
+
+  const canModerateFeedback = authUser?.role === "ADMIN";
+
+  const filteredFeedbackItems = useMemo(() => {
+    const query = feedbackSearch.trim().toLowerCase();
+    return feedbackItems.filter((item) => {
+      const matchesQuery = !query
+        || [item.subject, item.message, item.type, item.status]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      const matchesType = feedbackTypeFilter === "all" || item.type === feedbackTypeFilter;
+      const matchesStatus = feedbackStatusFilter === "all" || item.status === feedbackStatusFilter;
+      return matchesQuery && matchesType && matchesStatus;
+    });
+  }, [feedbackItems, feedbackSearch, feedbackTypeFilter, feedbackStatusFilter]);
+
+  const selectedFeedback = useMemo(() => {
+    if (!filteredFeedbackItems.length) {
+      return null;
+    }
+    return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? filteredFeedbackItems[0];
+  }, [filteredFeedbackItems, selectedFeedbackId]);
+
+  useEffect(() => {
+    if (activeTab !== "feedback") {
+      return;
+    }
+    const nextSelected = filteredFeedbackItems.find((item) => item.id === selectedFeedbackId)?.id
+      ?? filteredFeedbackItems[0]?.id
+      ?? null;
+    if (nextSelected !== selectedFeedbackId) {
+      setSelectedFeedbackId(nextSelected);
+    }
+  }, [activeTab, filteredFeedbackItems, selectedFeedbackId]);
 
   async function run(action: string, fn: () => Promise<void>) {
     setLoading(action);
@@ -407,6 +524,30 @@ export default function Home() {
     run("knowledge", async () => {
       const documents = JSON.parse(knowledgeJson);
       setKnowledgeResult(await postJson<KnowledgeResponse>("/knowledge/documents", { documents }));
+    });
+  }
+
+  function submitFeedback(event: FormEvent) {
+    event.preventDefault();
+    run("feedback", async () => {
+      const response = await postFeedback({
+        type: feedbackForm.type,
+        subject: feedbackForm.subject,
+        message: feedbackForm.message
+      });
+      setFeedbackSubmitted(response.feedback);
+      setFeedbackItems((current) => [response.feedback, ...current.filter((item) => item.id !== response.feedback.id)]);
+      setSelectedFeedbackId(response.feedback.id);
+      setFeedbackForm({ type: "genel", subject: "", message: "" });
+    });
+  }
+
+  function updateFeedbackItemStatus(id: string, status: FeedbackStatus) {
+    run("feedback-status", async () => {
+      const updated = await patchFeedbackStatus(id, status);
+      setFeedbackItems((current) => current.map((item) => (item.id === id ? updated : item)));
+      setFeedbackSubmitted((current) => (current?.id === id ? updated : current));
+      setSelectedFeedbackId(id);
     });
   }
 
@@ -478,6 +619,13 @@ export default function Home() {
       setPrecedents([]);
       setPetitionResult(null);
       setKnowledgeResult(null);
+      setFeedbackItems([]);
+      setFeedbackError("");
+      setFeedbackSubmitted(null);
+      setSelectedFeedbackId(null);
+      setFeedbackSearch("");
+      setFeedbackTypeFilter("all");
+      setFeedbackStatusFilter("all");
       setTraining(null);
       setDashboardCases([]);
       setDashboardTemplates([]);
@@ -690,6 +838,7 @@ export default function Home() {
           <div>
             <strong>{authUser.name}</strong>
             <span>{authUser.email}</span>
+            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? "Yonetici" : "Kullanici"}</span>
           </div>
           <div className="sidebar-user-actions">
             <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
@@ -1004,6 +1153,165 @@ export default function Home() {
           </section>
         )}
 
+                {activeTab === "feedback" && (
+          <section className="tool-grid">
+            <form className="panel primary-panel feedback-compose" onSubmit={submitFeedback}>
+              <PanelTitle icon={<MessageSquareMore size={20} />} title="Geri bildirim gonder" />
+              <div className="feedback-types">
+                <button type="button" className={feedbackForm.type === "hata" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "hata" }))}>
+                  Hata bildirimi
+                </button>
+                <button type="button" className={feedbackForm.type === "ozellik" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "ozellik" }))}>
+                  Ozellik istegi
+                </button>
+                <button type="button" className={feedbackForm.type === "genel" ? "active" : ""} onClick={() => setFeedbackForm((current) => ({ ...current, type: "genel" }))}>
+                  Genel geri bildirim
+                </button>
+              </div>
+              <label className="field-label">
+                Baslik
+                <input value={feedbackForm.subject} onChange={(event) => setFeedbackForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Orn: Belge yukleme ekraninda hata" />
+              </label>
+              <label className="field-label">
+                Detay
+                <textarea rows={10} value={feedbackForm.message} onChange={(event) => setFeedbackForm((current) => ({ ...current, message: event.target.value }))} placeholder="Sorunu, istegi veya gorusunuzu detayli yazin." />
+              </label>
+              <div className="row">
+                <button disabled={loading === "feedback"} type="submit">
+                  <Send size={17} />
+                  Gonder
+                </button>
+              </div>
+            </form>
+            <section className="feedback-board">
+              <article className="panel dashboard-panel feedback-list-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">Kayitlar</span>
+                    <h3>Gonderilen geri bildirimler</h3>
+                  </div>
+                  <span className="status">{canModerateFeedback ? "Yonetici gorunumu" : "Kendi kayitlariniz"}</span>
+                </div>
+                <div className="feedback-toolbar">
+                  <label className="field-label">
+                    Arama
+                    <input
+                      value={feedbackSearch}
+                      onChange={(event) => setFeedbackSearch(event.target.value)}
+                      placeholder="Baslik, mesaj, durum veya tip ara"
+                    />
+                  </label>
+                  <label className="field-label">
+                    Tip
+                    <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
+                      <option value="all">Tum tipler</option>
+                      <option value="hata">Hata bildirimi</option>
+                      <option value="ozellik">Ozellik istegi</option>
+                      <option value="genel">Genel geri bildirim</option>
+                    </select>
+                  </label>
+                  {canModerateFeedback ? (
+                    <label className="field-label">
+                      Durum
+                      <select value={feedbackStatusFilter} onChange={(event) => setFeedbackStatusFilter(event.target.value as FeedbackStatusFilter)}>
+                        <option value="all">Tum durumlar</option>
+                        <option value="received">Alindi</option>
+                        <option value="read">Incelendi</option>
+                        <option value="resolved">Cozuldu</option>
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+                {feedbackSubmitted ? <div className="auth-preview">Son kayit: <strong>{feedbackSubmitted.subject}</strong></div> : null}
+                {feedbackError ? <div className="error">{feedbackError}</div> : null}
+                {feedbackLoading ? (
+                  <EmptyState text="Geri bildirimler yukleniyor..." />
+                ) : filteredFeedbackItems.length ? (
+                  <div className="feedback-grid">
+                    {filteredFeedbackItems.map((item) => {
+                      const selected = item.id === selectedFeedbackId;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`feedback-card ${selected ? "selected" : ""}`}
+                          onClick={() => setSelectedFeedbackId(item.id)}
+                        >
+                          <div className="feedback-card-top">
+                            <strong>{item.subject}</strong>
+                            <span className={`feedback-pill feedback-pill-status feedback-status-${item.status}`}>{getFeedbackStatusLabel(item.status)}</span>
+                          </div>
+                          <div className="feedback-card-meta">
+                            <span className={`feedback-pill feedback-pill-type feedback-type-${item.type}`}>{getFeedbackTypeLabel(item.type)}</span>
+                            <small>{new Date(item.createdAt).toLocaleDateString("tr-TR")}</small>
+                          </div>
+                          <p>{item.message}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState text="Filtreye uygun geri bildirim bulunamadi." />
+                )}
+              </article>
+              <article className="panel feedback-detail-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">Detay</span>
+                    <h3>Secili kayit</h3>
+                  </div>
+                </div>
+                {selectedFeedback ? (
+                  <div className="feedback-detail">
+                    <div className="feedback-detail-head">
+                      <strong>{selectedFeedback.subject}</strong>
+                      <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{getFeedbackTypeLabel(selectedFeedback.type)}</span>
+                    </div>
+                    <div className="feedback-detail-meta">
+                      <div>
+                        <small>Durum</small>
+                        <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{getFeedbackStatusLabel(selectedFeedback.status)}</strong>
+                      </div>
+                      <div>
+                        <small>Tarih</small>
+                        <strong>{new Date(selectedFeedback.createdAt).toLocaleString("tr-TR")}</strong>
+                      </div>
+                    </div>
+                    <div className="feedback-detail-body">
+                      <small>Mesaj</small>
+                      <p>{selectedFeedback.message}</p>
+                    </div>
+                    {canModerateFeedback ? (
+                      <div className="feedback-detail-actions">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          disabled={loading === "feedback-status" || selectedFeedback.status === "read" || selectedFeedback.status === "resolved"}
+                          onClick={() => updateFeedbackItemStatus(selectedFeedback.id, "read")}
+                        >
+                          Okundu olarak isaretle
+                        </button>
+                        <button
+                          type="button"
+                          disabled={loading === "feedback-status" || selectedFeedback.status === "resolved"}
+                          onClick={() => updateFeedbackItemStatus(selectedFeedback.id, "resolved")}
+                        >
+                          Cozuldu olarak isaretle
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="feedback-detail-actions feedback-detail-note">
+                        <span>Bu kayit sadece goruntulenebilir. Islem yetkisi yonetici hesaptadir.</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <EmptyState text="Soldan bir geri bildirim secin." />
+                )}
+              </article>
+            </section>
+          </section>
+        )}
         {accountOpen && (
           <div className="account-overlay" role="dialog" aria-modal="true" aria-label="Sifre degistir">
             <form className="panel account-card" onSubmit={handleChangePassword}>
@@ -1594,4 +1902,3 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-

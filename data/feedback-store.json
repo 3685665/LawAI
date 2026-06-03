@@ -1,0 +1,43 @@
+{
+  "feedbackItems" : [ {
+    "id" : "7a135474-fedc-4161-aabe-bf2585b1d441",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "type" : "genel",
+    "subject" : "test",
+    "message" : "test",
+    "status" : "received",
+    "createdAt" : "2026-06-03T07:07:35.2858739Z"
+  }, {
+    "id" : "98730cec-382a-429d-9f94-5c146a7cc695",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "type" : "ozellik",
+    "subject" : "test1",
+    "message" : "test 1",
+    "status" : "received",
+    "createdAt" : "2026-06-03T07:07:52.1668757Z"
+  }, {
+    "id" : "0e9e0912-b1e6-4e5e-b189-a514ba072adb",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "type" : "genel",
+    "subject" : "test",
+    "message" : "test",
+    "status" : "received",
+    "createdAt" : "2026-06-03T07:20:29.3857118Z"
+  }, {
+    "id" : "f44a45e4-cca9-4a4a-8bf3-3b29d6056e7a",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "type" : "genel",
+    "subject" : "test",
+    "message" : "test",
+    "status" : "received",
+    "createdAt" : "2026-06-03T07:21:26.8293816Z"
+  } ]
+}

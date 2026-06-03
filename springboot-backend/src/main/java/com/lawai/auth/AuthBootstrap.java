@@ -39,7 +39,7 @@ public class AuthBootstrap {
       return;
     }
 
-    authService.register(new AuthRegisterRequest(name, email, password));
+    authService.registerAdmin(new AuthRegisterRequest(name, email, password));
     log.info("Bootstrap auth account created for {}", email);
   }
 }

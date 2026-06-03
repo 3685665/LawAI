@@ -51,12 +51,23 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  role?: string | null;
   createdAt?: string | null;
   lastLoginAt?: string | null;
 };
 
 export type AuthSessionResponse = { user: AuthUser };
 export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null; resetLinkPreview?: string | null };
+export type FeedbackRecord = {
+  id: string;
+  type: string;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
+};
+export type FeedbackSubmissionResponse = { message: string; feedback: FeedbackRecord };
+export type FeedbackStatus = "received" | "read" | "resolved";
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -161,6 +172,18 @@ export async function authResetPassword(payload: { token: string; newPassword: s
 
 export async function authChangePassword(payload: { currentPassword: string; newPassword: string }): Promise<AuthSessionResponse> {
   return postJson<AuthSessionResponse>("/auth/password/change", payload);
+}
+
+export async function submitFeedback(payload: { type: string; subject: string; message: string }): Promise<FeedbackSubmissionResponse> {
+  return postJson<FeedbackSubmissionResponse>("/feedback", payload);
+}
+
+export async function listFeedback(): Promise<FeedbackRecord[]> {
+  return getJson<FeedbackRecord[]>("/feedback");
+}
+
+export async function updateFeedbackStatus(id: string, status: FeedbackStatus): Promise<FeedbackRecord> {
+  return patchJson<FeedbackRecord>(`/feedback/${id}/status`, { status });
 }
 
 async function readError(response: Response): Promise<string> {
