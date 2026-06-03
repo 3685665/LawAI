@@ -104,6 +104,7 @@ class JsonVectorStore:
             date=doc.date,
             topic=doc.topic,
             summary=doc.summary,
+            content=doc.content,
         )
 
     def _load(self) -> list[VectorEntry]:
@@ -233,6 +234,7 @@ class PgVectorStore:
                     date=str(decision_date) if decision_date else None,
                     topic=topic,
                     summary=summary,
+                    content=content,
                 )
             )
             if len(results) >= limit:

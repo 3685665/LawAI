@@ -74,6 +74,7 @@ type FeedbackFilter = "all" | FeedbackType;
 type FeedbackStatusFilter = "all" | FeedbackStatus;
 type PetitionMethod = "case" | "quick" | "detailed";
 type PetitionModel = "standard" | "premium";
+type ResearchMode = "ai" | "manual";
 type FeedbackGridRow = FeedbackRecord & {
   typeLabel: string;
   statusLabel: string;
@@ -284,8 +285,16 @@ export default function Home() {
   const [smartNoteDraft, setSmartNoteDraft] = useState("Yarin bu dosyanin durusmasi var, lutfen benim icin durusma notlari cikar. Bu dosyada eksik hususlar neler, bu durusmada dikkat edilmesi gereken hususlar neler?");
   const [smartNotes, setSmartNotes] = useState<SmartNote[]>([]);
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
-  const [searchQuery, setSearchQuery] = useState("ise iade fesih ispat");
+  const [researchMode, setResearchMode] = useState<ResearchMode>("ai");
+  const [searchQuery, setSearchQuery] = useState("Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?");
+  const [searchCourt, setSearchCourt] = useState("");
+  const [searchChamber, setSearchChamber] = useState("");
+  const [searchDocket, setSearchDocket] = useState("");
+  const [searchDateFrom, setSearchDateFrom] = useState("");
+  const [searchDateTo, setSearchDateTo] = useState("");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
+  const [precedentSummary, setPrecedentSummary] = useState("");
+  const [selectedPrecedentIndex, setSelectedPrecedentIndex] = useState<number | null>(null);
   const [petition, setPetition] = useState({
     petitionType: "Alacak",
     court: "Istanbul Nobetci Asliye Hukuk Mahkemesi",
@@ -560,6 +569,12 @@ export default function Home() {
     return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? filteredFeedbackItems[0];
   }, [filteredFeedbackItems, selectedFeedbackId]);
 
+  const selectedPrecedent = useMemo(() => {
+    if (!precedents.length) return null;
+    const index = selectedPrecedentIndex ?? 0;
+    return precedents[index] ?? precedents[0];
+  }, [precedents, selectedPrecedentIndex]);
+
   const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [
     {
         field: "subject",
@@ -709,10 +724,65 @@ export default function Home() {
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
+    const manualParts = [
+      searchQuery.trim(),
+      searchDocket.trim() ? `${t.tools.researchDocket}: ${searchDocket.trim()}` : "",
+      searchDateFrom ? `${t.tools.researchDateFrom}: ${searchDateFrom}` : "",
+      searchDateTo ? `${t.tools.researchDateTo}: ${searchDateTo}` : ""
+    ].filter(Boolean);
     run("search", async () => {
-      const data = await postJson<{ results: Precedent[] }>("/precedents/search", { query: searchQuery, limit: 5 });
+      const data = await postJson<{ results: Precedent[] }>("/precedents/search", {
+        query: researchMode === "manual" ? manualParts.join(" ") : searchQuery,
+        court: searchCourt || undefined,
+        chamber: searchChamber || undefined,
+        limit: 50
+      });
       setPrecedents(data.results);
+      setSelectedPrecedentIndex(data.results.length ? 0 : null);
+      setPrecedentSummary("");
     });
+  }
+
+  function summarizePrecedents() {
+    if (!precedents.length) {
+      setError(t.tools.researchSummaryEmpty);
+      return;
+    }
+    const decisionList = precedents.slice(0, 10).map((item, index) => [
+      `${index + 1}. ${item.court}${item.chamber ? ` - ${item.chamber}` : ""}`,
+      `${t.tools.researchDocket}: ${[item.docketNo, item.decisionNo].filter(Boolean).join(" / ") || "-"}`,
+      `${t.feedback.date}: ${item.date ?? "-"}`,
+      `${t.feedback.subject}: ${item.topic}`,
+      item.content || item.summary
+    ].join("\n")).join("\n\n");
+    run("precedent-summary", async () => {
+      const response = await postJson<ChatResponse>("/chat", {
+        question: [
+          t.tools.researchAiSummary,
+          "",
+          `Arama: ${searchQuery}`,
+          "",
+          "Bulunan kararlar:",
+          decisionList
+        ].join("\n"),
+        mode: "precedent-summary",
+        privateMode
+      });
+      setPrecedentSummary(response.answer);
+    });
+  }
+
+  function addSelectedPrecedentToPetition() {
+    if (!selectedPrecedent) return;
+    const reference = [
+      `${selectedPrecedent.court}${selectedPrecedent.chamber ? ` - ${selectedPrecedent.chamber}` : ""}`,
+      `${t.tools.researchDocket}: ${[selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-"}`,
+      `${t.feedback.date}: ${selectedPrecedent.date ?? "-"}`,
+      `${t.feedback.subject}: ${selectedPrecedent.topic}`,
+      selectedPrecedent.content || selectedPrecedent.summary
+    ].join("\n");
+    setPetitionContext((current) => [current.trim(), `${t.tools.researchUse}:\n${reference}`].filter(Boolean).join("\n\n"));
+    setActiveTab("petition");
   }
 
   function submitPetition(event: FormEvent) {
@@ -1479,15 +1549,171 @@ export default function Home() {
         )}
 
         {activeTab === "search" && (
-          <section className="tool-grid">
-            <form className="panel primary-panel" onSubmit={submitSearch}>
-              <PanelTitle icon={<Search size={20} />} title={t.tools.searchTitle} />
-              <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t.tools.searchPlaceholder} />
-              <button disabled={loading === "search"} type="submit"><Search size={17} />{t.tools.searchSubmit}</button>
-            </form>
-            <ResultPanel title={t.tools.searchResults}>
-              {precedents.length ? <CitationList citations={precedents} /> : <EmptyState text={t.tools.searchEmpty} />}
-            </ResultPanel>
+          <section className="precedent-research-workspace">
+            <header className="panel precedent-research-header">
+              <div>
+                <span className="eyebrow">{t.tabs.search}</span>
+                <h1>{t.tools.searchTitle}</h1>
+                <p>{t.tools.researchSubtitle}</p>
+              </div>
+              <div className="smart-notes-summary">
+                <div>
+                  <span>{t.tools.searchResults}</span>
+                  <strong>{t.tools.researchMaxResults}</strong>
+                </div>
+                <div>
+                  <span>{t.tools.researchMethods}</span>
+                  <strong>{t.tools.researchAiSearch} / {t.tools.researchManualSearch}</strong>
+                </div>
+              </div>
+            </header>
+
+            <section className="precedent-research-layout">
+              <form className="panel precedent-search-panel" onSubmit={submitSearch}>
+                <PanelTitle icon={<Search size={20} />} title={t.tools.researchMethods} />
+                <div className="precedent-segmented">
+                  <button className={researchMode === "ai" ? "active" : ""} type="button" onClick={() => setResearchMode("ai")}>
+                    <Bot size={16} />
+                    {t.tools.researchAiSearch}
+                  </button>
+                  <button className={researchMode === "manual" ? "active" : ""} type="button" onClick={() => setResearchMode("manual")}>
+                    <FileSearch size={16} />
+                    {t.tools.researchManualSearch}
+                  </button>
+                </div>
+                <p className="panel-subtitle">{researchMode === "ai" ? t.tools.researchAiSearchDesc : t.tools.researchManualSearchDesc}</p>
+
+                {researchMode === "ai" ? (
+                  <section className="precedent-examples">
+                    <span className="section-label">{t.tools.researchExamples}</span>
+                    {[t.tools.researchExampleJewelry, t.tools.researchExampleMunicipality, t.tools.researchExampleDocket].map((example) => (
+                      <button key={example} className="secondary-button" type="button" onClick={() => setSearchQuery(example)}>
+                        {example}
+                      </button>
+                    ))}
+                  </section>
+                ) : null}
+
+                <label className="field-label">
+                  {researchMode === "ai" ? t.tools.researchAiSearch : t.tools.researchKeywords}
+                  <textarea rows={researchMode === "ai" ? 6 : 4} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t.tools.searchPlaceholder} />
+                </label>
+
+                <div className="precedent-manual-grid">
+                  <label className="field-label">
+                    {t.tools.researchCourt}
+                    <select value={searchCourt} onChange={(event) => setSearchCourt(event.target.value)}>
+                      <option value="">{t.tools.researchCourtAll}</option>
+                      <option value="Yargitay">Yargitay</option>
+                      <option value="Danistay">Danistay</option>
+                      <option value="AYM">AYM</option>
+                    </select>
+                  </label>
+                  <label className="field-label">
+                    {t.tools.researchChamber}
+                    <input value={searchChamber} onChange={(event) => setSearchChamber(event.target.value)} placeholder="2. Hukuk Dairesi" />
+                  </label>
+                </div>
+
+                {researchMode === "manual" ? (
+                  <div className="precedent-manual-grid">
+                    <label className="field-label">
+                      {t.tools.researchDocket}
+                      <input value={searchDocket} onChange={(event) => setSearchDocket(event.target.value)} placeholder="2025/2402" />
+                    </label>
+                    <label className="field-label">
+                      {t.tools.researchDateFrom}
+                      <input type="date" value={searchDateFrom} onChange={(event) => setSearchDateFrom(event.target.value)} />
+                    </label>
+                    <label className="field-label">
+                      {t.tools.researchDateTo}
+                      <input type="date" value={searchDateTo} onChange={(event) => setSearchDateTo(event.target.value)} />
+                    </label>
+                  </div>
+                ) : null}
+
+                <section className="precedent-notice">
+                  <strong>{t.tools.researchTechnicalNotice}</strong>
+                  <p>{t.tools.researchTechnicalNoticeText}</p>
+                </section>
+
+                <button disabled={loading === "search"} type="submit">
+                  {loading === "search" ? <LoaderCircle className="spin" size={17} /> : <Search size={17} />}
+                  {t.tools.searchSubmit}
+                </button>
+              </form>
+
+              <section className="panel precedent-results-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.tools.researchMaxResults}</span>
+                    <h3>{t.tools.searchResults}</h3>
+                  </div>
+                  <strong>{precedents.length} {t.tools.records}</strong>
+                </div>
+                {precedents.length ? (
+                  <div className="precedent-result-list">
+                    {precedents.map((item, index) => (
+                      <button
+                        key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
+                        className={`precedent-result-card ${selectedPrecedent === item ? "active" : ""}`}
+                        type="button"
+                        onClick={() => setSelectedPrecedentIndex(index)}
+                      >
+                        <span>{item.court}{item.chamber ? ` / ${item.chamber}` : ""}</span>
+                        <strong>{item.topic}</strong>
+                        <small>{[item.docketNo, item.decisionNo, item.date].filter(Boolean).join(" - ") || "-"}</small>
+                        <p>{item.summary}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : <EmptyState text={t.tools.searchEmpty} />}
+              </section>
+
+              <aside className="panel precedent-detail-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.tools.researchDetails}</span>
+                    <h3>{selectedPrecedent?.topic ?? t.tools.researchDetails}</h3>
+                  </div>
+                </div>
+
+                {selectedPrecedent ? (
+                  <section className="precedent-detail-box">
+                    <dl>
+                      <div><dt>{t.tools.researchCourt}</dt><dd>{selectedPrecedent.court}</dd></div>
+                      <div><dt>{t.tools.researchChamber}</dt><dd>{selectedPrecedent.chamber ?? "-"}</dd></div>
+                      <div><dt>{t.tools.researchDocket}</dt><dd>{[selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-"}</dd></div>
+                      <div><dt>{t.feedback.date}</dt><dd>{selectedPrecedent.date ?? "-"}</dd></div>
+                    </dl>
+                    <pre>{selectedPrecedent.content || selectedPrecedent.summary}</pre>
+                  </section>
+                ) : <EmptyState text={t.tools.searchEmpty} />}
+
+                <section className="precedent-summary-box">
+                  <div className="section-head">
+                    <div>
+                      <span className="section-label">{t.tools.researchAiSummary}</span>
+                      <h3>{t.tools.researchSummarize}</h3>
+                    </div>
+                  </div>
+                  <button className="secondary-button" disabled={!precedents.length || loading === "precedent-summary"} type="button" onClick={summarizePrecedents}>
+                    {loading === "precedent-summary" ? <LoaderCircle className="spin" size={17} /> : <Bot size={17} />}
+                    {t.tools.researchSummarize}
+                  </button>
+                  {precedentSummary ? <pre>{precedentSummary}</pre> : <p>{t.tools.researchSummaryEmpty}</p>}
+                </section>
+
+                <section className="precedent-use-box">
+                  <span className="section-label">{t.tools.researchUse}</span>
+                  <p>{t.tools.researchUseText}</p>
+                  <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
+                    <FileText size={17} />
+                    {t.tools.petitionContext}
+                  </button>
+                </section>
+              </aside>
+            </section>
           </section>
         )}
 

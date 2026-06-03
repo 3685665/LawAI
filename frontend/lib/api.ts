@@ -8,6 +8,7 @@ export type Precedent = {
   date?: string | null;
   topic: string;
   summary: string;
+  content?: string | null;
 };
 
 export type CaseDocument = {

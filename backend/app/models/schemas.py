@@ -9,6 +9,7 @@ class PrecedentDto(BaseModel):
     date: str | None = None
     topic: str
     summary: str
+    content: str | None = None
 
 
 class ChatRequest(BaseModel):
