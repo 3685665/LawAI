@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import {
@@ -72,6 +72,8 @@ type KnowledgeResponse = { indexed: number; storage: string; message: string };
 type FeedbackType = "hata" | "ozellik" | "genel";
 type FeedbackFilter = "all" | FeedbackType;
 type FeedbackStatusFilter = "all" | FeedbackStatus;
+type PetitionMethod = "case" | "quick" | "detailed";
+type PetitionModel = "standard" | "premium";
 type FeedbackGridRow = FeedbackRecord & {
   typeLabel: string;
   statusLabel: string;
@@ -291,6 +293,17 @@ export default function Home() {
     facts: "Taraflar arasinda akdedilen sozlesme kapsaminda edimler yerine getirilmemis, ihtara ragmen borc odenmemistir.",
     demands: "Alacagin yasal faiziyle birlikte tahsiline karar verilmesini talep ederiz."
   });
+  const [petitionMethod, setPetitionMethod] = useState<PetitionMethod>("quick");
+  const [petitionModel, setPetitionModel] = useState<PetitionModel>("standard");
+  const [petitionContext, setPetitionContext] = useState("");
+  const [petitionContextSources, setPetitionContextSources] = useState({
+    upload: false,
+    existing: true,
+    training: false
+  });
+  const [petitionEditInstruction, setPetitionEditInstruction] = useState("");
+  const [selectedPetitionText, setSelectedPetitionText] = useState("");
+  const [petitionEditPreview, setPetitionEditPreview] = useState<{ before: string; after: string } | null>(null);
   const [petitionResult, setPetitionResult] = useState<PetitionResponse | null>(null);
   const [knowledgeJson, setKnowledgeJson] = useState(`[
   {
@@ -704,9 +717,102 @@ export default function Home() {
 
   function submitPetition(event: FormEvent) {
     event.preventDefault();
+    const selectedSources = [
+      petitionContextSources.upload ? t.tools.petitionUploadContext : null,
+      petitionContextSources.existing ? t.tools.petitionExistingDocs : null,
+      petitionContextSources.training ? t.tools.petitionTrainingData : null
+    ].filter(Boolean).join(", ");
+    const modelInstruction = petitionModel === "premium"
+      ? t.tools.petitionPremiumDesc
+      : t.tools.petitionStandardDesc;
+    const methodInstruction = {
+      case: t.tools.petitionFromCase,
+      quick: t.tools.petitionQuick,
+      detailed: t.tools.petitionDetailed
+    }[petitionMethod];
+    const enrichedPetition = {
+      ...petition,
+      facts: [
+        petition.facts,
+        petitionContext.trim() ? `\n\n${t.tools.petitionCaseContext}:\n${petitionContext.trim()}` : "",
+        selectedSources ? `\n\n${t.tools.petitionContext}: ${selectedSources}` : "",
+        `\n\n${t.tools.petitionMethod}: ${methodInstruction}`,
+        `${t.tools.petitionModel}: ${petitionModel === "premium" ? t.tools.petitionPremiumModel : t.tools.petitionStandardModel} - ${modelInstruction}`
+      ].join("").trim(),
+      demands: petitionModel === "premium"
+        ? `${petition.demands}\n\n${t.tools.petitionQualityHint}`
+        : petition.demands
+    };
     run("petition", async () => {
-      setPetitionResult(await postJson<PetitionResponse>("/petitions", petition));
+      setPetitionEditPreview(null);
+      setPetitionResult(await postJson<PetitionResponse>("/petitions", enrichedPetition));
     });
+  }
+
+  function selectedTextFromEvent(event: SyntheticEvent<HTMLTextAreaElement>) {
+    const target = event.currentTarget;
+    setSelectedPetitionText(target.value.slice(target.selectionStart, target.selectionEnd));
+  }
+
+  function runPetitionEdit(scope: "all" | "selection") {
+    if (!petitionResult || !petitionEditInstruction.trim()) return;
+    const before = scope === "selection" && selectedPetitionText.trim()
+      ? selectedPetitionText
+      : petitionResult.body;
+    const prompt = [
+      t.tools.petitionSmartEdit,
+      t.tools.petitionEditInstruction + ": " + petitionEditInstruction.trim(),
+      "",
+      "Metin:",
+      before
+    ].join("\n");
+    run("petition-edit", async () => {
+      const response = await postJson<ChatResponse>("/chat", { question: prompt, mode: "petition-edit", privateMode });
+      setPetitionEditPreview({ before, after: response.answer });
+    });
+  }
+
+  function acceptPetitionEdit() {
+    if (!petitionResult || !petitionEditPreview) return;
+    const nextBody = petitionResult.body.includes(petitionEditPreview.before)
+      ? petitionResult.body.replace(petitionEditPreview.before, petitionEditPreview.after)
+      : petitionEditPreview.after;
+    setPetitionResult({ ...petitionResult, body: nextBody });
+    setPetitionEditPreview(null);
+    setSelectedPetitionText("");
+  }
+
+  function exportPetition(format: "docx" | "udf") {
+    if (!petitionResult) return;
+    const extension = format === "docx" ? "docx" : "udf";
+    const type = format === "docx"
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : "text/plain;charset=utf-8";
+    const blob = new Blob([petitionResult.body], { type });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${petitionResult.title || "dilekce"}.${extension}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function printPetitionPdf() {
+    if (!petitionResult) return;
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="${locale}">
+        <head><meta charset="utf-8" /><title>${escapeHtml(petitionResult.title)}</title></head>
+        <body style="font-family: Georgia, serif; line-height: 1.6; margin: 40px;">
+          <h1>${escapeHtml(petitionResult.title)}</h1>
+          <pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(petitionResult.body)}</pre>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   function submitKnowledge(event: FormEvent) {
@@ -1386,24 +1492,153 @@ export default function Home() {
         )}
 
         {activeTab === "petition" && (
-          <section className="tool-grid">
-            <form className="panel primary-panel" onSubmit={submitPetition}>
-              <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
-              <input value={petition.petitionType} onChange={(event) => setPetition({ ...petition, petitionType: event.target.value })} />
-              <input value={petition.court} onChange={(event) => setPetition({ ...petition, court: event.target.value })} />
-              <textarea rows={4} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
-              <textarea rows={6} value={petition.facts} onChange={(event) => setPetition({ ...petition, facts: event.target.value })} />
-              <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
-              <button disabled={loading === "petition"} type="submit"><FileText size={17} />{t.tools.petitionSubmit}</button>
-            </form>
-            <ResultPanel title={petitionResult?.title ?? t.tools.petitionDraft}>
-              {petitionResult ? (
-                <>
-                  <pre>{petitionResult.body}</pre>
-                  <CitationList citations={petitionResult.citedPrecedents} />
-                </>
-              ) : <EmptyState text={t.tools.petitionEmpty} />}
-            </ResultPanel>
+          <section className="petition-assistant-workspace">
+            <header className="panel smart-notes-header">
+              <div>
+                <span className="eyebrow">{t.tabs.petition}</span>
+                <h1>{t.tools.petitionAssistantTitle}</h1>
+                <p>{t.tools.petitionAssistantSubtitle}</p>
+              </div>
+              <div className="smart-notes-summary">
+                <div>
+                  <span>{t.tools.petitionMethod}</span>
+                  <strong>{petitionMethod === "case" ? t.tools.petitionFromCase : petitionMethod === "quick" ? t.tools.petitionQuick : t.tools.petitionDetailed}</strong>
+                </div>
+                <div>
+                  <span>{t.tools.petitionModel}</span>
+                  <strong>{petitionModel === "premium" ? t.tools.petitionPremiumModel : t.tools.petitionStandardModel}</strong>
+                </div>
+              </div>
+            </header>
+
+            <section className="petition-assistant-layout">
+              <form className="panel petition-builder-panel" onSubmit={submitPetition}>
+                <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
+                <div className="petition-segmented">
+                  <button className={petitionMethod === "case" ? "active" : ""} type="button" onClick={() => setPetitionMethod("case")}>{t.tools.petitionFromCase}</button>
+                  <button className={petitionMethod === "quick" ? "active" : ""} type="button" onClick={() => setPetitionMethod("quick")}>{t.tools.petitionQuick}</button>
+                  <button className={petitionMethod === "detailed" ? "active" : ""} type="button" onClick={() => setPetitionMethod("detailed")}>{t.tools.petitionDetailed}</button>
+                </div>
+
+                <div className="petition-model-grid">
+                  <button className={petitionModel === "standard" ? "active" : ""} type="button" onClick={() => setPetitionModel("standard")}>
+                    <strong>{t.tools.petitionStandardModel}</strong>
+                    <span>{t.tools.petitionStandardDesc}</span>
+                  </button>
+                  <button className={petitionModel === "premium" ? "active" : ""} type="button" onClick={() => setPetitionModel("premium")}>
+                    <strong>{t.tools.petitionPremiumModel}</strong>
+                    <span>{t.tools.petitionPremiumDesc}</span>
+                  </button>
+                </div>
+
+                <div className="petition-form-grid">
+                  <label className="field-label">
+                    {t.tools.petitionType}
+                    <input value={petition.petitionType} onChange={(event) => setPetition({ ...petition, petitionType: event.target.value })} />
+                  </label>
+                  <label className="field-label">
+                    {t.tools.petitionCourt}
+                    <input value={petition.court} onChange={(event) => setPetition({ ...petition, court: event.target.value })} />
+                  </label>
+                </div>
+
+                {petitionMethod === "detailed" ? (
+                  <div className="petition-form-grid">
+                    <label className="field-label">
+                      {t.tools.petitionApplicant}
+                      <input value={petition.parties.split("\n")[0]?.replace("Davaci: ", "") ?? ""} onChange={(event) => setPetition({ ...petition, parties: `Davaci: ${event.target.value}\nDavali: ${petition.parties.split("\n")[1]?.replace("Davali: ", "") ?? ""}` })} />
+                    </label>
+                    <label className="field-label">
+                      {t.tools.petitionOpponent}
+                      <input value={petition.parties.split("\n")[1]?.replace("Davali: ", "") ?? ""} onChange={(event) => setPetition({ ...petition, parties: `Davaci: ${petition.parties.split("\n")[0]?.replace("Davaci: ", "") ?? ""}\nDavali: ${event.target.value}` })} />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="field-label">
+                    {t.tools.petitionApplicant} / {t.tools.petitionOpponent}
+                    <textarea rows={3} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
+                  </label>
+                )}
+
+                <label className="field-label">
+                  {t.tools.petitionDescription}
+                  <textarea rows={6} value={petition.facts} onChange={(event) => setPetition({ ...petition, facts: event.target.value })} />
+                </label>
+                <label className="field-label">
+                  {t.tools.petitionDemands}
+                  <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
+                </label>
+
+                <section className="petition-context-panel">
+                  <div className="section-head">
+                    <div>
+                      <span className="section-label">{t.tools.petitionContext}</span>
+                      <h3>{t.tools.petitionCaseContext}</h3>
+                    </div>
+                  </div>
+                  <div className="petition-context-options">
+                    <label><input checked={petitionContextSources.upload} onChange={(event) => setPetitionContextSources((current) => ({ ...current, upload: event.target.checked }))} type="checkbox" /> {t.tools.petitionUploadContext}</label>
+                    <label><input checked={petitionContextSources.existing} onChange={(event) => setPetitionContextSources((current) => ({ ...current, existing: event.target.checked }))} type="checkbox" /> {t.tools.petitionExistingDocs}</label>
+                    <label><input checked={petitionContextSources.training} onChange={(event) => setPetitionContextSources((current) => ({ ...current, training: event.target.checked }))} type="checkbox" /> {t.tools.petitionTrainingData}</label>
+                  </div>
+                  <textarea rows={5} value={petitionContext} onChange={(event) => setPetitionContext(event.target.value)} placeholder={t.tools.petitionCaseContextPlaceholder} />
+                </section>
+
+                <button disabled={loading === "petition"} type="submit">
+                  {loading === "petition" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}
+                  {t.tools.petitionSubmit}
+                </button>
+              </form>
+
+              <aside className="panel petition-edit-panel">
+                <PanelTitle icon={<Bot size={20} />} title={t.tools.petitionSmartEdit} />
+                <p className="panel-subtitle">{t.tools.petitionQualityHint}</p>
+                <label className="field-label">
+                  {t.tools.petitionEditInstruction}
+                  <textarea rows={7} value={petitionEditInstruction} onChange={(event) => setPetitionEditInstruction(event.target.value)} placeholder={t.tools.petitionEditPlaceholder} />
+                </label>
+                <div className="petition-export-actions">
+                  <button className="secondary-button" type="button" disabled={!petitionResult || !petitionEditInstruction.trim() || loading === "petition-edit"} onClick={() => runPetitionEdit("all")}>{t.tools.petitionEditAll}</button>
+                  <button type="button" disabled={!petitionResult || !selectedPetitionText.trim() || !petitionEditInstruction.trim() || loading === "petition-edit"} onClick={() => runPetitionEdit("selection")}>{t.tools.petitionEditSelection}</button>
+                </div>
+                {petitionEditPreview ? (
+                  <section className="petition-diff-panel">
+                    <h3>{t.tools.petitionDiffView}</h3>
+                    <div className="petition-diff-grid">
+                      <pre>{petitionEditPreview.before}</pre>
+                      <pre>{petitionEditPreview.after}</pre>
+                    </div>
+                    <div className="petition-export-actions">
+                      <button type="button" onClick={acceptPetitionEdit}>{t.tools.petitionAccept}</button>
+                      <button className="secondary-button" type="button" onClick={() => setPetitionEditPreview(null)}>{t.tools.petitionReject}</button>
+                    </div>
+                  </section>
+                ) : null}
+                <section className="petition-export-panel">
+                  <span className="section-label">{t.tools.petitionExport}</span>
+                  <div className="petition-export-actions">
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
+                  </div>
+                </section>
+              </aside>
+
+              <section className="panel petition-draft-panel">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.tools.petitionDraft}</span>
+                    <h3>{petitionResult?.title ?? t.tools.petitionDraft}</h3>
+                  </div>
+                </div>
+                {petitionResult ? (
+                  <>
+                    <textarea className="petition-draft-textarea" value={petitionResult.body} onChange={(event) => setPetitionResult({ ...petitionResult, body: event.target.value })} onSelect={selectedTextFromEvent} />
+                    <CitationList citations={petitionResult.citedPrecedents} />
+                  </>
+                ) : <EmptyState text={t.tools.petitionEmpty} />}
+              </section>
+            </section>
           </section>
         )}
 
