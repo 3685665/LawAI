@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import {
   AlertCircle,
+  ArrowLeft,
   BarChart3,
   Bot,
   CheckCircle2,
@@ -2368,6 +2369,74 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const completion = requiredDocs.length === 0 ? 100 : Math.round(((requiredDocs.length - missingRequired.length) / requiredDocs.length) * 100);
   const groupedDocs = useMemo(() => groupDocuments(selectedTemplate.documents), [selectedTemplate.documents]);
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
+  const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
+    {
+      field: "caseLabel",
+      headerName: t.caseType,
+      flex: 1,
+      minWidth: 190,
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{String(params.value ?? "")}</strong>
+          <span>{params.row.subject}</span>
+        </div>
+      )
+    },
+    {
+      field: "clientName",
+      headerName: t.client,
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{String(params.value ?? "")}</strong>
+          <span>{params.row.opponentName}</span>
+        </div>
+      )
+    },
+    {
+      field: "courtName",
+      headerName: t.court,
+      flex: 1,
+      minWidth: 220,
+      renderCell: (params) => <span className="feedback-owner">{String(params.value ?? "-")}</span>
+    },
+    {
+      field: "progress",
+      headerName: t.overallCompletion,
+      width: 170,
+      renderCell: (params) => <span className="case-progress-pill">{Number(params.value ?? 0)}%</span>
+    },
+    {
+      field: "updatedAt",
+      headerName: locale === "en" ? "Updated" : "Guncelleme",
+      width: 180,
+      valueGetter: (_, row) => formatDateTime(row.updatedAt, locale, "-")
+    },
+    {
+      field: "actions",
+      headerName: t.view,
+      width: 180,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <div className="feedback-row-actions">
+          <button className="secondary-button" onClick={(event) => {
+            event.stopPropagation();
+            void openCase(params.row.id);
+          }} type="button">
+            {t.view}
+          </button>
+          <button className="danger-button" onClick={(event) => {
+            event.stopPropagation();
+            void deleteCase(params.row.id);
+          }} type="button">
+            {t.delete}
+          </button>
+        </div>
+      )
+    }
+  ], [locale, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2382,9 +2451,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         if (cancelled) return;
         setTemplates(templateResponse.templates);
         setSavedCases(caseList);
-        const firstCase = caseList[0] ?? null;
-        setSelectedCaseId(firstCase?.id ?? null);
-        setSelectedCase(firstCase);
       } catch (error) {
         if (!cancelled) {
           setLocalError(error instanceof Error ? error.message : t.errors.load);
@@ -2454,7 +2520,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       });
       const caseList = await getJson<CaseRecord[]>("/cases");
       setSavedCases(caseList);
-      const nextSelected = caseList.find((item) => item.id === created.id) ?? caseList[0] ?? null;
+      const nextSelected = caseList.find((item) => item.id === created.id) ?? null;
       setSelectedCaseId(nextSelected?.id ?? null);
       setSelectedCase(nextSelected);
       setCaseScreen("list");
@@ -2500,9 +2566,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     try {
       const caseList = await seedSamples<CaseRecord[]>("/cases/seed-samples");
       setSavedCases(caseList);
-      const firstCase = caseList[0] ?? null;
-      setSelectedCaseId(firstCase?.id ?? null);
-      setSelectedCase(firstCase);
       setCaseScreen("list");
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.samples);
@@ -2517,10 +2580,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         <div>
           <h2>{t.title}</h2>
           <p>{t.subtitle}</p>
-        </div>
-        <div className="cases-toolbar-actions">
-          <button className={caseScreen === "list" ? "active" : ""} onClick={openListScreen} type="button">{t.list}</button>
-          <button className={caseScreen === "create" ? "active" : ""} onClick={openCreateScreen} type="button">{t.addCase}</button>
         </div>
       </div>
 
@@ -2628,9 +2687,9 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         </section>
       )}
 
-      {caseScreen !== "create" && (
-        <section className="cases-grid">
-          <div className="panel case-list-panel">
+      {caseScreen === "list" && (
+        <section className="feedback-admin-layout feedback-admin-layout-list">
+          <div className="panel case-list-panel feedback-admin-table">
             <div className="case-list-head">
               <div>
                 <h2>{t.listing}</h2>
@@ -2650,23 +2709,31 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
             {loadingCases ? (
               <p className="empty">{t.loading}</p>
             ) : allCases.length ? (
-              <div className="case-list">
-                {allCases.map((item) => (
-                  <article key={item.id} className={`case-list-item ${selectedCaseId === item.id ? "selected" : ""}`}>
-                    <button className="case-list-main" onClick={() => void openCase(item.id)} type="button">
-                      <div className="case-list-title">
-                        <strong>{item.caseLabel}</strong>
-                        <span>{getMessages(locale).dashboard.caseProgress.replace("{progress}", String(item.progress))}</span>
-                      </div>
-                      <p>{item.clientName} - {item.opponentName}</p>
-                      <small>{item.courtName}</small>
-                    </button>
-                    <div className="case-list-actions">
-                      <button className="secondary-button" onClick={() => void openCase(item.id)} type="button">{t.view}</button>
-                      <button className="danger-button" onClick={() => void deleteCase(item.id)} type="button">{t.delete}</button>
-                    </div>
-                  </article>
-                ))}
+              <div className="feedback-datagrid-wrap">
+                <DataGrid
+                  autoHeight
+                  rows={allCases}
+                  columns={caseColumns}
+                  disableRowSelectionOnClick
+                  initialState={{ pagination: { paginationModel: { page: 0, pageSize: 8 } } }}
+                  pageSizeOptions={[8, 15, 25]}
+                  sx={{
+                    border: 0,
+                    "& .MuiDataGrid-columnHeaders": {
+                      borderBottom: "1px solid var(--line)",
+                      backgroundColor: "#f7f9fb"
+                    },
+                    "& .MuiDataGrid-cell": {
+                      borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                    },
+                    "& .MuiDataGrid-row:hover": {
+                      backgroundColor: "#f7fafc"
+                    },
+                    "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                      outline: "none"
+                    }
+                  }}
+                />
               </div>
             ) : (
               <div className="case-empty-detail">
@@ -2685,20 +2752,27 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               </div>
             )}
           </div>
+        </section>
+      )}
 
-          <div className="panel case-detail-panel">
+      {caseScreen === "detail" && (
+        <section className="feedback-admin-layout feedback-admin-layout-detail">
+          <div className="panel case-detail-panel feedback-admin-detail">
+            <div className="case-detail-head">
+              <div>
+                <h2>{t.view}</h2>
+                <p>{selectedCase?.caseLabel ?? t.selectCase}</p>
+              </div>
+              <div className="case-detail-actions">
+                <button className="secondary-button" onClick={openListScreen} type="button">
+                  <ArrowLeft size={16} />
+                  {t.backList}
+                </button>
+                {selectedCase ? <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">{t.delete}</button> : null}
+              </div>
+            </div>
             {selectedCase ? (
               <>
-                <div className="case-detail-head">
-                  <div>
-                    <h2>{t.view}</h2>
-                    <p>{selectedCase.caseLabel}</p>
-                  </div>
-                  <div className="case-detail-actions">
-                    <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
-                    <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">{t.delete}</button>
-                  </div>
-                </div>
                 <div className="case-score compact">
                   <strong>{selectedCase.progress}%</strong>
                   <span>{t.overallCompletion}</span>
@@ -2728,8 +2802,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               </>
             ) : (
               <div className="case-empty-detail">
-                <h2>{t.view}</h2>
                 <p>{t.selectCase}</p>
+                <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
               </div>
             )}
           </div>
