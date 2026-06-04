@@ -16,7 +16,6 @@ import {
   FileText,
   FolderOpen,
   LoaderCircle,
-  Lock,
   Mic,
   Clock3,
   ClipboardList,
@@ -266,7 +265,7 @@ function getFeedbackStatusLabel(value: string) {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
-  const [privateMode, setPrivateMode] = useState(true);
+  const [privateMode] = useState(true);
   const [themeMode, setThemeMode] = useState<ThemeMode>("original");
   const [locale, setLocale] = useState<Locale>("tr");
   const [loading, setLoading] = useState("");
@@ -394,9 +393,10 @@ export default function Home() {
   const [selectedAdminUserId, setSelectedAdminUserId] = useState<string | null>(null);
   const [selectedAdminUser, setSelectedAdminUser] = useState<AuthUser | null>(null);
   const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
-  const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
+  const [settingsSection, setSettingsSection] = useState<"view" | "account">("view");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const tabs = useMemo(() => {
     const baseTabs = [
       { id: "chat" as const, label: t.tabs.chat, icon: Bot },
@@ -1505,14 +1505,20 @@ export default function Home() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isAdminTab = tab.id === "admin";
+            const isSettingsTab = tab.id === "settings";
+            const isSubmenuTab = isAdminTab || isSettingsTab;
             return (
-              <div className={isAdminTab ? "sidebar-menu-group" : ""} key={tab.id}>
+              <div className={isSubmenuTab ? "sidebar-menu-group" : ""} key={tab.id}>
                 <button
-                  aria-expanded={isAdminTab ? adminMenuOpen : undefined}
+                  aria-expanded={isAdminTab ? adminMenuOpen : isSettingsTab ? settingsMenuOpen : undefined}
                   className={activeTab === tab.id ? "active" : ""}
                   onClick={() => {
                     if (isAdminTab) {
                       setAdminMenuOpen((current) => !current);
+                      return;
+                    }
+                    if (isSettingsTab) {
+                      setSettingsMenuOpen((current) => !current);
                       return;
                     }
                     setActiveTab(tab.id);
@@ -1522,8 +1528,38 @@ export default function Home() {
                 >
                   <Icon size={18} />
                   <span>{tab.label}</span>
-                  {isAdminTab ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
+                  {isSubmenuTab ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
                 </button>
+                {isSettingsTab && settingsMenuOpen && (
+                  <div className="sidebar-submenu">
+                    <button
+                      className={activeTab === "settings" && settingsSection === "view" ? "active" : ""}
+                      onClick={() => {
+                        setSettingsMenuOpen(true);
+                        setActiveTab("settings");
+                        setSettingsSection("view");
+                      }}
+                      type="button"
+                      title={t.settings.sections.view}
+                    >
+                      <Scale size={15} />
+                      <span>{t.settings.sections.view}</span>
+                    </button>
+                    <button
+                      className={activeTab === "settings" && settingsSection === "account" ? "active" : ""}
+                      onClick={() => {
+                        setSettingsMenuOpen(true);
+                        setActiveTab("settings");
+                        setSettingsSection("account");
+                      }}
+                      type="button"
+                      title={t.settings.sections.account}
+                    >
+                      <BarChart3 size={15} />
+                      <span>{t.settings.sections.account}</span>
+                    </button>
+                  </div>
+                )}
                 {isAdminTab && adminMenuOpen && (
                   <div className="sidebar-submenu">
                     <Link
@@ -2288,27 +2324,7 @@ export default function Home() {
               </div>
             </header>
 
-            <div className="settings-layout">
-              <aside className="panel settings-menu">
-                <button type="button" className={settingsSection === "view" ? "active" : ""} onClick={() => setSettingsSection("view")}>
-                  <Scale size={16} />
-                  {t.settings.sections.view}
-                </button>
-                <button type="button" className={settingsSection === "privacy" ? "active" : ""} onClick={() => setSettingsSection("privacy")}>
-                  <Lock size={16} />
-                  {t.settings.sections.privacy}
-                </button>
-                <button type="button" className={settingsSection === "account" ? "active" : ""} onClick={() => setSettingsSection("account")}>
-                  <BarChart3 size={16} />
-                  {t.settings.sections.account}
-                </button>
-                <button type="button" className={settingsSection === "app" ? "active" : ""} onClick={() => setSettingsSection("app")}>
-                  <ShieldAlert size={16} />
-                  {t.settings.sections.app}
-                </button>
-              </aside>
-
-              <section className="settings-content">
+            <section className="settings-content">
                 {settingsSection === "view" && (
                   <article className="panel settings-card">
                     <div className="section-head">
@@ -2343,31 +2359,6 @@ export default function Home() {
                   </article>
                 )}
 
-                {settingsSection === "privacy" && (
-                  <article className="panel settings-card">
-                    <div className="section-head">
-                      <div>
-                        <span className="section-label">{t.settings.sections.privacy}</span>
-                        <h3>{t.settings.privacySession}</h3>
-                      </div>
-                    </div>
-                    <label className="setting-row">
-                      <div>
-                        <strong>{t.settings.privacyMode}</strong>
-                        <span>{t.settings.privacyModeDesc}</span>
-                      </div>
-                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
-                    </label>
-                    <label className="setting-row">
-                      <div>
-                        <strong>{t.settings.sessionSecurity}</strong>
-                        <span>{t.settings.sessionSecurityDesc}</span>
-                      </div>
-                      <span className="status">{t.settings.modeActive}</span>
-                    </label>
-                  </article>
-                )}
-
                 {settingsSection === "account" && (
                   <article className="panel settings-card">
                     <div className="section-head">
@@ -2395,32 +2386,7 @@ export default function Home() {
                   </article>
                 )}
 
-                {settingsSection === "app" && (
-                  <article className="panel settings-card">
-                    <div className="section-head">
-                      <div>
-                        <span className="section-label">{t.settings.sections.app}</span>
-                        <h3>{t.settings.behavior}</h3>
-                      </div>
-                    </div>
-                    <label className="setting-row">
-                      <div>
-                        <strong>{t.settings.backendStatus}</strong>
-                        <span>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</span>
-                      </div>
-                      <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? t.settings.modeClosed : t.settings.modeActive}</span>
-                    </label>
-                    <label className="setting-row">
-                      <div>
-                        <strong>{t.settings.quickPrivate}</strong>
-                        <span>{t.settings.quickPrivateDesc}</span>
-                      </div>
-                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
-                    </label>
-                  </article>
-                )}
-              </section>
-            </div>
+            </section>
           </section>
         )}
 
