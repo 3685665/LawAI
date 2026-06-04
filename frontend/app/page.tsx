@@ -293,7 +293,6 @@ export default function Home() {
     currentPassword: "",
     newPassword: ""
   });
-  const [accountOpen, setAccountOpen] = useState(false);
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountError, setAccountError] = useState("");
   const [accountForm, setAccountForm] = useState({
@@ -1248,7 +1247,6 @@ export default function Home() {
       setActiveTab("chat");
       setAuthPreview(null);
       setAuthMode("login");
-      setAccountOpen(false);
       setChatResponse(null);
       setChatMessages([]);
       setPrecedents([]);
@@ -1308,7 +1306,6 @@ export default function Home() {
         newPassword: accountForm.newPassword
       });
       setAuthUser(session.user);
-      setAccountOpen(false);
       setAccountForm({
         currentPassword: "",
         newPassword: "",
@@ -2360,7 +2357,7 @@ export default function Home() {
                 )}
 
                 {settingsSection === "account" && (
-                  <article className="panel settings-card">
+                  <form className="panel settings-card" onSubmit={handleChangePassword}>
                     <div className="section-head">
                       <div>
                         <span className="section-label">{t.settings.sections.account}</span>
@@ -2372,55 +2369,30 @@ export default function Home() {
                         <strong>{t.settings.currentUser}</strong>
                         <span>{authUser.name}</span>
                       </div>
-                      <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
-                        {t.common.changePassword}
-                      </button>
-                    </label>
-                    <label className="setting-row">
-                      <div>
-                        <strong>{t.auth.labels.email}</strong>
-                        <span>{authUser.email}</span>
-                      </div>
                       <span className="status">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
                     </label>
-                  </article>
+                    <label className="field-label">
+                      Mevcut sifre
+                      <input type="password" value={accountForm.currentPassword} onChange={(event) => setAccountForm({ ...accountForm, currentPassword: event.target.value })} />
+                    </label>
+                    <label className="field-label">
+                      Yeni sifre
+                      <input type="password" value={accountForm.newPassword} onChange={(event) => setAccountForm({ ...accountForm, newPassword: event.target.value })} />
+                    </label>
+                    <label className="field-label">
+                      Yeni sifre tekrar
+                      <input type="password" value={accountForm.confirmPassword} onChange={(event) => setAccountForm({ ...accountForm, confirmPassword: event.target.value })} />
+                    </label>
+                    {accountError ? <div className="error">{accountError}</div> : null}
+                    <button disabled={accountLoading} type="submit">
+                      {accountLoading ? <LoaderCircle className="spin" size={17} /> : null}
+                      Sifreyi guncelle
+                    </button>
+                  </form>
                 )}
 
             </section>
           </section>
-        )}
-
-        {accountOpen && (
-          <div className="account-overlay" role="dialog" aria-modal="true" aria-label="Sifre degistir">
-            <form className="panel account-card" onSubmit={handleChangePassword}>
-              <div className="section-head">
-                <div>
-                  <span className="section-label">Hesap</span>
-                  <h3>Sifre degistir</h3>
-                </div>
-                <button className="secondary-button" type="button" onClick={() => setAccountOpen(false)}>
-                  Kapat
-                </button>
-              </div>
-              <label className="field-label">
-                Mevcut sifre
-                <input type="password" value={accountForm.currentPassword} onChange={(event) => setAccountForm({ ...accountForm, currentPassword: event.target.value })} />
-              </label>
-              <label className="field-label">
-                Yeni sifre
-                <input type="password" value={accountForm.newPassword} onChange={(event) => setAccountForm({ ...accountForm, newPassword: event.target.value })} />
-              </label>
-              <label className="field-label">
-                Yeni sifre tekrar
-                <input type="password" value={accountForm.confirmPassword} onChange={(event) => setAccountForm({ ...accountForm, confirmPassword: event.target.value })} />
-              </label>
-              {accountError ? <div className="error">{accountError}</div> : null}
-              <button disabled={accountLoading} type="submit">
-                {accountLoading ? <LoaderCircle className="spin" size={17} /> : null}
-                Sifreyi guncelle
-              </button>
-            </form>
-          </div>
         )}
       </section>
     </main>

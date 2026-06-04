@@ -62,7 +62,7 @@
     "sections": {
       "view": "Appearance",
       "privacy": "Privacy",
-      "account": "Account",
+      "account": "Change Password",
       "app": "App"
     },
     "locale": "Language",
@@ -76,7 +76,7 @@
     "themeSpacious": "Spacious",
     "themeInterface": "Theme and interface",
     "privacySession": "Session and private mode",
-    "accountAccess": "User and access",
+    "accountAccess": "Change password",
     "behavior": "Behavior settings",
     "privacyMode": "Private mode",
     "privacyModeDesc": "Restricts visibility of sensitive data.",

@@ -62,7 +62,7 @@
     "sections": {
       "view": "Gorunum",
       "privacy": "Gizlilik",
-      "account": "Hesap",
+      "account": "Sifre Degistir",
       "app": "Uygulama"
     },
     "locale": "Dil",
@@ -76,7 +76,7 @@
     "themeSpacious": "Genis",
     "themeInterface": "Tema ve arayuz",
     "privacySession": "Oturum ve gizli mod",
-    "accountAccess": "Kullanici ve erisim",
+    "accountAccess": "Sifre degistirme",
     "behavior": "Davranis ayarlari",
     "privacyMode": "Gizli mod",
     "privacyModeDesc": "Hassas veri gorunumunu kisitlar.",
