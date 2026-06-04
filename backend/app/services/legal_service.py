@@ -22,6 +22,7 @@ from app.settings import settings
 
 DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
 LOCAL_EMBEDDING_DIMENSIONS = 384
+AI_REQUEST_TIMEOUT_SECONDS = 12
 
 SAMPLE_PRECEDENTS = [
     PrecedentDto(court="Yargitay", chamber="9. Hukuk Dairesi", docketNo="2022/1845", decisionNo="2022/7281", date="2022-06-14", topic="Ise iade", summary="Fesih nedeninin somut delillerle ispatlanamamasi halinde ise iade kosullari degerlendirilir."),
@@ -70,7 +71,7 @@ class LegalService:
         citations = self.search(request.question, None, None, 4, use_samples=False)
         answer = self._local_answer(request, citations)
 
-        if self.chat_model:
+        if self.chat_model and citations:
             try:
                 answer = self._answer_with_ai(request, citations)
             except Exception as exc:
@@ -100,12 +101,13 @@ class LegalService:
         )
 
     def generate_petition(self, request: PetitionRequest) -> PetitionResponse:
-        citations = self.search(f"{request.facts} {request.demands or ''}", None, None, 2)
+        indexed_citations = self.search(f"{request.facts} {request.demands or ''}", None, None, 2, use_samples=False)
+        citations = indexed_citations or self._search_samples(f"{request.facts} {request.demands or ''}", None, None, 2)
         body = self._local_petition(request)
 
-        if self.chat_model:
+        if self.chat_model and indexed_citations:
             try:
-                body = self._petition_with_ai(request, citations)
+                body = self._petition_with_ai(request, indexed_citations)
             except Exception:
                 body += "\n\nNOT: AI saglayicisi su anda yanit vermedigi icin yerel taslak modu kullanildi."
 
@@ -126,7 +128,14 @@ class LegalService:
                 storage="disabled",
                 message=f"Embedding saglayicisi hata verdi: {exc}",
             )
-        indexed = vector_store.save_all(request.documents, embeddings)
+        try:
+            indexed = vector_store.save_all(request.documents, embeddings)
+        except Exception as exc:
+            return KnowledgeIngestResponse(
+                indexed=0,
+                storage="disabled",
+                message=f"Vektor deposu hata verdi: {exc}",
+            )
         storage = f"pgvector/{self.provider}" if settings.vector_store.lower() == "pgvector" else f"persistent/{self.provider}"
         return KnowledgeIngestResponse(indexed=indexed, storage=storage, message="Dokumanlar kalici vektor deposuna indekslendi.")
 
@@ -150,8 +159,8 @@ class LegalService:
     def search(self, query: str, court: str | None, chamber: str | None, limit: int, use_samples: bool = True) -> list[PrecedentDto]:
         if self.embeddings:
             try:
-                query_embedding = self._embed_query(query)
                 if vector_store.has_entries():
+                    query_embedding = self._embed_query(query)
                     results = vector_store.search(query_embedding, court, chamber, limit, query)
                     if results:
                         return results
@@ -207,12 +216,20 @@ class LegalService:
 
     def _chat_model(self) -> BaseChatModel | None:
         if self.provider == "openai" and settings.openai_api_key:
-            return ChatOpenAI(model=settings.openai_chat_model, api_key=settings.openai_api_key, temperature=0.2)
+            return ChatOpenAI(
+                model=settings.openai_chat_model,
+                api_key=settings.openai_api_key,
+                temperature=0.2,
+                timeout=AI_REQUEST_TIMEOUT_SECONDS,
+                max_retries=1,
+            )
         if self.provider == "gemini" and settings.google_api_key:
             return ChatGoogleGenerativeAI(
                 model=settings.gemini_chat_model,
                 google_api_key=settings.google_api_key,
                 temperature=0.2,
+                request_timeout=AI_REQUEST_TIMEOUT_SECONDS,
+                retries=1,
             )
         if self.provider == "ollama":
             return ChatOllama(
@@ -222,6 +239,7 @@ class LegalService:
                 num_ctx=2048,
                 num_predict=96,
                 keep_alive="5m",
+                sync_client_kwargs={"timeout": AI_REQUEST_TIMEOUT_SECONDS},
             )
         return None
 
@@ -232,6 +250,7 @@ class LegalService:
             return GoogleGenerativeAIEmbeddings(
                 model=settings.gemini_embedding_model,
                 google_api_key=settings.google_api_key,
+                request_options={"timeout": AI_REQUEST_TIMEOUT_SECONDS},
             )
         if self.provider == "ollama":
             return OllamaEmbeddings(model=settings.ollama_embedding_model, base_url=settings.ollama_base_url)

@@ -276,7 +276,7 @@ class PgVectorStore:
         self._ready = True
 
     def _connect(self):
-        return psycopg.connect(settings.database_url)
+        return psycopg.connect(settings.database_url, connect_timeout=2)
 
     def _to_vector_literal(self, embedding: list[float]) -> str:
         return "[" + ",".join(f"{value:.8f}" for value in embedding) + "]"

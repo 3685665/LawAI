@@ -1681,35 +1681,11 @@ export default function Home() {
                 <span className="eyebrow">{t.tabs.petition}</span>
                 <h1>{t.tools.petitionAssistantTitle}</h1>
               </div>
-              <div className="smart-notes-summary">
-                <div>
-                  <span>{t.tools.petitionMethod}</span>
-                  <strong>{petitionMethod === "case" ? t.tools.petitionFromCase : petitionMethod === "quick" ? t.tools.petitionQuick : t.tools.petitionDetailed}</strong>
-                </div>
-                <div>
-                  <span>{t.tools.petitionModel}</span>
-                  <strong>{petitionModel === "premium" ? t.tools.petitionPremiumModel : t.tools.petitionStandardModel}</strong>
-                </div>
-              </div>
             </header>
 
             <section className="petition-assistant-layout">
               <form className="panel petition-builder-panel" onSubmit={submitPetition}>
                 <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
-                <div className="petition-segmented">
-                  <button className={petitionMethod === "case" ? "active" : ""} type="button" onClick={() => setPetitionMethod("case")}>{t.tools.petitionFromCase}</button>
-                  <button className={petitionMethod === "quick" ? "active" : ""} type="button" onClick={() => setPetitionMethod("quick")}>{t.tools.petitionQuick}</button>
-                  <button className={petitionMethod === "detailed" ? "active" : ""} type="button" onClick={() => setPetitionMethod("detailed")}>{t.tools.petitionDetailed}</button>
-                </div>
-
-                <div className="petition-model-grid">
-                  <button className={petitionModel === "standard" ? "active" : ""} type="button" onClick={() => setPetitionModel("standard")}>
-                    <strong>{t.tools.petitionStandardModel}</strong>
-                  </button>
-                  <button className={petitionModel === "premium" ? "active" : ""} type="button" onClick={() => setPetitionModel("premium")}>
-                    <strong>{t.tools.petitionPremiumModel}</strong>
-                  </button>
-                </div>
 
                 <div className="petition-form-grid">
                   <label className="field-label">
@@ -1722,23 +1698,10 @@ export default function Home() {
                   </label>
                 </div>
 
-                {petitionMethod === "detailed" ? (
-                  <div className="petition-form-grid">
-                    <label className="field-label">
-                      {t.tools.petitionApplicant}
-                      <input value={petition.parties.split("\n")[0]?.replace("Davaci: ", "") ?? ""} onChange={(event) => setPetition({ ...petition, parties: `Davaci: ${event.target.value}\nDavali: ${petition.parties.split("\n")[1]?.replace("Davali: ", "") ?? ""}` })} />
-                    </label>
-                    <label className="field-label">
-                      {t.tools.petitionOpponent}
-                      <input value={petition.parties.split("\n")[1]?.replace("Davali: ", "") ?? ""} onChange={(event) => setPetition({ ...petition, parties: `Davaci: ${petition.parties.split("\n")[0]?.replace("Davaci: ", "") ?? ""}\nDavali: ${event.target.value}` })} />
-                    </label>
-                  </div>
-                ) : (
-                  <label className="field-label">
-                    {t.tools.petitionApplicant} / {t.tools.petitionOpponent}
-                    <textarea rows={3} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
-                  </label>
-                )}
+                <label className="field-label">
+                  {t.tools.petitionApplicant} / {t.tools.petitionOpponent}
+                  <textarea rows={3} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
+                </label>
 
                 <label className="field-label">
                   {t.tools.petitionDescription}
@@ -1749,69 +1712,22 @@ export default function Home() {
                   <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
                 </label>
 
-                <section className="petition-context-panel">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-label">{t.tools.petitionContext}</span>
-                      <h3>{t.tools.petitionCaseContext}</h3>
-                    </div>
-                  </div>
-                  <div className="petition-context-options">
-                    <label><input checked={petitionContextSources.upload} onChange={(event) => setPetitionContextSources((current) => ({ ...current, upload: event.target.checked }))} type="checkbox" /> {t.tools.petitionUploadContext}</label>
-                    <label><input checked={petitionContextSources.existing} onChange={(event) => setPetitionContextSources((current) => ({ ...current, existing: event.target.checked }))} type="checkbox" /> {t.tools.petitionExistingDocs}</label>
-                    <label><input checked={petitionContextSources.training} onChange={(event) => setPetitionContextSources((current) => ({ ...current, training: event.target.checked }))} type="checkbox" /> {t.tools.petitionTrainingData}</label>
-                  </div>
-                  <textarea rows={5} value={petitionContext} onChange={(event) => setPetitionContext(event.target.value)} placeholder={t.tools.petitionCaseContextPlaceholder} />
-                </section>
-
                 <button disabled={loading === "petition"} type="submit">
                   {loading === "petition" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}
                   {t.tools.petitionSubmit}
                 </button>
               </form>
 
-              <aside className="panel petition-edit-panel">
-                <PanelTitle icon={<Bot size={20} />} title={t.tools.draftControls} />
-                <details className="compact-details">
-                  <summary>{t.tools.advancedOptions}</summary>
-                  <p className="panel-subtitle">{t.tools.petitionQualityHint}</p>
-                </details>
-                <label className="field-label">
-                  {t.tools.petitionEditInstruction}
-                  <textarea rows={7} value={petitionEditInstruction} onChange={(event) => setPetitionEditInstruction(event.target.value)} placeholder={t.tools.petitionEditPlaceholder} />
-                </label>
-                <div className="petition-export-actions">
-                  <button className="secondary-button" type="button" disabled={!petitionResult || !petitionEditInstruction.trim() || loading === "petition-edit"} onClick={() => runPetitionEdit("all")}>{t.tools.petitionEditAll}</button>
-                  <button type="button" disabled={!petitionResult || !selectedPetitionText.trim() || !petitionEditInstruction.trim() || loading === "petition-edit"} onClick={() => runPetitionEdit("selection")}>{t.tools.petitionEditSelection}</button>
-                </div>
-                {petitionEditPreview ? (
-                  <section className="petition-diff-panel">
-                    <h3>{t.tools.petitionDiffView}</h3>
-                    <div className="petition-diff-grid">
-                      <pre>{petitionEditPreview.before}</pre>
-                      <pre>{petitionEditPreview.after}</pre>
-                    </div>
-                    <div className="petition-export-actions">
-                      <button type="button" onClick={acceptPetitionEdit}>{t.tools.petitionAccept}</button>
-                      <button className="secondary-button" type="button" onClick={() => setPetitionEditPreview(null)}>{t.tools.petitionReject}</button>
-                    </div>
-                  </section>
-                ) : null}
-                <section className="petition-export-panel">
-                  <span className="section-label">{t.tools.petitionExport}</span>
-                  <div className="petition-export-actions">
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
-                  </div>
-                </section>
-              </aside>
-
               <section className="panel petition-draft-panel">
                 <div className="section-head">
                   <div>
                     <span className="section-label">{t.tools.petitionDraft}</span>
                     <h3>{petitionResult?.title ?? t.tools.petitionDraft}</h3>
+                  </div>
+                  <div className="petition-export-actions">
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
+                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
                   </div>
                 </div>
                 {petitionResult ? (

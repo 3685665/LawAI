@@ -1826,11 +1826,10 @@ body[data-theme="dark"] .law-chat-download {
   align-items: start;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(360px, 0.92fr) minmax(300px, 0.72fr) minmax(430px, 1.08fr);
+  grid-template-columns: minmax(320px, 0.78fr) minmax(520px, 1.22fr);
 }
 
 .petition-builder-panel,
-.petition-edit-panel,
 .petition-draft-panel {
   align-content: start;
   display: grid;
@@ -1958,6 +1957,16 @@ body[data-theme="dark"] .law-chat-download {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.petition-draft-panel .section-head {
+  align-items: start;
+}
+
+.petition-draft-panel .petition-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .petition-export-panel .petition-export-actions {
   grid-template-columns: 1fr;
 }
@@ -1987,13 +1996,13 @@ body[data-theme="dark"] .law-chat-download {
 }
 
 .petition-draft-panel {
-  min-height: 720px;
+  min-height: 620px;
 }
 
 .petition-draft-textarea {
   font-family: var(--font-serif), Georgia, serif;
   line-height: 1.65;
-  min-height: 640px;
+  min-height: 520px;
   resize: vertical;
 }
 

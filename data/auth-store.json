@@ -6,13 +6,13 @@
     "passwordHash" : "$2a$10$8jBnxrT3MQ5lBRolF45ZK.Fgs6JfOjjKfyBNrFMRti9JIU94XqdEK",
     "role" : "ADMIN",
     "createdAt" : "2026-06-02T22:49:20.4135034Z",
-    "lastLoginAt" : "2026-06-03T22:42:33.1670853Z"
+    "lastLoginAt" : "2026-06-04T10:42:26.6467863Z"
   } ],
   "sessions" : [ {
-    "tokenHash" : "$2a$10$nrNiVAxZ426PRYjIYSgike7PYRjN4bBLFlvknEtJ4MmoJcG2lWnqy",
+    "tokenHash" : "$2a$10$9Ysu/8eQ3Ogg./QCQ8JKgewmdqsXcxS7gCHQpsUeKlC/W5f8GDmrS",
     "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
-    "expiresAt" : "2026-07-03T22:42:33.1670853Z",
-    "createdAt" : "2026-06-03T22:42:33.1670853Z"
+    "expiresAt" : "2026-07-04T10:42:26.6467863Z",
+    "createdAt" : "2026-06-04T10:42:26.6467863Z"
   } ],
   "passwordResets" : [ ]
 }
