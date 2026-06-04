@@ -2017,31 +2017,40 @@ export default function Home() {
               </div>
             </header>
 
-            <section className="admin-grid">
-              <article className="panel admin-card">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.adminPanel.userRequests}</span>
-                    <h3>{t.adminFeedback.title}</h3>
+            <div className="settings-layout admin-settings-layout">
+              <aside className="panel settings-menu">
+                <button type="button" className="active">
+                  <MessageSquareMore size={16} />
+                  {t.adminFeedback.title}
+                </button>
+              </aside>
+
+              <section className="settings-content">
+                <article className="panel admin-card">
+                  <div className="section-head">
+                    <div>
+                      <span className="section-label">{t.adminPanel.userRequests}</span>
+                      <h3>{t.adminFeedback.title}</h3>
+                    </div>
+                    <span className="status">{adminFeedbackMetrics.total} {t.tools.records}</span>
                   </div>
-                  <span className="status">{adminFeedbackMetrics.total} {t.tools.records}</span>
-                </div>
-                <div className="admin-metric-row">
-                  <div><span>{t.adminPanel.openFeedback}</span><strong>{adminFeedbackMetrics.open}</strong></div>
-                  <div><span>{t.adminPanel.resolvedFeedback}</span><strong>{adminFeedbackMetrics.resolved}</strong></div>
-                </div>
-                <div className="admin-actions">
-                  <button className="secondary-button" type="button" onClick={refreshAdminFeedback} disabled={feedbackLoading}>
-                    {feedbackLoading ? <LoaderCircle className="spin" size={17} /> : <MessageSquareMore size={17} />}
-                    {t.adminPanel.refreshFeedback}
-                  </button>
-                  <Link className="admin-link-button" href="/feedback-management">
-                    <ShieldAlert size={17} />
-                    {t.adminPanel.openFeedbackManagement}
-                  </Link>
-                </div>
-              </article>
-            </section>
+                  <div className="admin-metric-row">
+                    <div><span>{t.adminPanel.openFeedback}</span><strong>{adminFeedbackMetrics.open}</strong></div>
+                    <div><span>{t.adminPanel.resolvedFeedback}</span><strong>{adminFeedbackMetrics.resolved}</strong></div>
+                  </div>
+                  <div className="admin-actions">
+                    <button className="secondary-button" type="button" onClick={refreshAdminFeedback} disabled={feedbackLoading}>
+                      {feedbackLoading ? <LoaderCircle className="spin" size={17} /> : <MessageSquareMore size={17} />}
+                      {t.adminPanel.refreshFeedback}
+                    </button>
+                    <Link className="admin-link-button" href="/feedback-management">
+                      <ShieldAlert size={17} />
+                      {t.adminPanel.openFeedbackManagement}
+                    </Link>
+                  </div>
+                </article>
+              </section>
+            </div>
           </section>
         )}
 
