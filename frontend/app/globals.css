@@ -171,6 +171,11 @@ pre {
   grid-template-columns: 260px 1fr;
   min-height: 100vh;
   gap: 0;
+  transition: grid-template-columns 0.2s ease;
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 84px 1fr;
 }
 
 .sidebar {
@@ -181,6 +186,14 @@ pre {
   flex-direction: column;
   gap: 24px;
   padding: 24px 16px;
+  overflow: hidden;
+  transition: padding 0.2s ease;
+}
+
+.sidebar-collapsed .sidebar {
+  align-items: center;
+  gap: 18px;
+  padding: 24px 12px;
 }
 
 .brand {
@@ -191,6 +204,19 @@ pre {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-collapsed .brand {
+  justify-content: center;
+  padding: 12px;
+}
+
+.sidebar-collapsed .brand div,
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .tabs button span,
+.sidebar-collapsed .sidebar-user > div:not(.sidebar-user-avatar),
+.sidebar-collapsed .sidebar-user-actions button {
+  display: none;
 }
 
 .brand strong {
@@ -210,6 +236,36 @@ pre {
   gap: 8px;
 }
 
+.sidebar-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  color: #f4f8f7;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.sidebar-toggle svg {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.sidebar-collapsed .sidebar-toggle {
+  border-radius: 999px;
+  padding: 0;
+  width: 44px;
+}
+
+.sidebar-collapsed .sidebar-toggle svg {
+  transform: rotate(0deg);
+}
+
+.sidebar-collapsed .sidebar-toggle span {
+  display: none;
+}
+
 .nav-label {
   color: rgba(220, 229, 225, 0.72);
   font-size: 12px;
@@ -227,6 +283,15 @@ pre {
   padding: 11px 12px;
   box-shadow: none;
   border-radius: 10px;
+}
+
+.sidebar-collapsed .tabs {
+  width: 100%;
+}
+
+.sidebar-collapsed .tabs button {
+  justify-content: center;
+  padding: 11px 0;
 }
 
 .tabs button.active,
@@ -571,6 +636,29 @@ pre {
   margin-top: 6px;
   padding: 14px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-avatar {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: #fff;
+  display: none;
+  font-weight: 900;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.sidebar-collapsed .sidebar-user {
+  justify-items: center;
+  padding: 14px 0;
+  width: 100%;
+}
+
+.sidebar-collapsed .sidebar-user-avatar {
+  display: flex;
 }
 
 .sidebar-user strong,

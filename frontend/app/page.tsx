@@ -384,6 +384,7 @@ export default function Home() {
     message: ""
   });
   const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const tabs = useMemo(() => {
     const baseTabs = [
       { id: "chat" as const, label: t.tabs.chat, icon: Bot },
@@ -1384,7 +1385,7 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
         <div className="brand">
           <Scale size={28} />
@@ -1393,6 +1394,15 @@ export default function Home() {
             <span>{t.dashboard.eyebrow}</span>
           </div>
         </div>
+        <button
+          aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
+          className="sidebar-toggle"
+          onClick={() => setSidebarCollapsed((current) => !current)}
+          type="button"
+        >
+          <ChevronRight size={18} />
+          <span>{sidebarCollapsed ? "Ac" : "Kapat"}</span>
+        </button>
         <div className="nav-label">{t.common.apps}</div>
         <nav className="tabs">
           {tabs.map((tab) => {
@@ -1406,6 +1416,7 @@ export default function Home() {
           })}
         </nav>
         <div className="sidebar-user">
+          <div className="sidebar-user-avatar" aria-hidden="true">{authUser.name.slice(0, 1).toUpperCase()}</div>
           <div>
             <strong>{authUser.name}</strong>
             <span>{authUser.email}</span>
