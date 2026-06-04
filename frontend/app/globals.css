@@ -2105,33 +2105,6 @@ body[data-theme="dark"] .law-chat-download {
   opacity: 0.86;
 }
 
-.compact-details {
-  background: #fbfcfd;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--muted);
-  display: grid;
-  gap: 10px;
-  padding: 10px 12px;
-}
-
-.compact-details summary {
-  color: var(--accent-strong);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.compact-details[open] {
-  padding-bottom: 12px;
-}
-
-.compact-details .precedent-examples,
-.compact-details .precedent-notice {
-  border: 0;
-  padding: 8px 0 0;
-}
-
 .petition-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -2484,24 +2457,6 @@ body[data-theme="dark"] .law-chat-download {
   top: 24px;
 }
 
-.precedent-examples {
-  background: #fbfcfd;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: grid;
-  gap: 9px;
-  padding: 12px;
-}
-
-.precedent-examples button {
-  justify-content: flex-start;
-  line-height: 1.45;
-  min-height: 0;
-  padding: 10px 12px;
-  text-align: left;
-}
-
-.precedent-notice,
 .precedent-detail-box,
 .precedent-summary-box,
 .precedent-use-box {
@@ -2513,11 +2468,6 @@ body[data-theme="dark"] .law-chat-download {
   padding: 12px;
 }
 
-.precedent-notice strong {
-  color: var(--accent-strong);
-}
-
-.precedent-notice p,
 .precedent-use-box p {
   color: var(--muted);
   line-height: 1.55;
@@ -3628,7 +3578,7 @@ body[data-theme="dark"] .law-chat-download {
 }
 
 @media (max-width: 900px) {
-  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .training-grid, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-header, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
+  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .training-grid, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
     grid-template-columns: 1fr;
   }
 

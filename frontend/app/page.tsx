@@ -10,14 +10,12 @@ import {
   Bot,
   CheckCircle2,
   ChevronRight,
-  Database,
   GraduationCap,
   FileSearch,
   FileText,
   FolderOpen,
   LoaderCircle,
   Mic,
-  Clock3,
   MessageSquareMore,
   Scale,
   Search,
@@ -62,7 +60,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings" | "admin";
+type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type ChatMessage = {
@@ -106,7 +104,6 @@ type SmartNote = {
   createdAt: string;
 };
 type PetitionResponse = { title: string; body: string; citedPrecedents: Precedent[] };
-type KnowledgeResponse = { indexed: number; storage: string; message: string };
 type FeedbackType = "hata" | "ozellik" | "genel";
 type FeedbackFilter = "all" | FeedbackType;
 type FeedbackStatusFilter = "all" | FeedbackStatus;
@@ -368,20 +365,6 @@ export default function Home() {
   const [selectedPetitionText, setSelectedPetitionText] = useState("");
   const [petitionEditPreview, setPetitionEditPreview] = useState<{ before: string; after: string } | null>(null);
   const [petitionResult, setPetitionResult] = useState<PetitionResponse | null>(null);
-  const [knowledgeJson, setKnowledgeJson] = useState(`[
-  {
-    "sourceType": "precedent",
-    "court": "Yargitay",
-    "chamber": "3. Hukuk Dairesi",
-    "docketNo": "2024/100",
-    "decisionNo": "2024/250",
-    "date": "2024-03-12",
-    "topic": "Kira alacagi",
-    "summary": "Temerrut ve kira alacagi yazili delillerle degerlendirilir.",
-    "content": "Kira sozlesmesi, ihtarname ve odeme kayitlari birlikte incelenmelidir."
-  }
-]`);
-  const [knowledgeResult, setKnowledgeResult] = useState<KnowledgeResponse | null>(null);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackRecord[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState("");
@@ -1251,18 +1234,6 @@ export default function Home() {
     printWindow.document.close();
   }
 
-  function submitKnowledge(event: FormEvent) {
-    event.preventDefault();
-    indexKnowledge();
-  }
-
-  function indexKnowledge() {
-    run("knowledge", async () => {
-      const documents = JSON.parse(knowledgeJson);
-      setKnowledgeResult(await postJson<KnowledgeResponse>("/knowledge/documents", { documents }));
-    });
-  }
-
   function submitFeedback(event: FormEvent) {
     event.preventDefault();
     run("feedback", async () => {
@@ -1275,12 +1246,6 @@ export default function Home() {
       setFeedbackItems((current) => [response.feedback, ...current.filter((item) => item.id !== response.feedback.id)]);
       setSelectedFeedbackId(response.feedback.id);
       setFeedbackForm({ type: "genel", subject: "", message: "" });
-    });
-  }
-
-  function seedKnowledge() {
-    run("knowledge", async () => {
-      setKnowledgeResult(await postJson<KnowledgeResponse>("/knowledge/seed-precedents", {}));
     });
   }
 
@@ -1357,22 +1322,21 @@ export default function Home() {
       setChatMessages([]);
       setPrecedents([]);
       setPetitionResult(null);
-      setKnowledgeResult(null);
-        setFeedbackItems([]);
-        setFeedbackError("");
-        setFeedbackSubmitted(null);
-        setFeedbackLoaded(false);
-        setSelectedFeedbackId(null);
-        setFeedbackSearch("");
-        setFeedbackTypeFilter("all");
-        setFeedbackStatusFilter("all");
-        setAdminSection("feedback");
-        setAdminUsers([]);
-        setAdminUsersError("");
-        setSelectedAdminUserId(null);
-        setSelectedAdminUser(null);
-        setAdminUserView("list");
-        setTraining(null);
+      setFeedbackItems([]);
+      setFeedbackError("");
+      setFeedbackSubmitted(null);
+      setFeedbackLoaded(false);
+      setSelectedFeedbackId(null);
+      setFeedbackSearch("");
+      setFeedbackTypeFilter("all");
+      setFeedbackStatusFilter("all");
+      setAdminSection("feedback");
+      setAdminUsers([]);
+      setAdminUsersError("");
+      setSelectedAdminUserId(null);
+      setSelectedAdminUser(null);
+      setAdminUserView("list");
+      setTraining(null);
       setTrainingError("");
       setAuthForm({
         name: "",
@@ -1984,28 +1948,6 @@ export default function Home() {
         {activeTab === "cases" && <CasesPanel locale={locale} onGoToDocuments={() => setActiveTab("document")} />}
 
         {activeTab === "document" && <DocumentPanel locale={locale} loading={loading} run={run} onGoToChat={() => setActiveTab("chat")} />}
-
-        {activeTab === "knowledge" && (
-          <section className="tool-grid">
-            <form className="panel primary-panel" onSubmit={submitKnowledge}>
-              <PanelTitle icon={<Database size={20} />} title={t.tools.knowledgeTitle} />
-              <textarea value={knowledgeJson} onChange={(event) => setKnowledgeJson(event.target.value)} rows={16} />
-              <div className="row">
-                <button disabled={loading === "knowledge"} type="button" onClick={seedKnowledge}><Database size={17} />{t.tools.knowledgeSeed}</button>
-                <button disabled={loading === "knowledge"} type="submit"><Upload size={17} />{t.tools.knowledgeSubmit}</button>
-              </div>
-            </form>
-            <ResultPanel title={t.tools.knowledgeResult}>
-              {knowledgeResult ? (
-                <div className="document-summary">
-                  <strong>{knowledgeResult.storage}</strong>
-                  <span>{knowledgeResult.indexed} {t.tools.records}</span>
-                  <p>{knowledgeResult.message}</p>
-                </div>
-              ) : <EmptyState text={t.tools.knowledgeEmpty} />}
-            </ResultPanel>
-          </section>
-        )}
 
         {activeTab === "feedback" && (
           <section className="feedback-workspace">
