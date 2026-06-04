@@ -382,6 +382,7 @@ export default function Home() {
     subject: "",
     message: ""
   });
+  const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
   const tabs = useMemo(() => {
     const baseTabs = [
       { id: "chat" as const, label: t.tabs.chat, icon: Bot },
@@ -2052,145 +2053,141 @@ export default function Home() {
                 <h1>{t.settings.headline}</h1>
                 <p>{t.settings.subtitle}</p>
               </div>
-              <div className="settings-health-strip">
-                <div>
-                  <small>{t.settings.backendStatus}</small>
-                  <strong>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</strong>
-                </div>
-                <span className={backendOnline === false ? "status offline" : "status"}>
-                  {backendOnline === false ? t.settings.modeClosed : t.settings.modeActive}
-                </span>
-              </div>
             </header>
 
-            <section className="settings-summary-grid">
-              <div className="settings-summary-card">
-                <Scale size={18} />
-                <span>{t.settings.sections.view}</span>
-                <strong>{themeMode === "dark" ? t.settings.themeDark : themeMode === "light" ? t.settings.themeLight : t.settings.localeOriginal}</strong>
-              </div>
-              <div className="settings-summary-card">
-                <Lock size={18} />
-                <span>{t.settings.sections.privacy}</span>
-                <strong>{privateMode ? t.settings.modeActive : t.settings.modeClosed}</strong>
-              </div>
-              <div className="settings-summary-card">
-                <UserRound size={18} />
-                <span>{t.settings.sections.account}</span>
-                <strong>{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</strong>
-              </div>
-            </section>
+            <div className="settings-layout">
+              <aside className="panel settings-menu">
+                <button type="button" className={settingsSection === "view" ? "active" : ""} onClick={() => setSettingsSection("view")}>
+                  <Scale size={16} />
+                  {t.settings.sections.view}
+                </button>
+                <button type="button" className={settingsSection === "privacy" ? "active" : ""} onClick={() => setSettingsSection("privacy")}>
+                  <Lock size={16} />
+                  {t.settings.sections.privacy}
+                </button>
+                <button type="button" className={settingsSection === "account" ? "active" : ""} onClick={() => setSettingsSection("account")}>
+                  <BarChart3 size={16} />
+                  {t.settings.sections.account}
+                </button>
+                <button type="button" className={settingsSection === "app" ? "active" : ""} onClick={() => setSettingsSection("app")}>
+                  <ShieldAlert size={16} />
+                  {t.settings.sections.app}
+                </button>
+              </aside>
 
-            <section className="settings-grid">
-              <article className="panel settings-card settings-card-featured">
-                <div className="settings-card-title">
-                  <Scale size={19} />
-                  <div>
-                    <span className="section-label">{t.settings.sections.view}</span>
-                    <h3>{t.settings.themeInterface}</h3>
-                  </div>
-                </div>
-                <div className="settings-form-grid">
-                  <label className="field-label">
-                    {t.settings.theme}
-                    <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
-                      <option value="original">{t.settings.localeOriginal}</option>
-                      <option value="light">{t.settings.themeLight}</option>
-                      <option value="dark">{t.settings.themeDark}</option>
-                    </select>
-                  </label>
-                  <label className="field-label">
-                    {t.settings.localeView}
-                    <select defaultValue="comfortable">
-                      <option value="compact">{t.settings.themeCompact}</option>
-                      <option value="comfortable">{t.settings.themeBalanced}</option>
-                      <option value="spacious">{t.settings.themeSpacious}</option>
-                    </select>
-                  </label>
-                  <label className="field-label">
-                    {t.settings.language}
-                    <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
-                      <option value="tr">{t.settings.tr}</option>
-                      <option value="en">{t.settings.en}</option>
-                    </select>
-                  </label>
-                </div>
-              </article>
+              <section className="settings-content">
+                {settingsSection === "view" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.settings.sections.view}</span>
+                        <h3>{t.settings.themeInterface}</h3>
+                      </div>
+                    </div>
+                    <label className="field-label">
+                      {t.settings.theme}
+                      <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
+                        <option value="original">{t.settings.localeOriginal}</option>
+                        <option value="light">{t.settings.themeLight}</option>
+                        <option value="dark">{t.settings.themeDark}</option>
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      {t.settings.localeView}
+                      <select defaultValue="comfortable">
+                        <option value="compact">{t.settings.themeCompact}</option>
+                        <option value="comfortable">{t.settings.themeBalanced}</option>
+                        <option value="spacious">{t.settings.themeSpacious}</option>
+                      </select>
+                    </label>
+                    <label className="field-label">
+                      {t.settings.language}
+                      <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
+                        <option value="tr">{t.settings.tr}</option>
+                        <option value="en">{t.settings.en}</option>
+                      </select>
+                    </label>
+                  </article>
+                )}
 
-              <article className="panel settings-card">
-                <div className="settings-card-title">
-                  <Lock size={19} />
-                  <div>
-                    <span className="section-label">{t.settings.sections.privacy}</span>
-                    <h3>{t.settings.privacySession}</h3>
-                  </div>
-                </div>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.settings.privacyMode}</strong>
-                    <span>{t.settings.privacyModeDesc}</span>
-                  </div>
-                  <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
-                </label>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.settings.sessionSecurity}</strong>
-                    <span>{t.settings.sessionSecurityDesc}</span>
-                  </div>
-                  <span className="status">{t.settings.modeActive}</span>
-                </label>
-              </article>
+                {settingsSection === "privacy" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.settings.sections.privacy}</span>
+                        <h3>{t.settings.privacySession}</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.settings.privacyMode}</strong>
+                        <span>{t.settings.privacyModeDesc}</span>
+                      </div>
+                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.settings.sessionSecurity}</strong>
+                        <span>{t.settings.sessionSecurityDesc}</span>
+                      </div>
+                      <span className="status">{t.settings.modeActive}</span>
+                    </label>
+                  </article>
+                )}
 
-              <article className="panel settings-card">
-                <div className="settings-card-title">
-                  <UserRound size={19} />
-                  <div>
-                    <span className="section-label">{t.settings.sections.account}</span>
-                    <h3>{t.settings.accountAccess}</h3>
-                  </div>
-                </div>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.settings.currentUser}</strong>
-                    <span>{authUser.name}</span>
-                  </div>
-                  <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
-                    {t.common.changePassword}
-                  </button>
-                </label>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.auth.labels.email}</strong>
-                    <span>{authUser.email}</span>
-                  </div>
-                  <span className="status">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
-                </label>
-              </article>
+                {settingsSection === "account" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.settings.sections.account}</span>
+                        <h3>{t.settings.accountAccess}</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.settings.currentUser}</strong>
+                        <span>{authUser.name}</span>
+                      </div>
+                      <button className="secondary-button" type="button" onClick={() => setAccountOpen(true)}>
+                        {t.common.changePassword}
+                      </button>
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.auth.labels.email}</strong>
+                        <span>{authUser.email}</span>
+                      </div>
+                      <span className="status">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
+                    </label>
+                  </article>
+                )}
 
-              <article className="panel settings-card">
-                <div className="settings-card-title">
-                  <ShieldAlert size={19} />
-                  <div>
-                    <span className="section-label">{t.settings.sections.app}</span>
-                    <h3>{t.settings.behavior}</h3>
-                  </div>
-                </div>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.settings.backendStatus}</strong>
-                    <span>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</span>
-                  </div>
-                  <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? t.settings.modeClosed : t.settings.modeActive}</span>
-                </label>
-                <label className="setting-row">
-                  <div>
-                    <strong>{t.settings.quickPrivate}</strong>
-                    <span>{t.settings.quickPrivateDesc}</span>
-                  </div>
-                  <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
-                </label>
-              </article>
-            </section>
+                {settingsSection === "app" && (
+                  <article className="panel settings-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.settings.sections.app}</span>
+                        <h3>{t.settings.behavior}</h3>
+                      </div>
+                    </div>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.settings.backendStatus}</strong>
+                        <span>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</span>
+                      </div>
+                      <span className={backendOnline === false ? "status offline" : "status"}>{backendOnline === false ? t.settings.modeClosed : t.settings.modeActive}</span>
+                    </label>
+                    <label className="setting-row">
+                      <div>
+                        <strong>{t.settings.quickPrivate}</strong>
+                        <span>{t.settings.quickPrivateDesc}</span>
+                      </div>
+                      <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
+                    </label>
+                  </article>
+                )}
+              </section>
+            </div>
           </section>
         )}
 
