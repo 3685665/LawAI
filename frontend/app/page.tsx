@@ -26,7 +26,8 @@ import {
   ShieldAlert,
   Upload,
   UserRound,
-  X
+  X,
+  type LucideIcon
 } from "lucide-react";
 import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
 import { getMessages, isLocale, type Locale } from "@/lib/i18n";
@@ -111,8 +112,22 @@ type FeedbackFilter = "all" | FeedbackType;
 type FeedbackStatusFilter = "all" | FeedbackStatus;
 type PetitionMethod = "case" | "quick" | "detailed";
 type PetitionModel = "standard" | "premium";
-type ResearchMode = "ai" | "manual";
-type PrecedentSourceKey = "all" | "yargitay" | "danistay" | "aym" | "rekabet" | "literature" | "thesis";
+type PrecedentSourceKey = "all" | "yargitay" | "danistay" | "aym" | "rekabet";
+type NavigationGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  tab?: Tab;
+  children?: NavigationChild[];
+};
+type NavigationChild = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  tab?: Tab;
+  href?: string;
+  onSelect?: () => void;
+};
 type FeedbackGridRow = FeedbackRecord & {
   typeLabel: string;
   statusLabel: string;
@@ -328,13 +343,8 @@ export default function Home() {
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseDraftRef = useRef("");
-  const [researchMode, setResearchMode] = useState<ResearchMode>("ai");
   const [searchQuery, setSearchQuery] = useState("Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?");
   const [searchCourt, setSearchCourt] = useState("");
-  const [searchChamber, setSearchChamber] = useState("");
-  const [searchDocket, setSearchDocket] = useState("");
-  const [searchDateFrom, setSearchDateFrom] = useState("");
-  const [searchDateTo, setSearchDateTo] = useState("");
   const [precedentSource, setPrecedentSource] = useState<PrecedentSourceKey>("all");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
   const [precedentSummary, setPrecedentSummary] = useState("");
@@ -395,24 +405,75 @@ export default function Home() {
   const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
   const [settingsSection, setSettingsSection] = useState<"view" | "account">("view");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
-  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
-  const tabs = useMemo(() => {
-    const baseTabs = [
-      { id: "chat" as const, label: t.tabs.chat, icon: Bot },
-      { id: "search" as const, label: t.tabs.search, icon: FileSearch },
-      { id: "petition" as const, label: t.tabs.petition, icon: FileText },
-      { id: "training" as const, label: t.tabs.training, icon: GraduationCap },
-      { id: "cases" as const, label: t.tabs.cases, icon: FolderOpen },
-      { id: "document" as const, label: t.tabs.document, icon: Upload },
-      { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
-      { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
-      { id: "settings" as const, label: t.tabs.settings, icon: Settings }
+  const [openNavGroup, setOpenNavGroup] = useState<string | null>(null);
+  const navigationGroups = useMemo<NavigationGroup[]>(() => {
+    const groups: NavigationGroup[] = [
+      { id: "assistant", label: t.tabs.chat, icon: Bot, tab: "chat" },
+      { id: "precedents", label: t.tabs.search, icon: FileSearch, tab: "search" },
+      {
+        id: "drafting",
+        label: locale === "en" ? "Drafting" : "Dilekce",
+        icon: FileText,
+        children: [
+          { id: "petition", label: t.tabs.petition, icon: FileText, tab: "petition" },
+          { id: "training", label: t.tabs.training, icon: GraduationCap, tab: "training" }
+        ]
+      },
+      {
+        id: "files",
+        label: locale === "en" ? "Files" : "Dosyalar",
+        icon: FolderOpen,
+        children: [
+          { id: "cases", label: t.tabs.cases, icon: FolderOpen, tab: "cases" },
+          { id: "document", label: t.tabs.document, icon: Upload, tab: "document" }
+        ]
+      },
+      {
+        id: "account",
+        label: locale === "en" ? "Account" : "Hesap",
+        icon: UserRound,
+        children: [
+          { id: "profile", label: t.tabs.profile, icon: UserRound, tab: "profile" },
+          { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore, tab: "feedback" },
+          {
+            id: "settings-view",
+            label: t.settings.sections.view,
+            icon: Settings,
+            tab: "settings",
+            onSelect: () => setSettingsSection("view")
+          },
+          {
+            id: "settings-account",
+            label: t.settings.sections.account,
+            icon: BarChart3,
+            tab: "settings",
+            onSelect: () => setSettingsSection("account")
+          }
+        ]
+      }
     ];
-    return authUser?.role === "ADMIN"
-      ? [...baseTabs, { id: "admin" as const, label: t.tabs.admin, icon: ShieldAlert }]
-      : baseTabs;
-  }, [authUser?.role, t]);
+    if (authUser?.role === "ADMIN") {
+      groups.push({
+        id: "admin",
+        label: t.tabs.admin,
+        icon: ShieldAlert,
+        children: [
+          { id: "admin-feedback", label: t.adminFeedback.title, icon: MessageSquareMore, href: "/feedback-management" },
+          {
+            id: "admin-users",
+            label: locale === "en" ? "User Management" : "Kullanici Yonetimi",
+            icon: UserRound,
+            tab: "admin",
+            onSelect: () => {
+              setAdminSection("users");
+              setAdminUserView("list");
+            }
+          }
+        ]
+      });
+    }
+    return groups;
+  }, [authUser?.role, locale, t]);
 
   useEffect(() => {
     const storedLocale = window.localStorage.getItem("lawai-locale");
@@ -646,9 +707,7 @@ export default function Home() {
     { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
     { key: "danistay" as const, label: "Danistay", court: "Danistay" },
     { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" },
-    { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" },
-    { key: "literature" as const, label: locale === "en" ? "Literature (Law Articles)" : "Literatur (Hukuk Makaleleri)", court: "" },
-    { key: "thesis" as const, label: locale === "en" ? "Master/Doctoral Theses" : "Yuksek Lisans/Doktora Tezleri", court: "" }
+    { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
   ], [locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
@@ -662,9 +721,7 @@ export default function Home() {
     "Istirak nafakasinin miktarinin saptanmasinda cocugun yasam standardi ve ebeveyn gelirleri",
     "Belirsiz sureli kira sozlesmesinde tahliye - kiraya verenin ihtiyac nedeniyle actigi davalar",
     "Manevi tazminat miktarinin belirlenmesinde olayin niteligi ve taraf kusur oranlari",
-    "Tapu iptali ve tescil davalarinda muris muvazaasi iddiasinin ispat kriterleri",
-    "Kidem ve ihbar tazminatlarinda zamanasimi baslangici - fesih tarihine gore uygulamalar",
-    "Destekten yoksun kalma tazminatinda net gelir hesabi ve iskonto oranlarinin etkisi"
+    "Tapu iptali ve tescil davalarinda muris muvazaasi iddiasinin ispat kriterleri"
   ], [locale]);
 
   const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [
@@ -1010,13 +1067,7 @@ export default function Home() {
 
   function buildPrecedentQuery(query: string, sourceKey = precedentSource) {
     const sourceHint = precedentSources.find((item) => item.key === sourceKey);
-    const manualParts = [
-      query.trim(),
-      searchDocket.trim() ? `${t.tools.researchDocket}: ${searchDocket.trim()}` : "",
-      searchDateFrom ? `${t.tools.researchDateFrom}: ${searchDateFrom}` : "",
-      searchDateTo ? `${t.tools.researchDateTo}: ${searchDateTo}` : ""
-    ].filter(Boolean);
-    const baseQuery = researchMode === "manual" ? manualParts.join(" ") : query;
+    const baseQuery = query.trim();
     if (!sourceHint || sourceHint.key === "all" || sourceHint.court) {
       return baseQuery;
     }
@@ -1024,11 +1075,17 @@ export default function Home() {
   }
 
   function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
+      return;
+    }
+    const sourceHint = precedentSources.find((item) => item.key === sourceKey);
+    const effectiveCourt = court || sourceHint?.court || "";
     run("search", async () => {
       const data = await postJson<{ results: Precedent[] }>("/precedents/search", {
-        query: buildPrecedentQuery(query, sourceKey),
-        court: court || undefined,
-        chamber: searchChamber || undefined,
+        query: buildPrecedentQuery(normalizedQuery, sourceKey),
+        court: effectiveCourt || undefined,
         limit: 50
       });
       setPrecedents(data.results);
@@ -1049,7 +1106,7 @@ export default function Home() {
 
   function runExampleSearch(example: string) {
     setSearchQuery(example);
-    executePrecedentSearch(example);
+    executePrecedentSearch(example, searchCourt, precedentSource);
   }
 
   function summarizePrecedents() {
@@ -1293,6 +1350,7 @@ export default function Home() {
     } finally {
       setAuthUser(null);
       setActiveTab("chat");
+      setOpenNavGroup(null);
       setAuthPreview(null);
       setAuthMode("login");
       setChatResponse(null);
@@ -1546,89 +1604,70 @@ export default function Home() {
         </button>
         <div className="nav-label">{t.common.apps}</div>
         <nav className="tabs">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isAdminTab = tab.id === "admin";
-            const isSettingsTab = tab.id === "settings";
-            const isSubmenuTab = isAdminTab || isSettingsTab;
+          {navigationGroups.map((group) => {
+            const Icon = group.icon;
+            const groupTabs = group.children?.map((item) => item.tab).filter(Boolean) ?? [];
+            const isChildActive = groupTabs.includes(activeTab);
+            const isDirectActive = group.tab === activeTab;
+            const isOpen = Boolean(group.children?.length) && (openNavGroup === group.id || isChildActive);
             return (
-              <div className={isSubmenuTab ? "sidebar-menu-group" : ""} key={tab.id}>
+              <div className={group.children?.length ? "sidebar-menu-group" : ""} key={group.id}>
                 <button
-                  aria-expanded={isAdminTab ? adminMenuOpen : isSettingsTab ? settingsMenuOpen : undefined}
-                  className={activeTab === tab.id ? "active" : ""}
+                  aria-expanded={group.children?.length ? isOpen : undefined}
+                  className={isDirectActive || isChildActive ? "active" : ""}
                   onClick={() => {
-                    if (isAdminTab) {
-                      setAdminMenuOpen((current) => !current);
+                    if (group.children?.length) {
+                      setOpenNavGroup((current) => (current === group.id ? null : group.id));
                       return;
                     }
-                    if (isSettingsTab) {
-                      setSettingsMenuOpen((current) => !current);
-                      return;
+                    if (group.tab) {
+                      setActiveTab(group.tab);
                     }
-                    setActiveTab(tab.id);
                   }}
                   type="button"
-                  title={tab.label}
+                  title={group.label}
                 >
                   <Icon size={18} />
-                  <span>{tab.label}</span>
-                  {isSubmenuTab ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
+                  <span>{group.label}</span>
+                  {group.children?.length ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
                 </button>
-                {isSettingsTab && settingsMenuOpen && (
+                {isOpen && group.children?.length ? (
                   <div className="sidebar-submenu">
-                    <button
-                      className={activeTab === "settings" && settingsSection === "view" ? "active" : ""}
-                      onClick={() => {
-                        setSettingsMenuOpen(true);
-                        setActiveTab("settings");
-                        setSettingsSection("view");
-                      }}
-                      type="button"
-                      title={t.settings.sections.view}
-                    >
-                      <Scale size={15} />
-                      <span>{t.settings.sections.view}</span>
-                    </button>
-                    <button
-                      className={activeTab === "settings" && settingsSection === "account" ? "active" : ""}
-                      onClick={() => {
-                        setSettingsMenuOpen(true);
-                        setActiveTab("settings");
-                        setSettingsSection("account");
-                      }}
-                      type="button"
-                      title={t.settings.sections.account}
-                    >
-                      <BarChart3 size={15} />
-                      <span>{t.settings.sections.account}</span>
-                    </button>
+                    {group.children.map((item) => {
+                      const ChildIcon = item.icon;
+                      const isSettingsView = item.id === "settings-view" && activeTab === "settings" && settingsSection === "view";
+                      const isSettingsAccount = item.id === "settings-account" && activeTab === "settings" && settingsSection === "account";
+                      const isAdminUsers = item.id === "admin-users" && activeTab === "admin" && adminSection === "users";
+                      const isScopedChild = item.id.startsWith("settings-") || item.id.startsWith("admin-");
+                      const isActive = isScopedChild ? (isSettingsView || isSettingsAccount || isAdminUsers) : item.tab === activeTab;
+                      if (item.href) {
+                        return (
+                          <Link href={item.href} key={item.id} title={item.label}>
+                            <ChildIcon size={15} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      }
+                      return (
+                        <button
+                          className={isActive ? "active" : ""}
+                          key={item.id}
+                          onClick={() => {
+                            item.onSelect?.();
+                            if (item.tab) {
+                              setActiveTab(item.tab);
+                            }
+                          }}
+                          type="button"
+                          title={item.label}
+                        >
+                          <ChildIcon size={15} />
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-                {isAdminTab && adminMenuOpen && (
-                  <div className="sidebar-submenu">
-                    <Link
-                      href="/feedback-management"
-                      title={t.adminFeedback.title}
-                    >
-                      <MessageSquareMore size={15} />
-                      <span>{t.adminFeedback.title}</span>
-                    </Link>
-                    <button
-                      className={activeTab === "admin" && adminSection === "users" ? "active" : ""}
-                      onClick={() => {
-                        setAdminMenuOpen(true);
-                        setActiveTab("admin");
-                        setAdminSection("users");
-                        setAdminUserView("list");
-                      }}
-                      type="button"
-                      title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}
-                    >
-                      <UserRound size={15} />
-                      <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
-                    </button>
-                  </div>
-                )}
+                ) : null}
               </div>
             );
           })}
@@ -1732,109 +1771,60 @@ export default function Home() {
 
         {activeTab === "search" && (
           <section className="precedent-research-workspace">
-            <header className="panel precedent-research-header">
-              <div>
-                <span className="eyebrow">{t.tabs.search}</span>
-                <h1>{t.tools.searchTitle}</h1>
+            <form className="precedent-search-hero" onSubmit={submitSearch}>
+              <div className="precedent-brand-mark" aria-hidden="true">
+                <Scale size={30} />
+                <span>LawAI Studio</span>
               </div>
-              <div className="smart-notes-summary">
-                <div>
-                  <span>{t.tools.searchResults}</span>
-                  <strong>{precedents.length} {t.tools.records}</strong>
-                </div>
-                <div>
-                  <span>{t.tools.researchAiSummary}</span>
-                  <strong>{precedentSummary ? t.dashboard.statusReady : "-"}</strong>
-                </div>
+              <div className="precedent-hero-copy">
+                <span className="eyebrow">{locale === "en" ? "Precedent search" : "Emsal arama"}</span>
+                <h1>{locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama"}</h1>
+                <p>{locale === "en" ? "Select a source, enter the legal issue, and review the most relevant decisions." : "Kaynak secin, hukuki konuyu yazin ve en ilgili emsal kararları inceleyin."}</p>
               </div>
-            </header>
+              <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
+                {precedentSources.map((source) => (
+                  <button
+                    key={source.key}
+                    className={precedentSource === source.key ? "active" : ""}
+                    type="button"
+                    onClick={() => selectPrecedentSource(source)}
+                  >
+                    {precedentSource === source.key ? <CheckCircle2 size={18} /> : null}
+                    {source.label}
+                  </button>
+                ))}
+              </div>
+              <div className="precedent-hero-search">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={locale === "en" ? "Enter the legal issue or click a suggestion" : "Hukuki konuyu yazin veya ornek sorgu secin"}
+                />
+                <button aria-label={t.tools.searchSubmit} disabled={loading === "search"} type="submit">
+                  {loading === "search" ? <LoaderCircle className="spin" size={28} /> : <Search size={30} />}
+                </button>
+              </div>
+              <section className="precedent-suggestions">
+                <span>{locale === "en" ? "Example queries:" : "Ornek sorgular:"}</span>
+                <div>
+                  {precedentExampleQueries.map((example) => (
+                    <button key={example} type="button" onClick={() => runExampleSearch(example)}>
+                      <CheckCircle2 size={18} />
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </form>
 
             <section className="precedent-research-layout">
-              <form className="panel precedent-search-panel" onSubmit={submitSearch}>
-                <PanelTitle icon={<Search size={20} />} title={t.tools.researchMethods} />
-                <div className="precedent-segmented">
-                  <button className={researchMode === "ai" ? "active" : ""} type="button" onClick={() => setResearchMode("ai")}>
-                    <Bot size={16} />
-                    {t.tools.researchAiSearch}
-                  </button>
-                  <button className={researchMode === "manual" ? "active" : ""} type="button" onClick={() => setResearchMode("manual")}>
-                    <FileSearch size={16} />
-                    {t.tools.researchManualSearch}
-                  </button>
-                </div>
-
-                <label className="field-label">
-                  {researchMode === "ai" ? t.tools.lawyerQuestion : t.tools.researchKeywords}
-                  <textarea rows={researchMode === "ai" ? 6 : 4} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t.tools.searchPlaceholder} />
-                </label>
-
-                {researchMode === "ai" ? (
-                  <details className="compact-details">
-                    <summary>{t.tools.showExamples}</summary>
-                    <section className="precedent-examples">
-                      {[t.tools.researchExampleJewelry, t.tools.researchExampleMunicipality, t.tools.researchExampleDocket].map((example) => (
-                        <button key={example} className="secondary-button" type="button" onClick={() => setSearchQuery(example)}>
-                          {example}
-                        </button>
-                      ))}
-                    </section>
-                  </details>
-                ) : null}
-
-                <div className="precedent-manual-grid">
-                  <label className="field-label">
-                    {t.tools.researchCourt}
-                    <select value={searchCourt} onChange={(event) => setSearchCourt(event.target.value)}>
-                      <option value="">{t.tools.researchCourtAll}</option>
-                      <option value="Yargitay">Yargitay</option>
-                      <option value="Danistay">Danistay</option>
-                      <option value="AYM">AYM</option>
-                    </select>
-                  </label>
-                  <label className="field-label">
-                    {t.tools.researchChamber}
-                    <input value={searchChamber} onChange={(event) => setSearchChamber(event.target.value)} placeholder="2. Hukuk Dairesi" />
-                  </label>
-                </div>
-
-                {researchMode === "manual" ? (
-                  <div className="precedent-manual-grid">
-                    <label className="field-label">
-                      {t.tools.researchDocket}
-                      <input value={searchDocket} onChange={(event) => setSearchDocket(event.target.value)} placeholder="2025/2402" />
-                    </label>
-                    <label className="field-label">
-                      {t.tools.researchDateFrom}
-                      <input type="date" value={searchDateFrom} onChange={(event) => setSearchDateFrom(event.target.value)} />
-                    </label>
-                    <label className="field-label">
-                      {t.tools.researchDateTo}
-                      <input type="date" value={searchDateTo} onChange={(event) => setSearchDateTo(event.target.value)} />
-                    </label>
-                  </div>
-                ) : null}
-
-                <details className="compact-details">
-                  <summary>{t.tools.technicalInfo}</summary>
-                  <section className="precedent-notice">
-                    <strong>{t.tools.researchTechnicalNotice}</strong>
-                    <p>{t.tools.researchTechnicalNoticeText}</p>
-                  </section>
-                </details>
-
-                <button disabled={loading === "search"} type="submit">
-                  {loading === "search" ? <LoaderCircle className="spin" size={17} /> : <Search size={17} />}
-                  {t.tools.searchSubmit}
-                </button>
-              </form>
-
               <section className="panel precedent-results-panel">
-                <div className="section-head">
+                <div className="section-head precedent-results-head">
                   <div>
                     <span className="section-label">{t.tools.researchMaxResults}</span>
                     <h3>{t.tools.searchResults}</h3>
                   </div>
-                  <strong>{precedents.length} {t.tools.records}</strong>
+                  <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
                 </div>
                 {precedents.length ? (
                   <div className="precedent-result-list">
