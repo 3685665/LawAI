@@ -215,6 +215,7 @@ pre {
 .sidebar-collapsed .brand div,
 .sidebar-collapsed .nav-label,
 .sidebar-collapsed .tabs button span,
+.sidebar-collapsed .tabs a span,
 .sidebar-collapsed .sidebar-user > div:not(.sidebar-user-avatar),
 .sidebar-collapsed .sidebar-user-actions button {
   display: none;
@@ -284,31 +285,97 @@ pre {
   text-transform: uppercase;
 }
 
-.tabs button {
+.tabs button,
+.tabs a {
+  align-items: center;
   background: transparent;
   border: 1px solid transparent;
   color: #dce5e1;
+  display: flex;
+  gap: 10px;
   justify-content: flex-start;
   padding: 11px 12px;
   box-shadow: none;
   border-radius: 10px;
+  text-decoration: none;
 }
 
 .sidebar-collapsed .tabs {
   width: 100%;
 }
 
-.sidebar-collapsed .tabs button {
+.sidebar-collapsed .tabs button,
+.sidebar-collapsed .tabs a {
   justify-content: center;
   padding: 11px 0;
 }
 
 .tabs button.active,
-.tabs button:hover {
+.tabs button:hover,
+.tabs a.active,
+.tabs a:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.08);
   transform: none;
   box-shadow: none;
+}
+
+.sidebar-menu-group {
+  display: grid;
+  gap: 6px;
+}
+
+.sidebar-submenu {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 6px;
+  margin-left: 19px;
+  padding-left: 10px;
+}
+
+.sidebar-submenu button,
+.sidebar-submenu a {
+  color: rgba(220, 229, 225, 0.82);
+  font-size: 13px;
+  padding: 9px 10px;
+}
+
+.sidebar-submenu button.active,
+.sidebar-submenu a.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.sidebar-submenu-chevron {
+  margin-left: auto;
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+
+button[aria-expanded="false"] .sidebar-submenu-chevron {
+  transform: rotate(0deg);
+}
+
+.sidebar-collapsed .sidebar-menu-group {
+  justify-items: center;
+}
+
+.sidebar-collapsed .sidebar-submenu {
+  border-left: 0;
+  margin-left: 0;
+  padding-left: 0;
+  width: 100%;
+}
+
+.sidebar-collapsed .sidebar-submenu button,
+.sidebar-collapsed .sidebar-submenu a {
+  justify-content: center;
+  padding: 9px 0;
+}
+
+.sidebar-collapsed .sidebar-submenu-chevron {
+  display: none;
 }
 
 .sidebar-admin-link {

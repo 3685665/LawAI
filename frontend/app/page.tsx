@@ -396,6 +396,7 @@ export default function Home() {
   const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
   const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const tabs = useMemo(() => {
     const baseTabs = [
       { id: "chat" as const, label: t.tabs.chat, icon: Bot },
@@ -1503,11 +1504,52 @@ export default function Home() {
         <nav className="tabs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isAdminTab = tab.id === "admin";
             return (
-              <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} type="button" title={tab.label}>
-                <Icon size={18} />
-                <span>{tab.label}</span>
-              </button>
+              <div className={isAdminTab ? "sidebar-menu-group" : ""} key={tab.id}>
+                <button
+                  aria-expanded={isAdminTab ? adminMenuOpen : undefined}
+                  className={activeTab === tab.id ? "active" : ""}
+                  onClick={() => {
+                    if (isAdminTab) {
+                      setAdminMenuOpen((current) => !current);
+                      return;
+                    }
+                    setActiveTab(tab.id);
+                  }}
+                  type="button"
+                  title={tab.label}
+                >
+                  <Icon size={18} />
+                  <span>{tab.label}</span>
+                  {isAdminTab ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
+                </button>
+                {isAdminTab && adminMenuOpen && (
+                  <div className="sidebar-submenu">
+                    <Link
+                      href="/feedback-management"
+                      title={t.adminFeedback.title}
+                    >
+                      <MessageSquareMore size={15} />
+                      <span>{t.adminFeedback.title}</span>
+                    </Link>
+                    <button
+                      className={activeTab === "admin" && adminSection === "users" ? "active" : ""}
+                      onClick={() => {
+                        setAdminMenuOpen(true);
+                        setActiveTab("admin");
+                        setAdminSection("users");
+                        setAdminUserView("list");
+                      }}
+                      type="button"
+                      title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}
+                    >
+                      <UserRound size={15} />
+                      <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -2124,22 +2166,7 @@ export default function Home() {
               </div>
             </header>
 
-            <div className="settings-layout admin-settings-layout">
-              <aside className="panel settings-menu">
-                <button type="button" className={adminSection === "feedback" ? "active" : ""} onClick={() => setAdminSection("feedback")}>
-                  <MessageSquareMore size={16} />
-                  {t.adminFeedback.title}
-                </button>
-                <button type="button" className={adminSection === "users" ? "active" : ""} onClick={() => {
-                  setAdminSection("users");
-                  setAdminUserView("list");
-                }}>
-                  <UserRound size={16} />
-                  {locale === "en" ? "User Management" : "Kullanici Yonetimi"}
-                </button>
-              </aside>
-
-              <section className="settings-content">
+            <section className="settings-content admin-content">
                 {adminSection === "feedback" && (
                   <article className="panel admin-card">
                     <div className="section-head">
@@ -2247,8 +2274,7 @@ export default function Home() {
                     )}
                   </article>
                 )}
-              </section>
-            </div>
+            </section>
           </section>
         )}
 
