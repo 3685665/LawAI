@@ -10,7 +10,8 @@
     "knowledge": "Knowledge Base",
     "feedback": "Feedback",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "admin": "Admin"
   },
   "auth": {
     "loading": "Checking session...",
@@ -318,6 +319,23 @@
     "save": "Save",
     "markRead": "Read",
     "emptySelection": "Select a record from the list."
+  },
+  "adminPanel": {
+    "eyebrow": "Admin area",
+    "title": "Management Center",
+    "subtitle": "System status, feedback, knowledge base, test data and access settings in one place.",
+    "userRequests": "User requests",
+    "openFeedback": "Open records",
+    "resolvedFeedback": "Resolved",
+    "refreshFeedback": "Refresh records",
+    "openFeedbackManagement": "Open detailed management",
+    "knowledgeOps": "Knowledge base",
+    "dataOps": "Data management",
+    "caseData": "Case data",
+    "caseDataDesc": "Load sample case records for demo or test environments and review them in the cases screen.",
+    "seedCases": "Load sample cases",
+    "securityOps": "Security and access",
+    "accessAndSettings": "Access and settings"
   },
   "training": {
     "fallbackTitle": "Petition training",

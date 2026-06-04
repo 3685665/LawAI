@@ -59,7 +59,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings";
+type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type SmartNote = {
@@ -345,19 +345,24 @@ export default function Home() {
   });
   const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
 
-  const tabs = useMemo(() => [
-    { id: "dashboard" as const, label: t.tabs.dashboard, icon: Scale },
-    { id: "chat" as const, label: t.tabs.chat, icon: Bot },
-    { id: "search" as const, label: t.tabs.search, icon: FileSearch },
-    { id: "petition" as const, label: t.tabs.petition, icon: FileText },
-    { id: "training" as const, label: t.tabs.training, icon: GraduationCap },
-    { id: "cases" as const, label: t.tabs.cases, icon: FolderOpen },
-    { id: "document" as const, label: t.tabs.document, icon: Upload },
-    { id: "knowledge" as const, label: t.tabs.knowledge, icon: Database },
-    { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
-    { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
-    { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
-  ], [t]);
+  const tabs = useMemo(() => {
+    const baseTabs = [
+      { id: "dashboard" as const, label: t.tabs.dashboard, icon: Scale },
+      { id: "chat" as const, label: t.tabs.chat, icon: Bot },
+      { id: "search" as const, label: t.tabs.search, icon: FileSearch },
+      { id: "petition" as const, label: t.tabs.petition, icon: FileText },
+      { id: "training" as const, label: t.tabs.training, icon: GraduationCap },
+      { id: "cases" as const, label: t.tabs.cases, icon: FolderOpen },
+      { id: "document" as const, label: t.tabs.document, icon: Upload },
+      { id: "knowledge" as const, label: t.tabs.knowledge, icon: Database },
+      { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
+      { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
+      { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
+    ];
+    return authUser?.role === "ADMIN"
+      ? [...baseTabs, { id: "admin" as const, label: t.tabs.admin, icon: ShieldAlert }]
+      : baseTabs;
+  }, [authUser?.role, t]);
 
   useEffect(() => {
     const storedLocale = window.localStorage.getItem("lawai-locale");
@@ -511,7 +516,7 @@ export default function Home() {
   }, [activeTab, authUser, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
 
   useEffect(() => {
-    if (!authUser || activeTab !== "feedback" || feedbackLoaded || feedbackLoading) {
+    if (!authUser || (activeTab !== "feedback" && activeTab !== "admin") || feedbackLoaded || feedbackLoading) {
       return;
     }
     void loadFeedbackHistory();
@@ -568,6 +573,14 @@ export default function Home() {
     }
     return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? filteredFeedbackItems[0];
   }, [filteredFeedbackItems, selectedFeedbackId]);
+
+  const adminFeedbackMetrics = useMemo(() => {
+    return {
+      total: feedbackItems.length,
+      open: feedbackItems.filter((item) => item.status !== "resolved").length,
+      resolved: feedbackItems.filter((item) => item.status === "resolved").length
+    };
+  }, [feedbackItems]);
 
   const selectedPrecedent = useMemo(() => {
     if (!precedents.length) return null;
@@ -887,6 +900,10 @@ export default function Home() {
 
   function submitKnowledge(event: FormEvent) {
     event.preventDefault();
+    indexKnowledge();
+  }
+
+  function indexKnowledge() {
     run("knowledge", async () => {
       const documents = JSON.parse(knowledgeJson);
       setKnowledgeResult(await postJson<KnowledgeResponse>("/knowledge/documents", { documents }));
@@ -913,6 +930,18 @@ export default function Home() {
     run("knowledge", async () => {
       setKnowledgeResult(await postJson<KnowledgeResponse>("/knowledge/seed-precedents", {}));
     });
+  }
+
+  function seedAdminCases() {
+    run("admin-cases", async () => {
+      const caseList = await seedSamples<CaseRecord[]>("/cases/seed-samples");
+      setDashboardCases(caseList);
+    });
+  }
+
+  function refreshAdminFeedback() {
+    setFeedbackLoaded(false);
+    void loadFeedbackHistory();
   }
 
   function fillDemoCredentials() {
@@ -1223,13 +1252,6 @@ export default function Home() {
             );
           })}
         </nav>
-        {authUser.role === "ADMIN" ? (
-          <Link className="sidebar-admin-link" href="/feedback-management">
-            <ShieldAlert size={18} />
-            <span>{t.adminFeedback.title}</span>
-          </Link>
-        ) : null}
-
         <div className="sidebar-user">
           <div>
             <strong>{authUser.name}</strong>
@@ -2101,6 +2123,140 @@ export default function Home() {
                   <div><span>{t.profile.lastLoginAt}</span><strong>{formatDateTime(authUser.lastLoginAt, locale, t.profile.notAvailable)}</strong></div>
                 </div>
               </section>
+            </section>
+          </section>
+        )}
+
+        {activeTab === "admin" && authUser.role === "ADMIN" && (
+          <section className="admin-workspace">
+            <header className="panel admin-header">
+              <div>
+                <span className="eyebrow">{t.adminPanel.eyebrow}</span>
+                <h1>{t.adminPanel.title}</h1>
+                <p>{t.adminPanel.subtitle}</p>
+              </div>
+              <div className="admin-status-grid">
+                <div>
+                  <span>{t.settings.backendStatus}</span>
+                  <strong>{backendOnline === false ? t.settings.backendDisconnected : t.settings.backendConnected}</strong>
+                </div>
+                <div>
+                  <span>{t.profile.role}</span>
+                  <strong>{t.common.admin}</strong>
+                </div>
+                <div>
+                  <span>{t.adminPanel.openFeedback}</span>
+                  <strong>{feedbackLoading ? "..." : adminFeedbackMetrics.open}</strong>
+                </div>
+              </div>
+            </header>
+
+            <section className="admin-grid">
+              <article className="panel admin-card">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.adminPanel.userRequests}</span>
+                    <h3>{t.adminFeedback.title}</h3>
+                  </div>
+                  <span className="status">{adminFeedbackMetrics.total} {t.tools.records}</span>
+                </div>
+                <div className="admin-metric-row">
+                  <div><span>{t.adminPanel.openFeedback}</span><strong>{adminFeedbackMetrics.open}</strong></div>
+                  <div><span>{t.adminPanel.resolvedFeedback}</span><strong>{adminFeedbackMetrics.resolved}</strong></div>
+                </div>
+                <div className="admin-actions">
+                  <button className="secondary-button" type="button" onClick={refreshAdminFeedback} disabled={feedbackLoading}>
+                    {feedbackLoading ? <LoaderCircle className="spin" size={17} /> : <MessageSquareMore size={17} />}
+                    {t.adminPanel.refreshFeedback}
+                  </button>
+                  <Link className="admin-link-button" href="/feedback-management">
+                    <ShieldAlert size={17} />
+                    {t.adminPanel.openFeedbackManagement}
+                  </Link>
+                </div>
+              </article>
+
+              <article className="panel admin-card admin-card-wide">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.adminPanel.knowledgeOps}</span>
+                    <h3>{t.tools.knowledgeTitle}</h3>
+                  </div>
+                  {knowledgeResult ? <span className="status">{knowledgeResult.indexed} {t.tools.records}</span> : null}
+                </div>
+                <textarea rows={8} value={knowledgeJson} onChange={(event) => setKnowledgeJson(event.target.value)} />
+                <div className="admin-actions">
+                  <button className="secondary-button" disabled={loading === "knowledge"} type="button" onClick={seedKnowledge}>
+                    <Database size={17} />
+                    {t.tools.knowledgeSeed}
+                  </button>
+                  <button disabled={loading === "knowledge"} type="button" onClick={indexKnowledge}>
+                    {loading === "knowledge" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
+                    {t.tools.knowledgeSubmit}
+                  </button>
+                </div>
+                {knowledgeResult ? (
+                  <div className="admin-result">
+                    <strong>{knowledgeResult.storage}</strong>
+                    <span>{knowledgeResult.message}</span>
+                  </div>
+                ) : null}
+              </article>
+
+              <article className="panel admin-card">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.adminPanel.dataOps}</span>
+                    <h3>{t.adminPanel.caseData}</h3>
+                  </div>
+                </div>
+                <p>{t.adminPanel.caseDataDesc}</p>
+                <div className="admin-actions">
+                  <button type="button" onClick={seedAdminCases} disabled={loading === "admin-cases"}>
+                    {loading === "admin-cases" ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
+                    {t.adminPanel.seedCases}
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
+                    {t.tabs.cases}
+                  </button>
+                </div>
+              </article>
+
+              <article className="panel admin-card">
+                <div className="section-head">
+                  <div>
+                    <span className="section-label">{t.adminPanel.securityOps}</span>
+                    <h3>{t.adminPanel.accessAndSettings}</h3>
+                  </div>
+                </div>
+                <div className="admin-setting-list">
+                  <label className="setting-row">
+                    <div>
+                      <strong>{t.settings.privacyMode}</strong>
+                      <span>{privateMode ? t.settings.modeActive : t.settings.modeClosed}</span>
+                    </div>
+                    <input checked={privateMode} onChange={(event) => setPrivateMode(event.target.checked)} type="checkbox" />
+                  </label>
+                  <label className="setting-row">
+                    <div>
+                      <strong>{t.settings.language}</strong>
+                      <span>{locale === "tr" ? t.settings.tr : t.settings.en}</span>
+                    </div>
+                    <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
+                      <option value="tr">{t.settings.tr}</option>
+                      <option value="en">{t.settings.en}</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="admin-actions">
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("settings")}>
+                    {t.tabs.settings}
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setActiveTab("profile")}>
+                    {t.tabs.profile}
+                  </button>
+                </div>
+              </article>
             </section>
           </section>
         )}

@@ -10,7 +10,8 @@
     "knowledge": "Bilgi Bankasi",
     "feedback": "Geri Bildirim",
     "profile": "Profil",
-    "settings": "Ayarlar"
+    "settings": "Ayarlar",
+    "admin": "Yonetim"
   },
   "auth": {
     "loading": "Oturum bilgisi kontrol ediliyor...",
@@ -318,6 +319,23 @@
     "save": "Kaydet",
     "markRead": "Okundu",
     "emptySelection": "Listeden bir kayit secin."
+  },
+  "adminPanel": {
+    "eyebrow": "Yonetici alani",
+    "title": "Yonetim Merkezi",
+    "subtitle": "Sistem durumu, geri bildirimler, bilgi bankasi, test verileri ve erisim ayarlari tek yerde.",
+    "userRequests": "Kullanici talepleri",
+    "openFeedback": "Acik kayit",
+    "resolvedFeedback": "Cozulen",
+    "refreshFeedback": "Kayitlari yenile",
+    "openFeedbackManagement": "Detayli yonetime git",
+    "knowledgeOps": "Bilgi bankasi",
+    "dataOps": "Veri yonetimi",
+    "caseData": "Dosya verileri",
+    "caseDataDesc": "Demo veya test ortami icin ornek dava kayitlarini yukleyin; mevcut dosya ekraninda takip edin.",
+    "seedCases": "Ornek dosyalari yukle",
+    "securityOps": "Guvenlik ve erisim",
+    "accessAndSettings": "Erisim ve ayarlar"
   },
   "training": {
     "fallbackTitle": "Dilekce egitimi",
