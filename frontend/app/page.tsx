@@ -4,7 +4,6 @@ import { FormEvent, SyntheticEvent, useEffect, useMemo, useRef, useState } from 
 import Link from "next/link";
 import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import {
-  ArrowRight,
   AlertCircle,
   BarChart3,
   Bot,
@@ -17,6 +16,7 @@ import {
   FolderOpen,
   LoaderCircle,
   Lock,
+  Mic,
   Clock3,
   ClipboardList,
   MessageSquareMore,
@@ -59,9 +59,44 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "dashboard" | "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings" | "admin";
+type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "knowledge" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  citations?: Precedent[];
+  disclaimer?: string;
+};
+type ChatAttachment = {
+  filename: string;
+  size: number;
+  content: string;
+};
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  maxAlternatives?: number;
+  onstart: (() => void) | null;
+  onresult: ((event: {
+    resultIndex: number;
+    results: ArrayLike<{
+      0: { transcript: string };
+      isFinal: boolean;
+      length: number;
+    }>;
+  }) => void) | null;
+  onaudiostart?: (() => void) | null;
+  onspeechstart?: (() => void) | null;
+  onerror: ((event: { error?: string; message?: string }) => void) | null;
+  onend: (() => void) | null;
+  abort: () => void;
+  start: () => void;
+  stop: () => void;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 type SmartNote = {
   id: string;
   text: string;
@@ -225,7 +260,7 @@ function getFeedbackStatusLabel(value: string) {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTab] = useState<Tab>("chat");
   const [privateMode, setPrivateMode] = useState(true);
   const [themeMode, setThemeMode] = useState<ThemeMode>("original");
   const [locale, setLocale] = useState<Locale>("tr");
@@ -238,10 +273,6 @@ export default function Home() {
   const [selectedTrainingModule, setSelectedTrainingModule] = useState(0);
   const [selectedTrainingPrompt, setSelectedTrainingPrompt] = useState(0);
   const [trainingDraft, setTrainingDraft] = useState("");
-  const [dashboardCases, setDashboardCases] = useState<CaseRecord[]>([]);
-  const [dashboardTemplates, setDashboardTemplates] = useState<CaseTemplate[]>([]);
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [dashboardError, setDashboardError] = useState("");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -281,10 +312,18 @@ export default function Home() {
 
   const t = useMemo(() => getMessages(locale), [locale]);
 
-  const [smartNoteCaseTitle, setSmartNoteCaseTitle] = useState("Kira alacagi dosyasi");
-  const [smartNoteDraft, setSmartNoteDraft] = useState("Yarin bu dosyanin durusmasi var, lutfen benim icin durusma notlari cikar. Bu dosyada eksik hususlar neler, bu durusmada dikkat edilmesi gereken hususlar neler?");
+  const [smartNoteCaseTitle, setSmartNoteCaseTitle] = useState("Genel analiz");
+  const [smartNoteDraft, setSmartNoteDraft] = useState("");
   const [smartNotes, setSmartNotes] = useState<SmartNote[]>([]);
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
+  const [chatAttachmentLoading, setChatAttachmentLoading] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState("");
+  const chatFileInputRef = useRef<HTMLInputElement | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceBaseDraftRef = useRef("");
   const [researchMode, setResearchMode] = useState<ResearchMode>("ai");
   const [searchQuery, setSearchQuery] = useState("Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?");
   const [searchCourt, setSearchCourt] = useState("");
@@ -347,7 +386,6 @@ export default function Home() {
 
   const tabs = useMemo(() => {
     const baseTabs = [
-      { id: "dashboard" as const, label: t.tabs.dashboard, icon: Scale },
       { id: "chat" as const, label: t.tabs.chat, icon: Bot },
       { id: "search" as const, label: t.tabs.search, icon: FileSearch },
       { id: "petition" as const, label: t.tabs.petition, icon: FileText },
@@ -483,63 +521,11 @@ export default function Home() {
   }, [activeTab, authUser, training, trainingLoading]);
 
   useEffect(() => {
-    if (!authUser || activeTab !== "dashboard" || dashboardCases.length || dashboardTemplates.length || dashboardLoading) {
-      return;
-    }
-
-    let cancelled = false;
-    setDashboardLoading(true);
-    setDashboardError("");
-    Promise.all([
-      getJson<CaseRecord[]>("/cases"),
-      getJson<CaseTemplatesResponse>("/cases/templates")
-    ])
-      .then(([cases, templates]) => {
-        if (cancelled) return;
-        setDashboardCases(cases);
-        setDashboardTemplates(templates.templates);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setDashboardError(err instanceof Error ? err.message : "Dashboard verisi yuklenemedi.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDashboardLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, authUser, dashboardCases.length, dashboardTemplates.length, dashboardLoading]);
-
-  useEffect(() => {
     if (!authUser || (activeTab !== "feedback" && activeTab !== "admin") || feedbackLoaded || feedbackLoading) {
       return;
     }
     void loadFeedbackHistory();
   }, [activeTab, authUser, feedbackLoaded, feedbackLoading]);
-
-  const dashboardMetrics = useMemo(() => {
-    const totalCases = dashboardCases.length;
-    const avgProgress = totalCases
-      ? Math.round(dashboardCases.reduce((sum, item) => sum + item.progress, 0) / totalCases)
-      : 0;
-    const completedRequiredDocs = dashboardCases.reduce((sum, item) => sum + item.completedRequiredDocumentCount, 0);
-    const requiredDocs = dashboardCases.reduce((sum, item) => sum + item.requiredDocumentCount, 0);
-    const riskCases = dashboardCases.filter((item) => item.progress < 60);
-    return {
-      totalCases,
-      avgProgress,
-      completedRequiredDocs,
-      requiredDocs,
-      riskCases,
-      recentCases: [...dashboardCases].slice(0, 3),
-      templates: dashboardTemplates.slice(0, 4)
-    };
-  }, [dashboardCases, dashboardTemplates]);
 
   const filteredFeedbackItems = useMemo(() => {
     const query = feedbackSearch.trim().toLowerCase();
@@ -675,29 +661,200 @@ export default function Home() {
     setSmartNoteDraft("Taniklardan Ahmet Ornek dinlenecek. Dosyadaki tum belgeleri oku, analiz et ve bu taniga sorulabilecek soru onerileri hazirla.");
   }
 
-  function buildSmartNotesPrompt() {
-    const notesText = smartNotes
+  function buildSmartNotesPrompt(notes: SmartNote[] = smartNotes, attachment: ChatAttachment | null = chatAttachment) {
+    const notesText = notes
       .map((note, index) => `${index + 1}. ${note.text}`)
       .join("\n");
-    return [
-      t.tools.smartNotesAnalysisPrompt,
+    const parts = [
+      "Kullanıcının aşağıdaki talebini hukuk asistanı gibi yanıtla.",
+      "Ekli belge varsa önce belge içeriğini dikkate al; kullanıcının istediği konuya göre belgeyi araştır, incele ve analiz et.",
+      "Yanıtı pratik, gerekçeli ve mümkünse başlıklar halinde ver. Belgeden emin olmadığın noktaları açıkça belirt.",
       "",
-      `Dosya: ${smartNoteCaseTitle.trim() || "-"}`,
-      "",
-      "Notlar:",
-      notesText
-    ].join("\n");
+      "Kullanıcı talebi:",
+      notesText || "Ekli belgeyi incele ve hukuki olarak değerlendir."
+    ];
+    if (attachment) {
+      parts.push("", "Ek belge:", `Ad: ${attachment.filename}`, `Boyut: ${formatBytes(attachment.size)}`, "", attachment.content);
+    }
+    return parts.join("\n");
   }
 
   function submitChat(event: FormEvent) {
     event.preventDefault();
-    if (!smartNotes.length) {
+    const draft = smartNoteDraft.trim();
+    const notesForPrompt = draft
+      ? [{ id: "draft", text: draft, createdAt: new Date().toISOString() }]
+      : [];
+    if (!notesForPrompt.length && !chatAttachment) {
       setError(t.tools.smartNotesNoNotes);
       return;
     }
+    const attachmentLine = chatAttachment ? `\n\n[Belge: ${chatAttachment.filename}]` : "";
+    const userMessage = `${draft || "Ekli belgeyi incele ve hukuki olarak değerlendir."}${attachmentLine}`;
+    const attachmentForPrompt = chatAttachment;
+    setChatMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: "user", text: userMessage }
+    ]);
+    setSmartNoteDraft("");
+    setChatAttachment(null);
     run("chat", async () => {
-      setChatResponse(await postJson<ChatResponse>("/chat", { question: buildSmartNotesPrompt(), mode: "smart-notes", privateMode }));
+      const response = await postJson<ChatResponse>("/chat", { question: buildSmartNotesPrompt(notesForPrompt, attachmentForPrompt), mode: "smart-notes", privateMode });
+      setChatResponse(response);
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: response.answer,
+          citations: response.citations,
+          disclaimer: response.disclaimer
+        }
+      ]);
     });
+  }
+
+  async function attachChatDocument(file: File | null) {
+    const validationError = validateFile(file, locale);
+    if (validationError || !file) {
+      setError(validationError ?? t.document.errors.noFile);
+      return;
+    }
+    setChatAttachmentLoading(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const result = await uploadMultipart<UploadResponse>("/documents/analyze", form);
+      const content = [
+        result.summary ? `Özet:\n${result.summary}` : "",
+        result.textPreview ? `Metin önizleme:\n${result.textPreview}` : "",
+        result.detectedIssues?.length ? `Tespit edilen hususlar:\n${result.detectedIssues.join("\n")}` : "",
+        result.warnings?.length ? `Uyarılar:\n${result.warnings.join("\n")}` : ""
+      ].filter(Boolean).join("\n\n");
+      setChatAttachment({
+        filename: result.filename || file.name,
+        size: result.size || file.size,
+        content: content || "Belge analiz edildi ancak metin önizlemesi alınamadı. Kullanıcı sorusunu belge adı ve bağlamı ile birlikte değerlendir."
+      });
+    } catch (error) {
+      if (file.type.startsWith("text/") || file.name.toLowerCase().endsWith(".txt")) {
+        const text = await file.text();
+        setChatAttachment({
+          filename: file.name,
+          size: file.size,
+          content: text.slice(0, 12000)
+        });
+      } else {
+        setError(error instanceof Error ? error.message : t.document.errors.unsupported);
+      }
+    } finally {
+      setChatAttachmentLoading(false);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = "";
+    }
+  }
+
+  async function startVoiceInput() {
+    if (typeof window === "undefined") return;
+    setVoiceNotice("");
+    const isSecureContext = window.isSecureContext || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (!isSecureContext) {
+      const message = "Sesli arama icin uygulamayi HTTPS veya localhost uzerinden acin.";
+      setError(message);
+      setVoiceNotice(message);
+      return;
+    }
+    const speechWindow = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      const message = "Tarayiciniz sesli aramayi desteklemiyor. Chrome veya Edge ile localhost/HTTPS uzerinden deneyin.";
+      setError(message);
+      setVoiceNotice(message);
+      return;
+    }
+    if (voiceListening) {
+      speechRecognitionRef.current?.stop();
+      setVoiceListening(false);
+      setVoiceNotice("Dinleme durduruldu.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      const message = "Tarayici mikrofon izni alamiyor. Chrome veya Edge ile deneyin.";
+      setError(message);
+      setVoiceNotice(message);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    } catch {
+      const message = "Mikrofon izni verilmedi veya mikrofon kullanilamiyor.";
+      setError(message);
+      setVoiceNotice(message);
+      return;
+    }
+    speechRecognitionRef.current?.abort();
+    const recognition = new Recognition();
+    recognition.lang = locale === "en" ? "en-US" : "tr-TR";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    voiceBaseDraftRef.current = smartNoteDraft.trim();
+    setError("");
+    setVoiceNotice("Mikrofon baslatiliyor...");
+    recognition.onstart = () => {
+      setVoiceListening(true);
+      setVoiceNotice("Dinleniyor, konusabilirsiniz.");
+    };
+    recognition.onaudiostart = () => setVoiceNotice("Mikrofon dinleniyor.");
+    recognition.onspeechstart = () => setVoiceNotice("Ses algilandi, metne cevriliyor.");
+    recognition.onresult = (event) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result[0]?.transcript ?? "";
+        if (result.isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      const transcript = `${finalTranscript} ${interimTranscript}`.trim();
+      if (transcript) {
+        setSmartNoteDraft([voiceBaseDraftRef.current, transcript].filter(Boolean).join(" ").trim());
+        setVoiceNotice("Konusma metne aktariliyor.");
+      }
+    };
+    recognition.onerror = (event) => {
+      setVoiceListening(false);
+      const reason = event.error === "not-allowed"
+        ? "Mikrofon izni verilmedi."
+        : event.error === "no-speech"
+          ? "Ses algilanamadi. Tekrar deneyin."
+          : event.error === "network"
+            ? "Sesli arama icin tarayici ag servisine ulasilamadi."
+            : "Sesli arama tamamlanamadi.";
+      setError(reason);
+      setVoiceNotice(reason);
+    };
+    recognition.onend = () => {
+      setVoiceListening(false);
+      setVoiceNotice((current) => current || "Dinleme tamamlandi.");
+    };
+    speechRecognitionRef.current = recognition;
+    try {
+      setVoiceListening(true);
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+      const message = "Sesli arama baslatilamadi. Lutfen tekrar deneyin.";
+      setError(message);
+      setVoiceNotice(message);
+    }
   }
 
   function downloadSmartNotesPdf() {
@@ -934,8 +1091,7 @@ export default function Home() {
 
   function seedAdminCases() {
     run("admin-cases", async () => {
-      const caseList = await seedSamples<CaseRecord[]>("/cases/seed-samples");
-      setDashboardCases(caseList);
+      await seedSamples<CaseRecord[]>("/cases/seed-samples");
     });
   }
 
@@ -969,7 +1125,7 @@ export default function Home() {
         });
         setAuthUser(session.user);
         setAuthPreview(null);
-        setActiveTab("dashboard");
+        setActiveTab("chat");
       } else if (authMode === "register") {
         if (!authForm.name.trim()) throw new Error("Ad soyad gerekli.");
         if (authForm.password !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
@@ -980,7 +1136,7 @@ export default function Home() {
         });
         setAuthUser(session.user);
         setAuthPreview(null);
-        setActiveTab("dashboard");
+        setActiveTab("chat");
       } else if (authMode === "forgot") {
         if (!authForm.email) throw new Error("E-posta gerekli.");
         const response = await authForgotPassword({ email: authForm.email });
@@ -998,11 +1154,12 @@ export default function Home() {
       await authLogout();
     } finally {
       setAuthUser(null);
-      setActiveTab("dashboard");
+      setActiveTab("chat");
       setAuthPreview(null);
       setAuthMode("login");
       setAccountOpen(false);
       setChatResponse(null);
+      setChatMessages([]);
       setPrecedents([]);
       setPetitionResult(null);
       setKnowledgeResult(null);
@@ -1016,9 +1173,6 @@ export default function Home() {
       setFeedbackTypeFilter("all");
       setFeedbackStatusFilter("all");
       setTraining(null);
-      setDashboardCases([]);
-      setDashboardTemplates([]);
-      setDashboardError("");
       setTrainingError("");
       setAuthForm({
         name: "",
@@ -1267,273 +1421,84 @@ export default function Home() {
       </aside>
 
       <section className="workspace">
-        {activeTab === "dashboard" && (
-          <header className="topbar">
-            <div>
-              <span className="eyebrow">{t.dashboard.noActionNoise}</span>
-              <h1>{t.dashboard.lawyerDeskTitle}</h1>
-              <p>{t.dashboard.lawyerDeskSubtitle}</p>
-            </div>
-            <span className={backendOnline === false ? "status offline" : "status"}>{loading ? t.dashboard.statusLoading : backendOnline === false ? t.dashboard.statusBackendDown : t.dashboard.statusReady}</span>
-          </header>
-        )}
-
-        {activeTab === "dashboard" && (
-          <section className="dashboard-hero panel">
-            <div className="dashboard-hero-copy">
-              <h2>{dashboardMetrics.riskCases.length ? t.dashboard.priorityWork : t.dashboard.caseSnapshot}</h2>
-              <p>{dashboardMetrics.riskCases.length ? `${dashboardMetrics.riskCases.length} ${t.dashboard.riskCases.toLowerCase()}` : t.dashboard.noRisk}</p>
-              <div className="hero-actions">
-                <button type="button" onClick={() => setActiveTab("cases")}>
-                  <FolderOpen size={17} />
-                  {t.dashboard.openCaseFile}
-                </button>
-                <button className="secondary-button" type="button" onClick={() => setActiveTab("petition")}>
-                  <FileText size={17} />
-                  {t.dashboard.startPetition}
-                </button>
-                <button className="secondary-button" type="button" onClick={() => setActiveTab("chat")}>
-                  <ClipboardList size={17} />
-                  {t.dashboard.prepareHearing}
-                </button>
-              </div>
-            </div>
-            <div className="dashboard-hero-side">
-              <div className="hero-metric">
-                <span>{t.dashboard.statusLabel}</span>
-                <strong>{backendOnline === false ? t.settings.backendDisconnected : t.dashboard.serviceReady}</strong>
-              </div>
-              <div className="hero-metric">
-                <span>{t.dashboard.workMode}</span>
-                <strong>{privateMode ? t.dashboard.privacyOn : t.dashboard.standardMode}</strong>
-              </div>
-              <div className="hero-metric">
-                <span>{t.dashboard.riskCases}</span>
-                <strong>{dashboardLoading ? "..." : dashboardMetrics.riskCases.length}</strong>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "dashboard" && (
-          <section className="dashboard-grid">
-            <div className="dashboard-stats">
-              <article className="panel stat-card">
-                <span>{t.dashboard.totalCases}</span>
-                <strong>{dashboardLoading ? "..." : dashboardMetrics.totalCases}</strong>
-                <small>{t.dashboard.activeCases}</small>
-              </article>
-              <article className="panel stat-card">
-                <span>{t.dashboard.avgProgress}</span>
-                <strong>{dashboardLoading ? "..." : `${dashboardMetrics.avgProgress}%`}</strong>
-                <small>{t.dashboard.avgProgressHint}</small>
-              </article>
-              <article className="panel stat-card">
-                <span>{t.dashboard.completedRequiredDocs}</span>
-                <strong>{dashboardLoading ? "..." : `${dashboardMetrics.completedRequiredDocs}/${dashboardMetrics.requiredDocs}`}</strong>
-                <small>{t.dashboard.missingDocsHint}</small>
-              </article>
-              <article className="panel stat-card">
-                <span>{t.dashboard.riskCases}</span>
-                <strong>{dashboardLoading ? "..." : dashboardMetrics.riskCases.length}</strong>
-                <small>{t.dashboard.riskCasesHint}</small>
-              </article>
-            </div>
-
-            {dashboardError && <div className="error">{dashboardError}</div>}
-
-            <div className="dashboard-panels">
-              <article className="panel dashboard-panel dashboard-panel-large">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.dashboard.recentMovement}</span>
-                    <h3>{t.dashboard.recentCases}</h3>
-                  </div>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
-                    {t.dashboard.goCases}
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-                {dashboardLoading ? (
-                  <p className="empty">{t.dashboard.loading}</p>
-                ) : dashboardMetrics.recentCases.length ? (
-                  <div className="dashboard-list">
-                    {dashboardMetrics.recentCases.map((item) => (
-                      <article key={item.id} className="dashboard-row">
-                        <div>
-                          <strong>{item.caseLabel}</strong>
-                          <span>{item.clientName} - {item.opponentName}</span>
-                        </div>
-                        <div className="dashboard-row-meta">
-                          <span>{item.progress}%</span>
-                          <small>{item.courtName}</small>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty">{t.dashboard.noCases}</p>
-                )}
-              </article>
-
-              <article className="panel dashboard-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.dashboard.priorityWork}</span>
-                    <h3>{t.dashboard.riskCases}</h3>
-                  </div>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("cases")}>
-                    {t.dashboard.goCases}
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-                {dashboardMetrics.riskCases.length ? (
-                  <div className="dashboard-risk-list">
-                    {dashboardMetrics.riskCases.slice(0, 3).map((item) => (
-                      <div key={item.id} className="dashboard-risk-item">
-                        <strong>{item.caseLabel}</strong>
-                        <span>{t.dashboard.caseProgress.replace("{progress}", String(item.progress))}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty">{t.dashboard.noRisk}</p>
-                )}
-              </article>
-
-              <article className="panel dashboard-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.dashboard.actionQueue}</span>
-                    <h3>{t.dashboard.workShortcuts}</h3>
-                  </div>
-                </div>
-                <div className="dashboard-actions">
-                  <button type="button" onClick={() => setActiveTab("petition")}>
-                    {t.dashboard.startPetition}
-                  </button>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("search")}>
-                    {t.dashboard.searchPrecedent}
-                  </button>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("document")}>
-                    {t.dashboard.uploadDocument}
-                  </button>
-                  <button className="secondary-button" type="button" onClick={() => setActiveTab("knowledge")}>
-                    {t.dashboard.knowledgeBase}
-                  </button>
-                </div>
-              </article>
-            </div>
-          </section>
-        )}
-
         {error && <div className="error">{error}</div>}
 
         {activeTab === "chat" && (
-          <section className="smart-notes-workspace">
-            <header className="panel smart-notes-header">
-              <div>
-                <span className="eyebrow">{t.tabs.chat}</span>
-                <h1>{t.tools.chatTitle}</h1>
+          <section className="smart-notes-workspace law-chat-home">
+            <header className="law-chat-hero">
+              <div className="law-chat-mark">
+                <Scale size={70} strokeWidth={1.45} />
+                <strong>LawAI</strong>
               </div>
-              <div className="smart-notes-summary">
-                <div>
-                  <span>{t.tools.smartNotesCase}</span>
-                  <strong>{smartNoteCaseTitle || "-"}</strong>
-                </div>
-                <div>
-                  <span>{t.tools.smartNotesSaved}</span>
-                  <strong>{smartNotes.length}</strong>
-                </div>
-              </div>
+              <h1>Hoş geldiniz, ne yapmak istersiniz?</h1>
             </header>
 
-            <div className="smart-notes-layout">
-              <form className="panel smart-notes-compose" onSubmit={submitChat}>
-                <PanelTitle icon={<ClipboardList size={20} />} title={t.tools.smartNotesDraft} />
-                <label className="field-label">
-                  {t.tools.smartNotesCase}
-                  <input
-                    value={smartNoteCaseTitle}
-                    onChange={(event) => setSmartNoteCaseTitle(event.target.value)}
-                    placeholder={t.tools.smartNotesCasePlaceholder}
-                  />
-                </label>
-                <label className="field-label">
-                  {t.tools.smartNotesDraft}
-                  <textarea
-                    value={smartNoteDraft}
-                    onChange={(event) => setSmartNoteDraft(event.target.value)}
-                    placeholder={t.tools.smartNotesDraftPlaceholder}
-                    rows={8}
-                  />
-                </label>
-                <div className="smart-notes-actions">
-                  <button className="secondary-button" type="button" onClick={useSampleSmartNote}>
-                    <ClipboardList size={17} />
-                    {t.tools.smartNotesScenario}
-                  </button>
-                  <button type="button" onClick={addSmartNote} disabled={!smartNoteDraft.trim()}>
-                    <CheckCircle2 size={17} />
-                    {t.tools.smartNotesAdd}
-                  </button>
-                </div>
-                <button className="smart-notes-analyze" disabled={loading === "chat" || !smartNotes.length} type="submit">
-                  {loading === "chat" ? <LoaderCircle className="spin" size={17} /> : <Send size={17} />}
-                  {t.tools.chatSubmit}
-                </button>
-              </form>
-
-              <section className="panel smart-notes-list-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.tools.smartNotesSaved}</span>
-                    <h3>{smartNotes.length} {t.tools.records}</h3>
-                  </div>
-                </div>
-                {smartNotes.length ? (
-                  <div className="smart-note-cards">
-                    {smartNotes.map((note, index) => (
-                      <article className="smart-note-card" key={note.id}>
-                        <div className="smart-note-card-head">
-                          <span>{String(index + 1).padStart(2, "0")}</span>
-                          <small>{new Date(note.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR")}</small>
-                        </div>
-                        <p>{note.text}</p>
-                        <button className="danger-button" type="button" onClick={() => setSmartNotes((current) => current.filter((item) => item.id !== note.id))}>
-                          {t.tools.smartNotesDelete}
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty">{t.tools.smartNotesEmpty}</p>
-                )}
-              </section>
-
-              <section className="panel smart-notes-analysis">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.tools.chatAnswer}</span>
-                    <h3>{t.tools.chatTitle}</h3>
-                  </div>
-                  {chatResponse ? (
-                    <button className="secondary-button" type="button" onClick={downloadSmartNotesPdf}>
-                      <FileText size={17} />
-                      {t.tools.smartNotesDownload}
-                    </button>
-                  ) : null}
-                </div>
+            {chatMessages.length ? (
+              <section className="law-chat-thread" aria-live="polite">
+                {chatMessages.map((message) => (
+                  <article key={message.id} className={`law-chat-message ${message.role}`}>
+                    <span>{message.role === "user" ? "Siz" : "LawAI"}</span>
+                    <pre>{message.text}</pre>
+                    {message.citations ? <CitationList citations={message.citations} /> : null}
+                    {message.disclaimer ? <small>{message.disclaimer}</small> : null}
+                  </article>
+                ))}
+                {loading === "chat" ? (
+                  <article className="law-chat-message assistant pending">
+                    <span>LawAI</span>
+                    <p><LoaderCircle className="spin" size={18} /> Cevap hazirlaniyor...</p>
+                  </article>
+                ) : null}
                 {chatResponse ? (
-                  <>
-                    <pre className="smart-notes-analysis-body">{chatResponse.answer}</pre>
-                    <CitationList citations={chatResponse.citations} />
-                    <small>{chatResponse.disclaimer}</small>
-                    <small className="smart-notes-print-hint">{t.tools.smartNotesDownloadHint}</small>
-                  </>
-                ) : <EmptyState text={t.tools.chatEmpty} />}
+                  <button className="law-chat-download" type="button" onClick={downloadSmartNotesPdf}>
+                    <FileText size={17} />
+                    {t.tools.smartNotesDownload}
+                  </button>
+                ) : null}
               </section>
-            </div>
+            ) : null}
+
+            <form className="law-chat-composer" onSubmit={submitChat}>
+              <input
+                ref={chatFileInputRef}
+                accept={acceptedExtensions.join(",")}
+                className="law-chat-file-input"
+                onChange={(event) => void attachChatDocument(event.target.files?.[0] ?? null)}
+                type="file"
+              />
+              <textarea
+                value={smartNoteDraft}
+                onChange={(event) => setSmartNoteDraft(event.target.value)}
+                placeholder="Bana bir soru sor..."
+                rows={4}
+              />
+              {chatAttachment ? (
+                <div className="law-chat-attachment">
+                  <FileText size={17} />
+                  <span>{chatAttachment.filename}</span>
+                  <small>{formatBytes(chatAttachment.size)}</small>
+                  <button type="button" onClick={() => setChatAttachment(null)} aria-label="Belgeyi kaldir">
+                    <X size={15} />
+                  </button>
+                </div>
+              ) : null}
+              <div className="law-chat-composer-tools">
+                <div>
+                  <button className="law-chat-tool" type="button" onClick={() => chatFileInputRef.current?.click()} disabled={chatAttachmentLoading} title="Belge ekle">
+                    {chatAttachmentLoading ? <LoaderCircle className="spin" size={18} /> : <Upload size={18} />}
+                    <span>Belge ekle</span>
+                  </button>
+                  <button className={`law-chat-tool ${voiceListening ? "active" : ""}`} type="button" onClick={() => void startVoiceInput()} title="Sesli ara">
+                    <Mic size={18} />
+                    <span>{voiceListening ? "Dinleniyor" : "Sesli ara"}</span>
+                  </button>
+                </div>
+                <button className="law-chat-send" disabled={loading === "chat" || chatAttachmentLoading || (!smartNoteDraft.trim() && !chatAttachment)} type="submit">
+                  {loading === "chat" ? <LoaderCircle className="spin" size={22} /> : <Send size={22} />}
+                </button>
+              </div>
+              {voiceNotice ? <p className="law-chat-voice-notice">{voiceNotice}</p> : null}
+            </form>
           </section>
         )}
 
