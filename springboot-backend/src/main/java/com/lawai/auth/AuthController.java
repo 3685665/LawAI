@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -63,6 +65,16 @@ public class AuthController {
   @GetMapping("/me")
   public AuthUserDto me(HttpServletRequest request) {
     return authService.currentUser(extractSessionToken(request));
+  }
+
+  @GetMapping("/users")
+  public List<AuthUserDto> users(HttpServletRequest request) {
+    return authService.listUsers(extractSessionToken(request));
+  }
+
+  @GetMapping("/users/{id}")
+  public AuthUserDto user(@PathVariable String id, HttpServletRequest request) {
+    return authService.getUser(extractSessionToken(request), id);
   }
 
   @PutMapping("/me")

@@ -49,9 +49,11 @@ import {
   checkHealth,
   deleteJson,
   getJson,
+  getUser,
   patchJson,
   postJson,
   listFeedback,
+  listUsers,
   Precedent,
   seedSamples,
   submitFeedback as postFeedback,
@@ -117,6 +119,8 @@ type FeedbackGridRow = FeedbackRecord & {
   createdAtLabel: string;
   messagePreview: string;
 };
+type AdminSection = "feedback" | "users";
+type AdminUserView = "list" | "detail";
 type ThemeMode = "original" | "light" | "dark";
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
@@ -383,6 +387,13 @@ export default function Home() {
     subject: "",
     message: ""
   });
+  const [adminSection, setAdminSection] = useState<AdminSection>("feedback");
+  const [adminUsers, setAdminUsers] = useState<AuthUser[]>([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState("");
+  const [selectedAdminUserId, setSelectedAdminUserId] = useState<string | null>(null);
+  const [selectedAdminUser, setSelectedAdminUser] = useState<AuthUser | null>(null);
+  const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
   const [settingsSection, setSettingsSection] = useState<"view" | "privacy" | "account" | "app">("view");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const tabs = useMemo(() => {
@@ -527,6 +538,13 @@ export default function Home() {
     void loadFeedbackHistory();
   }, [activeTab, authUser, feedbackLoaded, feedbackLoading]);
 
+  useEffect(() => {
+    if (!authUser || authUser.role !== "ADMIN" || activeTab !== "admin" || adminSection !== "users" || adminUsers.length || adminUsersLoading) {
+      return;
+    }
+    void loadAdminUsers();
+  }, [activeTab, adminSection, adminUsers.length, adminUsersLoading, authUser]);
+
   const filteredFeedbackItems = useMemo(() => {
     const query = feedbackSearch.trim().toLowerCase();
     return feedbackItems.filter((item) => {
@@ -567,6 +585,54 @@ export default function Home() {
       resolved: feedbackItems.filter((item) => item.status === "resolved").length
     };
   }, [feedbackItems]);
+
+  const adminUserColumns = useMemo<GridColDef<AuthUser>[]>(() => [
+    {
+      field: "name",
+      headerName: locale === "en" ? "Name" : "Ad soyad",
+      flex: 1,
+      minWidth: 200,
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{String(params.value ?? "-")}</strong>
+          <span>{params.row.email}</span>
+        </div>
+      )
+    },
+    {
+      field: "role",
+      headerName: locale === "en" ? "Role" : "Rol",
+      width: 140,
+      renderCell: (params) => <span className="feedback-pill feedback-pill-status">{String(params.value ?? "USER")}</span>
+    },
+    {
+      field: "createdAt",
+      headerName: locale === "en" ? "Created" : "Olusturma",
+      width: 180,
+      valueGetter: (_, row) => formatDateTime(row.createdAt, locale, "-")
+    },
+    {
+      field: "lastLoginAt",
+      headerName: locale === "en" ? "Last login" : "Son giris",
+      width: 180,
+      valueGetter: (_, row) => formatDateTime(row.lastLoginAt, locale, "-")
+    },
+    {
+      field: "actions",
+      headerName: locale === "en" ? "Action" : "Islem",
+      width: 130,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <button className="secondary-button" onClick={(event) => {
+          event.stopPropagation();
+          void openAdminUser(params.row.id);
+        }} type="button">
+          {locale === "en" ? "Open" : "Ac"}
+        </button>
+      )
+    }
+  ], [locale]);
 
   const selectedPrecedent = useMemo(() => {
     if (!precedents.length) return null;
@@ -624,6 +690,30 @@ export default function Home() {
       setFeedbackError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
     } finally {
       setFeedbackLoading(false);
+    }
+  }
+
+  async function loadAdminUsers() {
+    setAdminUsersLoading(true);
+    setAdminUsersError("");
+    try {
+      setAdminUsers(await listUsers());
+    } catch (err) {
+      setAdminUsersError(err instanceof Error ? err.message : "Kullanicilar yuklenemedi.");
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  }
+
+  async function openAdminUser(id: string) {
+    setAdminUsersError("");
+    try {
+      const user = await getUser(id);
+      setSelectedAdminUserId(user.id);
+      setSelectedAdminUser(user);
+      setAdminUserView("detail");
+    } catch (err) {
+      setAdminUsersError(err instanceof Error ? err.message : "Kullanici acilamadi.");
     }
   }
 
@@ -1163,16 +1253,22 @@ export default function Home() {
       setPrecedents([]);
       setPetitionResult(null);
       setKnowledgeResult(null);
-      setFeedbackItems([]);
-      setFeedbackError("");
-      setFeedbackSubmitted(null);
-      setFeedbackHistoryOpen(false);
-      setFeedbackLoaded(false);
-      setSelectedFeedbackId(null);
-      setFeedbackSearch("");
-      setFeedbackTypeFilter("all");
-      setFeedbackStatusFilter("all");
-      setTraining(null);
+        setFeedbackItems([]);
+        setFeedbackError("");
+        setFeedbackSubmitted(null);
+        setFeedbackHistoryOpen(false);
+        setFeedbackLoaded(false);
+        setSelectedFeedbackId(null);
+        setFeedbackSearch("");
+        setFeedbackTypeFilter("all");
+        setFeedbackStatusFilter("all");
+        setAdminSection("feedback");
+        setAdminUsers([]);
+        setAdminUsersError("");
+        setSelectedAdminUserId(null);
+        setSelectedAdminUser(null);
+        setAdminUserView("list");
+        setTraining(null);
       setTrainingError("");
       setAuthForm({
         name: "",
@@ -2030,36 +2126,127 @@ export default function Home() {
 
             <div className="settings-layout admin-settings-layout">
               <aside className="panel settings-menu">
-                <button type="button" className="active">
+                <button type="button" className={adminSection === "feedback" ? "active" : ""} onClick={() => setAdminSection("feedback")}>
                   <MessageSquareMore size={16} />
                   {t.adminFeedback.title}
+                </button>
+                <button type="button" className={adminSection === "users" ? "active" : ""} onClick={() => {
+                  setAdminSection("users");
+                  setAdminUserView("list");
+                }}>
+                  <UserRound size={16} />
+                  {locale === "en" ? "User Management" : "Kullanici Yonetimi"}
                 </button>
               </aside>
 
               <section className="settings-content">
-                <article className="panel admin-card">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-label">{t.adminPanel.userRequests}</span>
-                      <h3>{t.adminFeedback.title}</h3>
+                {adminSection === "feedback" && (
+                  <article className="panel admin-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.adminPanel.userRequests}</span>
+                        <h3>{t.adminFeedback.title}</h3>
+                      </div>
+                      <span className="status">{adminFeedbackMetrics.total} {t.tools.records}</span>
                     </div>
-                    <span className="status">{adminFeedbackMetrics.total} {t.tools.records}</span>
-                  </div>
-                  <div className="admin-metric-row">
-                    <div><span>{t.adminPanel.openFeedback}</span><strong>{adminFeedbackMetrics.open}</strong></div>
-                    <div><span>{t.adminPanel.resolvedFeedback}</span><strong>{adminFeedbackMetrics.resolved}</strong></div>
-                  </div>
-                  <div className="admin-actions">
-                    <button className="secondary-button" type="button" onClick={refreshAdminFeedback} disabled={feedbackLoading}>
-                      {feedbackLoading ? <LoaderCircle className="spin" size={17} /> : <MessageSquareMore size={17} />}
-                      {t.adminPanel.refreshFeedback}
-                    </button>
-                    <Link className="admin-link-button" href="/feedback-management">
-                      <ShieldAlert size={17} />
-                      {t.adminPanel.openFeedbackManagement}
-                    </Link>
-                  </div>
-                </article>
+                    <div className="admin-metric-row">
+                      <div><span>{t.adminPanel.openFeedback}</span><strong>{adminFeedbackMetrics.open}</strong></div>
+                      <div><span>{t.adminPanel.resolvedFeedback}</span><strong>{adminFeedbackMetrics.resolved}</strong></div>
+                    </div>
+                    <div className="admin-actions">
+                      <button className="secondary-button" type="button" onClick={refreshAdminFeedback} disabled={feedbackLoading}>
+                        {feedbackLoading ? <LoaderCircle className="spin" size={17} /> : <MessageSquareMore size={17} />}
+                        {t.adminPanel.refreshFeedback}
+                      </button>
+                      <Link className="admin-link-button" href="/feedback-management">
+                        <ShieldAlert size={17} />
+                        {t.adminPanel.openFeedbackManagement}
+                      </Link>
+                    </div>
+                  </article>
+                )}
+
+                {adminSection === "users" && adminUserView === "list" && (
+                  <article className="panel admin-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{locale === "en" ? "System users" : "Sistem kullanicilari"}</span>
+                        <h3>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</h3>
+                      </div>
+                      <span className="status">{adminUsers.length} {t.tools.records}</span>
+                    </div>
+                    <div className="admin-actions">
+                      <button className="secondary-button" type="button" onClick={() => void loadAdminUsers()} disabled={adminUsersLoading}>
+                        {adminUsersLoading ? <LoaderCircle className="spin" size={17} /> : <UserRound size={17} />}
+                        {locale === "en" ? "Refresh users" : "Kullanicilari yenile"}
+                      </button>
+                    </div>
+                    {adminUsersError ? <div className="error">{adminUsersError}</div> : null}
+                    {adminUsersLoading ? (
+                      <p className="empty">{locale === "en" ? "Loading users..." : "Kullanicilar yukleniyor..."}</p>
+                    ) : (
+                      <div className="feedback-datagrid-wrap">
+                        <DataGrid
+                          autoHeight
+                          rows={adminUsers}
+                          columns={adminUserColumns}
+                          disableRowSelectionOnClick
+                          initialState={{ pagination: { paginationModel: { page: 0, pageSize: 8 } } }}
+                          pageSizeOptions={[8, 15, 25]}
+                          rowHeight={68}
+                          columnHeaderHeight={42}
+                          onRowClick={(params: GridRowParams<AuthUser>) => void openAdminUser(String(params.id))}
+                          sx={{
+                            border: "none",
+                            color: "var(--ink)",
+                            fontFamily: "inherit",
+                            "& .MuiDataGrid-columnHeaders": {
+                              background: "#f7f9fb",
+                              borderBottom: "1px solid var(--line)"
+                            },
+                            "& .MuiDataGrid-cell": {
+                              borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                            },
+                            "& .MuiDataGrid-row:hover": {
+                              backgroundColor: "#f7fafc"
+                            },
+                            "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                              outline: "none"
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </article>
+                )}
+
+                {adminSection === "users" && adminUserView === "detail" && (
+                  <article className="panel admin-card">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{locale === "en" ? "User detail" : "Kullanici detayi"}</span>
+                        <h3>{selectedAdminUser?.name ?? "-"}</h3>
+                      </div>
+                      <button className="secondary-button" type="button" onClick={() => setAdminUserView("list")}>
+                        <ArrowLeft size={16} />
+                        {locale === "en" ? "Back to list" : "Listeye don"}
+                      </button>
+                    </div>
+                    {adminUsersError ? <div className="error">{adminUsersError}</div> : null}
+                    {selectedAdminUser ? (
+                      <div className="case-stats">
+                        <div><span>ID</span><strong>{selectedAdminUser.id}</strong></div>
+                        <div><span>{locale === "en" ? "Name" : "Ad soyad"}</span><strong>{selectedAdminUser.name}</strong></div>
+                        <div><span>E-posta</span><strong>{selectedAdminUser.email}</strong></div>
+                        <div><span>{locale === "en" ? "Role" : "Rol"}</span><strong>{selectedAdminUser.role ?? "USER"}</strong></div>
+                        <div><span>{locale === "en" ? "Created" : "Olusturma"}</span><strong>{formatDateTime(selectedAdminUser.createdAt, locale, "-")}</strong></div>
+                        <div><span>{locale === "en" ? "Last login" : "Son giris"}</span><strong>{formatDateTime(selectedAdminUser.lastLoginAt, locale, "-")}</strong></div>
+                      </div>
+                    ) : (
+                      <p className="empty">{locale === "en" ? "Select a user from the list." : "Listeden bir kullanici secin."}</p>
+                    )}
+                  </article>
+                )}
               </section>
             </div>
           </section>

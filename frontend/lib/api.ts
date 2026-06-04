@@ -197,6 +197,14 @@ export async function authChangePassword(payload: { currentPassword: string; new
   return postJson<AuthSessionResponse>("/auth/password/change", payload);
 }
 
+export async function listUsers(): Promise<AuthUser[]> {
+  return getJson<AuthUser[]>("/auth/users");
+}
+
+export async function getUser(id: string): Promise<AuthUser> {
+  return getJson<AuthUser>(`/auth/users/${id}`);
+}
+
 export async function submitFeedback(payload: { type: string; subject: string; message: string }): Promise<FeedbackSubmissionResponse> {
   return postJson<FeedbackSubmissionResponse>("/feedback", payload);
 }

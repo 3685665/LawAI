@@ -191,6 +191,23 @@ public class AuthService {
     return toDto(updatedUser);
   }
 
+  public List<AuthUserDto> listUsers(String sessionToken) {
+    requireAdmin(sessionToken);
+    return safeList(load().users()).stream()
+        .sorted(Comparator.comparing(UserRecord::createdAt).reversed())
+        .map(this::toDto)
+        .toList();
+  }
+
+  public AuthUserDto getUser(String sessionToken, String userId) {
+    requireAdmin(sessionToken);
+    return safeList(load().users()).stream()
+        .filter(item -> item.id().equals(userId))
+        .findFirst()
+        .map(this::toDto)
+        .orElseThrow(() -> new IllegalArgumentException("Kullanici bulunamadi."));
+  }
+
   public String issueSessionToken(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
         .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
@@ -215,6 +232,13 @@ public class AuthService {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
     return new AuthenticatedUser(user.id(), user.name(), user.email(), effectiveRole(user));
+  }
+
+  private void requireAdmin(String sessionToken) {
+    AuthUserDto user = currentUser(sessionToken);
+    if (!"ADMIN".equalsIgnoreCase(user.role())) {
+      throw new org.springframework.security.access.AccessDeniedException("Yonetici yetkisi gerekli.");
+    }
   }
 
   public boolean hasUsers() {
