@@ -1398,10 +1398,10 @@ export default function Home() {
           aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
           className="sidebar-toggle"
           onClick={() => setSidebarCollapsed((current) => !current)}
+          title={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
           type="button"
         >
           <ChevronRight size={18} />
-          <span>{sidebarCollapsed ? "Ac" : "Kapat"}</span>
         </button>
         <div className="nav-label">{t.common.apps}</div>
         <nav className="tabs">

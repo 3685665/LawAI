@@ -187,6 +187,7 @@ pre {
   gap: 24px;
   padding: 24px 16px;
   overflow: hidden;
+  position: relative;
   transition: padding 0.2s ease;
 }
 
@@ -237,14 +238,22 @@ pre {
 }
 
 .sidebar-toggle {
-  background: rgba(255, 255, 255, 0.06);
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
   box-shadow: none;
   color: #f4f8f7;
+  display: inline-flex;
+  height: 34px;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 10px;
-  width: 100%;
+  min-height: 0;
+  padding: 0;
+  position: absolute;
+  right: 12px;
+  top: 28px;
+  width: 34px;
+  z-index: 2;
 }
 
 .sidebar-toggle svg {
@@ -252,18 +261,18 @@ pre {
   transition: transform 0.2s ease;
 }
 
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: none;
+}
+
 .sidebar-collapsed .sidebar-toggle {
-  border-radius: 999px;
-  padding: 0;
-  width: 44px;
+  right: 50%;
+  transform: translateX(50%);
 }
 
 .sidebar-collapsed .sidebar-toggle svg {
   transform: rotate(0deg);
-}
-
-.sidebar-collapsed .sidebar-toggle span {
-  display: none;
 }
 
 .nav-label {
