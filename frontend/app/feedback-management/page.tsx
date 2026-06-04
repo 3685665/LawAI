@@ -3,9 +3,26 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import { AlertCircle, ArrowLeft, LoaderCircle, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Bot,
+  ChevronRight,
+  FileSearch,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  LoaderCircle,
+  MessageSquareMore,
+  Scale,
+  ShieldAlert,
+  Trash2,
+  Upload,
+  UserRound
+} from "lucide-react";
 import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
 import {
+  authLogout,
   authMe,
   deleteFeedback,
   listFeedback,
@@ -50,6 +67,8 @@ export default function FeedbackManagementPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<FeedbackManagementView>("list");
   const [saving, setSaving] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(true);
   const [editForm, setEditForm] = useState({
     type: "genel" as FeedbackType,
     subject: "",
@@ -78,6 +97,22 @@ export default function FeedbackManagementPage() {
   }, []);
 
   const t = getMessages(locale);
+  const tabs = useMemo(() => {
+    const baseTabs = [
+      { id: "chat", label: t.tabs.chat, icon: Bot },
+      { id: "search", label: t.tabs.search, icon: FileSearch },
+      { id: "petition", label: t.tabs.petition, icon: FileText },
+      { id: "training", label: t.tabs.training, icon: GraduationCap },
+      { id: "cases", label: t.tabs.cases, icon: FolderOpen },
+      { id: "document", label: t.tabs.document, icon: Upload },
+      { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore },
+      { id: "profile", label: t.tabs.profile, icon: UserRound },
+      { id: "settings", label: t.tabs.settings, icon: ShieldAlert }
+    ];
+    return authUser?.role === "ADMIN"
+      ? [...baseTabs, { id: "admin", label: t.tabs.admin, icon: ShieldAlert }]
+      : baseTabs;
+  }, [authUser?.role, t]);
 
   useEffect(() => {
     if (!authUser || authUser.role !== "ADMIN") {
@@ -254,6 +289,14 @@ export default function FeedbackManagementPage() {
     refreshFrom(updated);
   }
 
+  async function handleLogout() {
+    try {
+      await authLogout();
+    } finally {
+      window.location.href = "/";
+    }
+  }
+
   if (loadingAuth) {
     return (
       <main className="auth-shell">
@@ -293,7 +336,81 @@ export default function FeedbackManagementPage() {
   }
 
   return (
-    <main className="workspace admin-feedback-shell">
+    <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <aside className="sidebar">
+        <div className="brand">
+          <Scale size={28} />
+          <div>
+            <strong>LawAI Studio</strong>
+            <span>{t.dashboard.eyebrow}</span>
+          </div>
+        </div>
+        <button
+          aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
+          className="sidebar-toggle"
+          onClick={() => setSidebarCollapsed((current) => !current)}
+          title={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
+          type="button"
+        >
+          <ChevronRight size={18} />
+        </button>
+        <div className="nav-label">{t.common.apps}</div>
+        <nav className="tabs">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isAdminTab = tab.id === "admin";
+            return (
+              <div className={isAdminTab ? "sidebar-menu-group" : ""} key={tab.id}>
+                {isAdminTab ? (
+                  <button
+                    aria-expanded={adminMenuOpen}
+                    className="active"
+                    onClick={() => setAdminMenuOpen((current) => !current)}
+                    title={tab.label}
+                    type="button"
+                  >
+                    <Icon size={18} />
+                    <span>{tab.label}</span>
+                    <ChevronRight className="sidebar-submenu-chevron" size={15} />
+                  </button>
+                ) : (
+                  <Link href="/" title={tab.label}>
+                    <Icon size={18} />
+                    <span>{tab.label}</span>
+                  </Link>
+                )}
+                {isAdminTab && adminMenuOpen && (
+                  <div className="sidebar-submenu">
+                    <Link className="active" href="/feedback-management" title={t.adminFeedback.title}>
+                      <MessageSquareMore size={15} />
+                      <span>{t.adminFeedback.title}</span>
+                    </Link>
+                    <Link href="/" title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}>
+                      <UserRound size={15} />
+                      <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+        <div className="sidebar-user">
+          <div className="sidebar-user-avatar" aria-hidden="true">{authUser.name.slice(0, 1).toUpperCase()}</div>
+          <div>
+            <strong>{authUser.name}</strong>
+            <span>{authUser.email}</span>
+            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
+          </div>
+          <div className="sidebar-user-actions">
+            <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
+              {t.common.logout}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section className="workspace admin-feedback-shell">
       <div className="topbar">
         <div>
           <span className="eyebrow">{t.adminFeedback.eyebrow}</span>
@@ -456,6 +573,7 @@ export default function FeedbackManagementPage() {
           )}
         </div>
         ) : null}
+      </section>
       </section>
     </main>
   );
