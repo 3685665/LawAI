@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { AlertCircle, ArrowLeft, LoaderCircle, Trash2 } from "lucide-react";
 import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
 import {
@@ -19,6 +19,7 @@ import {
 
 type FilterStatus = "all" | FeedbackStatus;
 type FilterType = "all" | FeedbackType;
+type FeedbackManagementView = "list" | "detail";
 
 function isFeedbackType(value: string): value is FeedbackType {
   return value === "hata" || value === "ozellik" || value === "genel";
@@ -47,6 +48,7 @@ export default function FeedbackManagementPage() {
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<FeedbackManagementView>("list");
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
     type: "genel" as FeedbackType,
@@ -88,7 +90,6 @@ export default function FeedbackManagementPage() {
       .then((data) => {
         if (cancelled) return;
         setItems(data);
-        setSelectedId((current) => current ?? data[0]?.id ?? null);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -190,6 +191,7 @@ export default function FeedbackManagementPage() {
           <button type="button" className="secondary-button" onClick={(event) => {
             event.stopPropagation();
             setSelectedId(String(params.id));
+            setViewMode("detail");
           }}>
             {t.adminFeedback.open}
           </button>
@@ -227,6 +229,7 @@ export default function FeedbackManagementPage() {
     await deleteFeedback(id);
     setItems((current) => current.filter((item) => item.id !== id));
     setSelectedId((current) => (current === id ? null : current));
+    setViewMode((current) => (selectedId === id ? "list" : current));
   }
 
   async function handleSave(event: FormEvent) {
@@ -305,28 +308,39 @@ export default function FeedbackManagementPage() {
         </div>
       </div>
 
-      <div className="feedback-admin-filters">
-        <label className="field-label">
-          {t.feedback.search}
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.adminFeedback.searchPlaceholder} />
-        </label>
-        <div className="feedback-quick-filters">
-          <button type="button" className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")}>{t.adminFeedback.all}</button>
-          <button type="button" className={statusFilter === "received" ? "active" : ""} onClick={() => setStatusFilter("received")}>{t.feedback.statuses.received}</button>
-          <button type="button" className={statusFilter === "read" ? "active" : ""} onClick={() => setStatusFilter("read")}>{t.feedback.statuses.read}</button>
-          <button type="button" className={statusFilter === "resolved" ? "active" : ""} onClick={() => setStatusFilter("resolved")}>{t.feedback.statuses.resolved}</button>
-        </div>
-        <div className="feedback-quick-filters">
-          <button type="button" className={typeFilter === "all" ? "active" : ""} onClick={() => setTypeFilter("all")}>{t.adminFeedback.allTypes}</button>
-          <button type="button" className={typeFilter === "hata" ? "active" : ""} onClick={() => setTypeFilter("hata")}>{t.feedback.types.hata}</button>
-          <button type="button" className={typeFilter === "ozellik" ? "active" : ""} onClick={() => setTypeFilter("ozellik")}>{t.feedback.types.ozellik}</button>
-          <button type="button" className={typeFilter === "genel" ? "active" : ""} onClick={() => setTypeFilter("genel")}>{t.feedback.types.genel}</button>
-        </div>
-      </div>
+      {viewMode === "list" ? (
+        <section className="panel feedback-admin-filters">
+          <div className="feedback-filter-search">
+            <label className="field-label">
+              {t.feedback.search}
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.adminFeedback.searchPlaceholder} />
+            </label>
+          </div>
+          <div className="feedback-filter-group">
+            <span className="section-label">{t.feedback.status}</span>
+            <div className="feedback-quick-filters">
+              <button type="button" className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")}>{t.adminFeedback.all}</button>
+              <button type="button" className={statusFilter === "received" ? "active" : ""} onClick={() => setStatusFilter("received")}>{t.feedback.statuses.received}</button>
+              <button type="button" className={statusFilter === "read" ? "active" : ""} onClick={() => setStatusFilter("read")}>{t.feedback.statuses.read}</button>
+              <button type="button" className={statusFilter === "resolved" ? "active" : ""} onClick={() => setStatusFilter("resolved")}>{t.feedback.statuses.resolved}</button>
+            </div>
+          </div>
+          <div className="feedback-filter-group">
+            <span className="section-label">{t.feedback.type}</span>
+            <div className="feedback-quick-filters">
+              <button type="button" className={typeFilter === "all" ? "active" : ""} onClick={() => setTypeFilter("all")}>{t.adminFeedback.allTypes}</button>
+              <button type="button" className={typeFilter === "hata" ? "active" : ""} onClick={() => setTypeFilter("hata")}>{t.feedback.types.hata}</button>
+              <button type="button" className={typeFilter === "ozellik" ? "active" : ""} onClick={() => setTypeFilter("ozellik")}>{t.feedback.types.ozellik}</button>
+              <button type="button" className={typeFilter === "genel" ? "active" : ""} onClick={() => setTypeFilter("genel")}>{t.feedback.types.genel}</button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {error ? <div className="error">{error}</div> : null}
 
-      <section className="feedback-admin-layout">
+      <section className={viewMode === "detail" ? "feedback-admin-layout feedback-admin-layout-detail" : "feedback-admin-layout feedback-admin-layout-list"}>
+        {viewMode === "list" ? (
         <div className="panel feedback-admin-table">
           <div className="section-head">
             <div>
@@ -346,7 +360,6 @@ export default function FeedbackManagementPage() {
                 disableRowSelectionOnClick
                 processRowUpdate={handleRowUpdate}
                 onProcessRowUpdateError={(err) => setError(err instanceof Error ? err.message : t.adminFeedback.rowUpdateError)}
-                onRowClick={(params: GridRowParams) => setSelectedId(String(params.id))}
                 initialState={{ pagination: { paginationModel: { page: 0, pageSize: 8 } } }}
                 pageSizeOptions={[8, 15, 25]}
                 sx={{
@@ -366,13 +379,19 @@ export default function FeedbackManagementPage() {
             </div>
           )}
         </div>
+        ) : null}
 
+        {viewMode === "detail" ? (
         <div className="panel feedback-admin-detail">
           <div className="section-head">
             <div>
               <span className="section-label">{t.adminFeedback.detail}</span>
               <h3>{t.adminFeedback.selectedRecord}</h3>
             </div>
+            <button className="secondary-button" type="button" onClick={() => setViewMode("list")}>
+              <ArrowLeft size={16} />
+              {t.adminFeedback.records}
+            </button>
           </div>
           {selected ? (
             <form className="feedback-edit-form" onSubmit={handleSave}>
@@ -436,6 +455,7 @@ export default function FeedbackManagementPage() {
             <p className="empty">{t.adminFeedback.emptySelection}</p>
           )}
         </div>
+        ) : null}
       </section>
     </main>
   );

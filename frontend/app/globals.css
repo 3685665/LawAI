@@ -1096,9 +1096,12 @@ pre {
 }
 
 .feedback-admin-filters {
+  align-items: stretch;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(246, 250, 249, 0.96));
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1.1fr) repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(260px, 0.9fr) minmax(260px, 0.9fr);
   margin-bottom: 16px;
 }
 
@@ -1106,17 +1109,33 @@ pre {
   margin: 0;
 }
 
+.feedback-filter-search,
+.feedback-filter-group {
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.feedback-filter-search input {
+  min-height: 44px;
+}
+
 .feedback-quick-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .feedback-quick-filters button {
   background: #eef3f7;
   color: var(--accent-strong);
   box-shadow: none;
+  min-height: 36px;
+  padding: 0 12px;
 }
 
 .feedback-quick-filters button.active {
@@ -1131,6 +1150,10 @@ pre {
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
 }
 
+.feedback-admin-layout-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .feedback-admin-table,
 .feedback-admin-detail {
   display: grid;
@@ -1141,6 +1164,15 @@ pre {
 .feedback-admin-detail {
   position: sticky;
   top: 24px;
+}
+
+.feedback-admin-layout-detail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.feedback-admin-layout-detail .feedback-admin-detail {
+  position: static;
+  top: auto;
 }
 
 .feedback-datagrid-wrap {
@@ -3322,6 +3354,7 @@ body[data-theme="dark"] .law-chat-download {
   }
 
   .feedback-admin-filters,
+  .feedback-admin-filters.panel,
   .feedback-admin-layout {
     grid-template-columns: 1fr;
   }
