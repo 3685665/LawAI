@@ -18,7 +18,6 @@ import {
   LoaderCircle,
   Mic,
   Clock3,
-  ClipboardList,
   MessageSquareMore,
   Scale,
   Search,
@@ -374,7 +373,6 @@ export default function Home() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<FeedbackRecord | null>(null);
-  const [feedbackHistoryOpen, setFeedbackHistoryOpen] = useState(false);
   const [feedbackLoaded, setFeedbackLoaded] = useState(false);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [feedbackSearch, setFeedbackSearch] = useState("");
@@ -572,10 +570,10 @@ export default function Home() {
   }, [filteredFeedbackItems, locale, t]);
 
   const selectedFeedback = useMemo(() => {
-    if (!filteredFeedbackItems.length) {
+    if (!selectedFeedbackId || !filteredFeedbackItems.length) {
       return null;
     }
-    return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? filteredFeedbackItems[0];
+    return filteredFeedbackItems.find((item) => item.id === selectedFeedbackId) ?? null;
   }, [filteredFeedbackItems, selectedFeedbackId]);
 
   const adminFeedbackMetrics = useMemo(() => {
@@ -684,7 +682,6 @@ export default function Home() {
     try {
       const items = await listFeedback();
       setFeedbackItems(items);
-      setSelectedFeedbackId((current) => current ?? items[0]?.id ?? null);
       setFeedbackLoaded(true);
     } catch (err) {
       setFeedbackError(err instanceof Error ? err.message : "Geri bildirimler yuklenemedi.");
@@ -1168,7 +1165,6 @@ export default function Home() {
       setFeedbackSubmitted(response.feedback);
       setFeedbackItems((current) => [response.feedback, ...current.filter((item) => item.id !== response.feedback.id)]);
       setSelectedFeedbackId(response.feedback.id);
-      setFeedbackHistoryOpen(true);
       setFeedbackForm({ type: "genel", subject: "", message: "" });
     });
   }
@@ -1255,7 +1251,6 @@ export default function Home() {
         setFeedbackItems([]);
         setFeedbackError("");
         setFeedbackSubmitted(null);
-        setFeedbackHistoryOpen(false);
         setFeedbackLoaded(false);
         setSelectedFeedbackId(null);
         setFeedbackSearch("");
@@ -2003,137 +1998,125 @@ export default function Home() {
               </div>
             </form>
 
-            <section className="panel dashboard-panel feedback-history-panel">
-              <div className="section-head feedback-history-head">
-                <div>
-                  <span className="section-label">{t.feedback.history}</span>
-                  <h3>{t.feedback.historyTitle}</h3>
+            {!selectedFeedback ? (
+              <section className="panel dashboard-panel feedback-history-panel">
+                <div className="section-head feedback-history-head">
+                  <div>
+                    <span className="section-label">{t.feedback.history}</span>
+                    <h3>{t.feedback.historyTitle}</h3>
+                  </div>
+                  <div className="feedback-history-actions">
+                    <span className="status">{filteredFeedbackItems.length} {t.feedback.recordCount}</span>
+                  </div>
                 </div>
-                <div className="feedback-history-actions">
-                  <span className="status">{filteredFeedbackItems.length} {t.feedback.recordCount}</span>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => {
-                      setFeedbackHistoryOpen((current) => !current);
-                      void loadFeedbackHistory();
-                    }}
-                  >
-                    <ClipboardList size={16} />
-                    {feedbackHistoryOpen ? t.feedback.hideHistory : t.feedback.showHistory}
-                  </button>
-                </div>
-              </div>
 
-              {feedbackHistoryOpen ? (
-                <>
-                  <div className="feedback-toolbar">
-                    <label className="field-label">
-                      {t.feedback.search}
-                      <input
-                        value={feedbackSearch}
-                        onChange={(event) => setFeedbackSearch(event.target.value)}
-                        placeholder={t.feedback.searchPlaceholder}
-                      />
-                    </label>
-                    <label className="field-label">
-                      {t.feedback.type}
-                      <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
-                        <option value="all">{t.feedback.allTypes}</option>
-                        <option value="hata">{t.feedback.types.hata}</option>
-                        <option value="ozellik">{t.feedback.types.ozellik}</option>
-                        <option value="genel">{t.feedback.types.genel}</option>
-                      </select>
-                    </label>
-                    <label className="field-label">
-                      {t.feedback.status}
-                      <select value={feedbackStatusFilter} onChange={(event) => setFeedbackStatusFilter(event.target.value as FeedbackStatusFilter)}>
-                        <option value="all">{t.feedback.allStatuses}</option>
-                        <option value="received">{t.feedback.statuses.received}</option>
-                        <option value="read">{t.feedback.statuses.read}</option>
-                        <option value="resolved">{t.feedback.statuses.resolved}</option>
-                      </select>
-                    </label>
-                  </div>
-                  {feedbackError ? <div className="error">{feedbackError}</div> : null}
-                  <div className="feedback-datagrid-wrap">
-                    <DataGrid
-                      rows={feedbackRows}
-                      columns={feedbackColumns}
-                      loading={feedbackLoading}
-                      autoHeight
-                      hideFooter
-                      disableRowSelectionOnClick
-                      disableColumnMenu
-                      rowHeight={72}
-                      columnHeaderHeight={42}
-                      onRowClick={(params: GridRowParams<FeedbackGridRow>) => setSelectedFeedbackId(String(params.id))}
-                      sx={{
-                        border: "none",
-                        color: "var(--ink)",
-                        fontFamily: "inherit",
-                        "& .MuiDataGrid-columnHeaders": {
-                          backgroundColor: "#f6f8fb",
-                          borderBottom: "1px solid var(--line)",
-                          color: "var(--muted)",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          letterSpacing: "0.04em",
-                          textTransform: "uppercase"
-                        },
-                        "& .MuiDataGrid-cell": {
-                          borderBottom: "1px solid rgba(212, 220, 230, 0.72)",
-                          outline: "none"
-                        },
-                        "& .MuiDataGrid-row": {
-                          cursor: "pointer"
-                        },
-                        "& .MuiDataGrid-row:hover": {
-                          backgroundColor: "#f4f8fc"
-                        },
-                        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
-                          outline: "none"
-                        }
-                      }}
+                <div className="feedback-toolbar">
+                  <label className="field-label">
+                    {t.feedback.search}
+                    <input
+                      value={feedbackSearch}
+                      onChange={(event) => setFeedbackSearch(event.target.value)}
+                      placeholder={t.feedback.searchPlaceholder}
                     />
-                  </div>
-                  {selectedFeedback ? (
-                    <article className="panel feedback-detail-panel feedback-detail-panel-wide">
-                      <div className="section-head">
-                        <div>
-                          <span className="section-label">{t.feedback.detail}</span>
-                          <h3>{t.feedback.selectedRecord}</h3>
-                        </div>
-                      </div>
-                      <div className="feedback-detail">
-                        <div className="feedback-detail-head">
-                          <strong>{selectedFeedback.subject}</strong>
-                          <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{isFeedbackType(selectedFeedback.type) ? t.feedback.types[selectedFeedback.type] : selectedFeedback.type}</span>
-                        </div>
-                        <div className="feedback-detail-meta">
-                          <div>
-                            <small>{t.feedback.status}</small>
-                            <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{isFeedbackStatus(selectedFeedback.status) ? t.feedback.statuses[selectedFeedback.status] : selectedFeedback.status}</strong>
-                          </div>
-                          <div>
-                            <small>{t.feedback.date}</small>
-                            <strong>{new Date(selectedFeedback.createdAt).toLocaleString("tr-TR")}</strong>
-                          </div>
-                        </div>
-                        <div className="feedback-detail-body">
-                          <small>{t.feedback.message}</small>
-                          <p>{selectedFeedback.message}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ) : null}
-                </>
-              ) : (
-                <div className="feedback-history-closed">
-                  <p>{t.feedback.historyEmpty}</p>
+                  </label>
+                  <label className="field-label">
+                    {t.feedback.type}
+                    <select value={feedbackTypeFilter} onChange={(event) => setFeedbackTypeFilter(event.target.value as FeedbackFilter)}>
+                      <option value="all">{t.feedback.allTypes}</option>
+                      <option value="hata">{t.feedback.types.hata}</option>
+                      <option value="ozellik">{t.feedback.types.ozellik}</option>
+                      <option value="genel">{t.feedback.types.genel}</option>
+                    </select>
+                  </label>
+                  <label className="field-label">
+                    {t.feedback.status}
+                    <select value={feedbackStatusFilter} onChange={(event) => setFeedbackStatusFilter(event.target.value as FeedbackStatusFilter)}>
+                      <option value="all">{t.feedback.allStatuses}</option>
+                      <option value="received">{t.feedback.statuses.received}</option>
+                      <option value="read">{t.feedback.statuses.read}</option>
+                      <option value="resolved">{t.feedback.statuses.resolved}</option>
+                    </select>
+                  </label>
                 </div>
-              )}
-            </section>
+                {feedbackError ? <div className="error">{feedbackError}</div> : null}
+                <div className="feedback-datagrid-wrap">
+                  <DataGrid
+                    rows={feedbackRows}
+                    columns={feedbackColumns}
+                    loading={feedbackLoading}
+                    autoHeight
+                    hideFooter
+                    disableRowSelectionOnClick
+                    disableColumnMenu
+                    rowHeight={72}
+                    columnHeaderHeight={42}
+                    onRowClick={(params: GridRowParams<FeedbackGridRow>) => setSelectedFeedbackId(String(params.id))}
+                    sx={{
+                      border: "none",
+                      color: "var(--ink)",
+                      fontFamily: "inherit",
+                      "& .MuiDataGrid-columnHeaders": {
+                        backgroundColor: "#f6f8fb",
+                        borderBottom: "1px solid var(--line)",
+                        color: "var(--muted)",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase"
+                      },
+                      "& .MuiDataGrid-cell": {
+                        borderBottom: "1px solid rgba(212, 220, 230, 0.72)",
+                        outline: "none"
+                      },
+                      "& .MuiDataGrid-row": {
+                        cursor: "pointer"
+                      },
+                      "& .MuiDataGrid-row:hover": {
+                        backgroundColor: "#f4f8fc"
+                      },
+                      "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                        outline: "none"
+                      }
+                    }}
+                  />
+                </div>
+              </section>
+            ) : (
+              <section className="feedback-admin-layout feedback-admin-layout-detail">
+                <article className="panel feedback-detail-panel feedback-admin-detail">
+                  <div className="section-head">
+                    <div>
+                      <span className="section-label">{t.feedback.detail}</span>
+                      <h3>{t.feedback.selectedRecord}</h3>
+                    </div>
+                    <button className="secondary-button" type="button" onClick={() => setSelectedFeedbackId(null)}>
+                      <ArrowLeft size={16} />
+                      {locale === "en" ? "Back to list" : "Listeye don"}
+                    </button>
+                  </div>
+                  <div className="feedback-detail">
+                    <div className="feedback-detail-head">
+                      <strong>{selectedFeedback.subject}</strong>
+                      <span className={`feedback-pill feedback-pill-type feedback-type-${selectedFeedback.type}`}>{isFeedbackType(selectedFeedback.type) ? t.feedback.types[selectedFeedback.type] : selectedFeedback.type}</span>
+                    </div>
+                    <div className="feedback-detail-meta">
+                      <div>
+                        <small>{t.feedback.status}</small>
+                        <strong className={`feedback-pill feedback-pill-status feedback-status-${selectedFeedback.status}`}>{isFeedbackStatus(selectedFeedback.status) ? t.feedback.statuses[selectedFeedback.status] : selectedFeedback.status}</strong>
+                      </div>
+                      <div>
+                        <small>{t.feedback.date}</small>
+                        <strong>{new Date(selectedFeedback.createdAt).toLocaleString(locale === "en" ? "en-US" : "tr-TR")}</strong>
+                      </div>
+                    </div>
+                    <div className="feedback-detail-body">
+                      <small>{t.feedback.message}</small>
+                      <p>{selectedFeedback.message}</p>
+                    </div>
+                  </div>
+                </article>
+              </section>
+            )}
           </section>
         )}
 
