@@ -22,6 +22,7 @@ import {
   Scale,
   Search,
   Send,
+  Settings,
   ShieldAlert,
   Upload,
   UserRound,
@@ -111,6 +112,7 @@ type FeedbackStatusFilter = "all" | FeedbackStatus;
 type PetitionMethod = "case" | "quick" | "detailed";
 type PetitionModel = "standard" | "premium";
 type ResearchMode = "ai" | "manual";
+type PrecedentSourceKey = "all" | "yargitay" | "danistay" | "aym" | "rekabet" | "literature" | "thesis";
 type FeedbackGridRow = FeedbackRecord & {
   typeLabel: string;
   statusLabel: string;
@@ -333,6 +335,7 @@ export default function Home() {
   const [searchDocket, setSearchDocket] = useState("");
   const [searchDateFrom, setSearchDateFrom] = useState("");
   const [searchDateTo, setSearchDateTo] = useState("");
+  const [precedentSource, setPrecedentSource] = useState<PrecedentSourceKey>("all");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
   const [precedentSummary, setPrecedentSummary] = useState("");
   const [selectedPrecedentIndex, setSelectedPrecedentIndex] = useState<number | null>(null);
@@ -404,7 +407,7 @@ export default function Home() {
       { id: "document" as const, label: t.tabs.document, icon: Upload },
       { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
       { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
-      { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
+      { id: "settings" as const, label: t.tabs.settings, icon: Settings }
     ];
     return authUser?.role === "ADMIN"
       ? [...baseTabs, { id: "admin" as const, label: t.tabs.admin, icon: ShieldAlert }]
@@ -637,6 +640,32 @@ export default function Home() {
     const index = selectedPrecedentIndex ?? 0;
     return precedents[index] ?? precedents[0];
   }, [precedents, selectedPrecedentIndex]);
+
+  const precedentSources = useMemo(() => [
+    { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
+    { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
+    { key: "danistay" as const, label: "Danistay", court: "Danistay" },
+    { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" },
+    { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" },
+    { key: "literature" as const, label: locale === "en" ? "Literature (Law Articles)" : "Literatur (Hukuk Makaleleri)", court: "" },
+    { key: "thesis" as const, label: locale === "en" ? "Master/Doctoral Theses" : "Yuksek Lisans/Doktora Tezleri", court: "" }
+  ], [locale]);
+
+  const precedentExampleQueries = useMemo(() => locale === "en" ? [
+    "Determining child living standard and parent income in child support amount",
+    "Eviction in indefinite-term lease due to lessor's personal need",
+    "Event characteristics and party fault rates in moral compensation amount",
+    "Proof criteria for collusion claims in title cancellation and registration cases",
+    "Limitation period start for severance and notice pay based on termination date",
+    "Net income calculation and discount rates in loss of support compensation"
+  ] : [
+    "Istirak nafakasinin miktarinin saptanmasinda cocugun yasam standardi ve ebeveyn gelirleri",
+    "Belirsiz sureli kira sozlesmesinde tahliye - kiraya verenin ihtiyac nedeniyle actigi davalar",
+    "Manevi tazminat miktarinin belirlenmesinde olayin niteligi ve taraf kusur oranlari",
+    "Tapu iptali ve tescil davalarinda muris muvazaasi iddiasinin ispat kriterleri",
+    "Kidem ve ihbar tazminatlarinda zamanasimi baslangici - fesih tarihine gore uygulamalar",
+    "Destekten yoksun kalma tazminatinda net gelir hesabi ve iskonto oranlarinin etkisi"
+  ], [locale]);
 
   const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [
     {
@@ -979,18 +1008,26 @@ export default function Home() {
     printWindow.document.close();
   }
 
-  function submitSearch(event: FormEvent) {
-    event.preventDefault();
+  function buildPrecedentQuery(query: string, sourceKey = precedentSource) {
+    const sourceHint = precedentSources.find((item) => item.key === sourceKey);
     const manualParts = [
-      searchQuery.trim(),
+      query.trim(),
       searchDocket.trim() ? `${t.tools.researchDocket}: ${searchDocket.trim()}` : "",
       searchDateFrom ? `${t.tools.researchDateFrom}: ${searchDateFrom}` : "",
       searchDateTo ? `${t.tools.researchDateTo}: ${searchDateTo}` : ""
     ].filter(Boolean);
+    const baseQuery = researchMode === "manual" ? manualParts.join(" ") : query;
+    if (!sourceHint || sourceHint.key === "all" || sourceHint.court) {
+      return baseQuery;
+    }
+    return `${sourceHint.label}: ${baseQuery}`;
+  }
+
+  function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
     run("search", async () => {
       const data = await postJson<{ results: Precedent[] }>("/precedents/search", {
-        query: researchMode === "manual" ? manualParts.join(" ") : searchQuery,
-        court: searchCourt || undefined,
+        query: buildPrecedentQuery(query, sourceKey),
+        court: court || undefined,
         chamber: searchChamber || undefined,
         limit: 50
       });
@@ -998,6 +1035,21 @@ export default function Home() {
       setSelectedPrecedentIndex(data.results.length ? 0 : null);
       setPrecedentSummary("");
     });
+  }
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    executePrecedentSearch();
+  }
+
+  function selectPrecedentSource(source: (typeof precedentSources)[number]) {
+    setPrecedentSource(source.key);
+    setSearchCourt(source.court);
+  }
+
+  function runExampleSearch(example: string) {
+    setSearchQuery(example);
+    executePrecedentSearch(example);
   }
 
   function summarizePrecedents() {
