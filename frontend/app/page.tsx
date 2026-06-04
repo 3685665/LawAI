@@ -392,7 +392,6 @@ export default function Home() {
       { id: "training" as const, label: t.tabs.training, icon: GraduationCap },
       { id: "cases" as const, label: t.tabs.cases, icon: FolderOpen },
       { id: "document" as const, label: t.tabs.document, icon: Upload },
-      { id: "knowledge" as const, label: t.tabs.knowledge, icon: Database },
       { id: "feedback" as const, label: t.tabs.feedback, icon: MessageSquareMore },
       { id: "profile" as const, label: t.tabs.profile, icon: UserRound },
       { id: "settings" as const, label: t.tabs.settings, icon: ShieldAlert }
