@@ -89,7 +89,7 @@ class JsonVectorStore:
                 if not query_tokens.intersection(document_tokens):
                     continue
             score = cosine_similarity(query_embedding, entry.embedding)
-            if score > 0:
+            if score >= settings.min_vector_similarity:
                 ranked.append((score, entry))
 
         ranked.sort(key=lambda item: item[0], reverse=True)
@@ -205,24 +205,27 @@ class PgVectorStore:
             filters.append("lower(coalesce(chamber, '')) LIKE lower(%s)")
             params.append(f"%{chamber}%")
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
-        params.extend([self._to_vector_literal(query_embedding), max(limit * 3, limit)])
+        params.extend([self._to_vector_literal(query_embedding), max(limit * 5, limit)])
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     f"""
-                    SELECT court, chamber, docket_no, decision_no, decision_date, topic, summary, content
+                    SELECT court, chamber, docket_no, decision_no, decision_date, topic, summary, content,
+                           1 - (embedding <=> %s::vector) AS similarity
                     FROM knowledge_documents
                     {where_clause}
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
                     """,
-                    params,
+                    [*params[:-2], params[-2], params[-2], params[-1]],
                 )
                 rows = cur.fetchall()
 
         results: list[PrecedentDto] = []
         for row in rows:
-            row_court, row_chamber, docket_no, decision_no, decision_date, topic, summary, content = row
+            row_court, row_chamber, docket_no, decision_no, decision_date, topic, summary, content, similarity = row
+            if float(similarity or 0) < settings.min_vector_similarity:
+                continue
             if query_tokens and not query_tokens.intersection(tokenize(" ".join([topic, summary, content]))):
                 continue
             results.append(

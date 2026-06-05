@@ -26,12 +26,23 @@ def test_health() -> None:
     assert response.json()["status"] == "ok"
 
 
-def test_precedent_search_uses_samples() -> None:
+def test_precedent_search_does_not_use_samples_without_index() -> None:
     response = client.post("/api/precedents/search", json={"query": "kira alacagi", "limit": 2})
     assert response.status_code == 200
     body = response.json()
     assert body["query"] == "kira alacagi"
-    assert len(body["results"]) == 2
+    assert body["results"] == []
+
+
+def test_precedent_search_uses_indexed_precedents() -> None:
+    client.post("/api/knowledge/seed-precedents")
+
+    response = client.post("/api/precedents/search", json={"query": "kira alacagi", "limit": 2})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["results"]) == 1
+    assert body["results"][0]["topic"] == "Kira alacagi"
 
 
 def test_knowledge_ingest_works_with_local_provider() -> None:

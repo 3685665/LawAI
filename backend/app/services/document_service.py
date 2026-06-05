@@ -58,8 +58,9 @@ class DocumentService:
         if len(extracted_text) < MIN_EXTRACTED_CHARACTERS:
             raise ValueError("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.")
 
+        cleaned_text = self._clean_text(extracted_text)
         splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=150)
-        chunks = splitter.split_text(extracted_text)
+        chunks = splitter.split_text(cleaned_text)
         document_topic = topic.strip() if topic and topic.strip() else Path(filename).stem
         documents = [
             KnowledgeDocumentRequest(
@@ -79,12 +80,12 @@ class DocumentService:
             filename=filename,
             size=len(content),
             contentType=content_type,
-            extractedCharacters=len(extracted_text),
+            extractedCharacters=len(cleaned_text),
             chunkCount=len(chunks),
             indexed=ingest_response.indexed,
             storage=ingest_response.storage,
             message=ingest_response.message,
-            textPreview=self._preview(extracted_text, 500),
+            textPreview=self._preview(cleaned_text, 500),
             warnings=[],
         )
 
@@ -118,6 +119,21 @@ class DocumentService:
 
     def _preview(self, content: str, length: int) -> str:
         return content if len(content) <= length else f"{content[:length]}..."
+
+    def _clean_text(self, content: str) -> str:
+        lines = [" ".join(line.split()) for line in content.splitlines()]
+        paragraphs: list[str] = []
+        current: list[str] = []
+        for line in lines:
+            if not line:
+                if current:
+                    paragraphs.append(" ".join(current))
+                    current = []
+                continue
+            current.append(line)
+        if current:
+            paragraphs.append(" ".join(current))
+        return "\n\n".join(paragraphs).strip()
 
 
 document_service = DocumentService()

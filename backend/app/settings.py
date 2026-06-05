@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ollama_chat_model: str = Field(default="qwen2.5:3b", validation_alias="OLLAMA_CHAT_MODEL")
     ollama_embedding_model: str = Field(default="nomic-embed-text", validation_alias="OLLAMA_EMBEDDING_MODEL")
     embedding_dimensions: int = Field(default=384, validation_alias=AliasChoices("LAWAI_EMBEDDING_DIMENSIONS", "EMBEDDING_DIMENSIONS"))
+    min_vector_similarity: float = Field(default=0.12, validation_alias=AliasChoices("LAWAI_MIN_VECTOR_SIMILARITY", "MIN_VECTOR_SIMILARITY"))
     max_upload_mb: int = Field(default=25, validation_alias="MAX_UPLOAD_MB")
 
     model_config = SettingsConfigDict(

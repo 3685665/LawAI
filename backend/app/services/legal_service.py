@@ -97,12 +97,12 @@ class LegalService:
         limit = min(max(request.limit or 5, 1), 20)
         return PrecedentSearchResponse(
             query=request.query,
-            results=self.search(request.query, request.court, request.chamber, limit),
+            results=self.search(request.query, request.court, request.chamber, limit, use_samples=False),
         )
 
     def generate_petition(self, request: PetitionRequest) -> PetitionResponse:
         indexed_citations = self.search(f"{request.facts} {request.demands or ''}", None, None, 2, use_samples=False)
-        citations = indexed_citations or self._search_samples(f"{request.facts} {request.demands or ''}", None, None, 2)
+        citations = indexed_citations
         body = self._local_petition(request)
 
         if self.chat_model and indexed_citations:
@@ -137,7 +137,10 @@ class LegalService:
                 message=f"Vektor deposu hata verdi: {exc}",
             )
         storage = f"pgvector/{self.provider}" if settings.vector_store.lower() == "pgvector" else f"persistent/{self.provider}"
-        return KnowledgeIngestResponse(indexed=indexed, storage=storage, message="Dokumanlar kalici vektor deposuna indekslendi.")
+        message = "Dokumanlar kalici vektor deposuna indekslendi."
+        if self.provider == "local":
+            message += " Not: local embedding yalnizca gelistirme icindir; emsal kalitesi icin OpenAI, Gemini veya Ollama embedding saglayicisi kullanin ve dokumanlari yeniden indeksleyin."
+        return KnowledgeIngestResponse(indexed=indexed, storage=storage, message=message)
 
     def seed_precedents(self) -> KnowledgeIngestResponse:
         documents = [
@@ -212,7 +215,8 @@ class LegalService:
             if (not court or normalize(court) in normalize(item.court))
             and (not chamber or normalize(chamber) in normalize(item.chamber))
         ]
-        return sorted(filtered, key=score, reverse=True)[:limit]
+        scored = [(score(item), item) for item in filtered]
+        return [item for item_score, item in sorted(scored, key=lambda pair: pair[0], reverse=True) if item_score > 0][:limit]
 
     def _chat_model(self) -> BaseChatModel | None:
         if self.provider == "openai" and settings.openai_api_key:
