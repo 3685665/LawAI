@@ -611,5 +611,89 @@
     "detail" : "Belge Isleme ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T17:17:18.2063253Z"
+  }, {
+    "id" : "574c1bc3-331e-45f1-a964-daf5a3fe2605",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:48:04.5272016Z"
+  }, {
+    "id" : "9ced5b27-90e4-40a4-a8e1-1a62bd2b8cca",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "chat",
+    "screen" : "Asistan",
+    "detail" : "AI sohbet analizi yapildi.",
+    "path" : "/api/chat",
+    "createdAt" : "2026-06-05T17:48:26.6048246Z"
+  }, {
+    "id" : "b10ecaa0-0c2c-4226-86f9-4cca5a0c0376",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Emsal Arama",
+    "detail" : "Emsal Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:48:43.2222034Z"
+  }, {
+    "id" : "6208cf3e-65ae-4172-9d03-f976cfaa4320",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "precedent-search",
+    "screen" : "Emsal Arama",
+    "detail" : "Emsal karar aramasi yapildi.",
+    "path" : "/api/precedents/search",
+    "createdAt" : "2026-06-05T17:48:46.4580628Z"
+  }, {
+    "id" : "16d8dbdc-0d2c-414c-ad93-21d2351f665a",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce Taslak ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:48:55.311129Z"
+  }, {
+    "id" : "7d84962e-a37b-47df-ac9e-fdfc7a45cdad",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "petition-create",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce taslagi olusturuldu.",
+    "path" : "/api/petitions",
+    "createdAt" : "2026-06-05T17:49:05.1128493Z"
+  }, {
+    "id" : "d79d3fc5-c2a8-4980-93ce-5b0522e4ff1a",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "petition-create",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce taslagi olusturuldu.",
+    "path" : "/api/petitions",
+    "createdAt" : "2026-06-05T17:49:18.9244404Z"
   } ]
 }
