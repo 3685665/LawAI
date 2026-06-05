@@ -23,9 +23,11 @@ class Settings(BaseSettings):
     file_batch_size: int = Field(default=128, validation_alias="PDF_FILE_BATCH_SIZE")
     embedding_batch_size: int = Field(default=32, validation_alias="PDF_EMBEDDING_BATCH_SIZE")
     min_extracted_characters: int = Field(default=40, validation_alias="PDF_MIN_EXTRACTED_CHARACTERS")
+    opensearch_enabled: bool = Field(default=True, validation_alias="OPENSEARCH_ENABLED")
+    opensearch_base_url: str = Field(default="http://localhost:9200", validation_alias="OPENSEARCH_BASE_URL")
+    opensearch_index: str = Field(default="legal-document-chunks", validation_alias="OPENSEARCH_INDEX")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
-

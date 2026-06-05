@@ -5,9 +5,10 @@ import re
 import subprocess
 import sys
 
-from pdf_vector_ingest.db import PgVectorRepository, file_record
-from pdf_vector_ingest.embeddings import create_embeddings
-from pdf_vector_ingest.pdf import PdfChunk, discover_pdfs, split_pdf
+from pdf_vector_ingest.db import PgVectorRepository, StoredChunk, file_record
+from pdf_vector_ingest.embeddings import LocalEmbeddings, create_embeddings
+from pdf_vector_ingest.opensearch import OpenSearchClient
+from pdf_vector_ingest.pdf import PdfChunk, discover_pdfs, extract_text, split_text
 from pdf_vector_ingest.settings import settings
 
 
@@ -18,12 +19,14 @@ class IngestStats:
     indexed_files: int = 0
     failed_files: int = 0
     indexed_chunks: int = 0
+    opensearch_chunks: int = 0
 
 
 def ingest_local(input_path: Path, dry_run: bool = False, limit_files: int | None = None) -> IngestStats:
     repository = PgVectorRepository()
     repository.ensure_schema()
     embeddings = create_embeddings()
+    opensearch = OpenSearchClient()
 
     paths = discover_pdfs(input_path)
     if limit_files is not None:
@@ -40,12 +43,10 @@ def ingest_local(input_path: Path, dry_run: bool = False, limit_files: int | Non
             continue
 
         try:
-            repository.mark_processing(record)
-            chunks = split_pdf(record.path, record.sha256)
-            inserted = _embed_and_insert(repository, embeddings, chunks)
-            repository.mark_indexed(record, len(chunks))
+            result = _ingest_one(repository, embeddings, opensearch, record)
             stats.indexed_files += 1
-            stats.indexed_chunks += inserted
+            stats.indexed_chunks += result.indexed_chunks
+            stats.opensearch_chunks += result.opensearch_chunks
         except Exception as exc:
             repository.mark_failed(record, str(exc))
             stats.failed_files += 1
@@ -100,6 +101,7 @@ def ingest_spark(
             stats.indexed_files += partial.indexed_files
             stats.failed_files += partial.failed_files
             stats.indexed_chunks += partial.indexed_chunks
+            stats.opensearch_chunks += partial.opensearch_chunks
         return stats
     finally:
         spark.stop()
@@ -109,6 +111,7 @@ def _ingest_partition(paths: list[str], dry_run: bool) -> IngestStats:
     repository = PgVectorRepository()
     repository.ensure_schema()
     embeddings = create_embeddings()
+    opensearch = OpenSearchClient()
     stats = IngestStats(discovered=len(paths))
     for raw_path in paths:
         record = file_record(Path(raw_path))
@@ -119,25 +122,43 @@ def _ingest_partition(paths: list[str], dry_run: bool) -> IngestStats:
             stats.skipped += 1
             continue
         try:
-            repository.mark_processing(record)
-            chunks = split_pdf(record.path, record.sha256)
-            inserted = _embed_and_insert(repository, embeddings, chunks)
-            repository.mark_indexed(record, len(chunks))
+            result = _ingest_one(repository, embeddings, opensearch, record)
             stats.indexed_files += 1
-            stats.indexed_chunks += inserted
+            stats.indexed_chunks += result.indexed_chunks
+            stats.opensearch_chunks += result.opensearch_chunks
         except Exception as exc:
             repository.mark_failed(record, str(exc))
             stats.failed_files += 1
     return stats
 
 
-def _embed_and_insert(repository, embeddings, chunks: list[PdfChunk]) -> int:
-    inserted = 0
+@dataclass
+class IngestOneResult:
+    indexed_chunks: int
+    opensearch_chunks: int
+
+
+def _ingest_one(repository, embeddings, opensearch: OpenSearchClient, record) -> IngestOneResult:
+    repository.mark_processing(record)
+    text = extract_text(record.path)
+    document_id = repository.create_document(record, text)
+    chunks = split_text(record.path, record.sha256, text)
+    stored_chunks = _embed_and_insert(repository, embeddings, document_id, chunks)
+    opensearch_chunks = opensearch.index_chunks(record.path.name, stored_chunks)
+    repository.mark_indexed(record, document_id, len(chunks))
+    return IngestOneResult(indexed_chunks=len(stored_chunks), opensearch_chunks=opensearch_chunks)
+
+
+def _embed_and_insert(repository, embeddings, document_id: int, chunks: list[PdfChunk]) -> list[StoredChunk]:
+    stored: list[StoredChunk] = []
     for start in range(0, len(chunks), settings.embedding_batch_size):
         chunk_batch = chunks[start : start + settings.embedding_batch_size]
-        vectors = embeddings.embed_documents([chunk.content for chunk in chunk_batch])
-        inserted += repository.insert_chunks(chunk_batch, vectors)
-    return inserted
+        try:
+            vectors = embeddings.embed_documents([chunk.content for chunk in chunk_batch])
+        except Exception:
+            vectors = LocalEmbeddings().embed_documents([chunk.content for chunk in chunk_batch])
+        stored.extend(repository.insert_chunks(document_id, chunk_batch, vectors))
+    return stored
 
 
 def _validate_spark_java() -> None:

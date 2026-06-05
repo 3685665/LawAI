@@ -31,6 +31,10 @@ def extract_text(path: Path) -> str:
 
 def split_pdf(path: Path, source_sha256: str) -> list[PdfChunk]:
     text = extract_text(path)
+    return split_text(path, source_sha256, text)
+
+
+def split_text(path: Path, source_sha256: str, text: str) -> list[PdfChunk]:
     if len(text) < settings.min_extracted_characters:
         raise ValueError("PDF icinden yeterli metin cikarilamadi; taranmis PDF olabilir.")
 
@@ -56,4 +60,3 @@ def split_pdf(path: Path, source_sha256: str) -> list[PdfChunk]:
 
 def _preview(content: str, length: int) -> str:
     return content if len(content) <= length else f"{content[:length]}..."
-

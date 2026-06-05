@@ -27,5 +27,6 @@ def main() -> None:
 
     print(
         "discovered={discovered} skipped={skipped} indexed_files={indexed_files} "
-        "failed_files={failed_files} indexed_chunks={indexed_chunks}".format(**stats.__dict__)
+        "failed_files={failed_files} indexed_chunks={indexed_chunks} "
+        "opensearch_chunks={opensearch_chunks}".format(**stats.__dict__)
     )

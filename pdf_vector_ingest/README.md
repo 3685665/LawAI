@@ -1,14 +1,16 @@
 # PDF Vector Ingest
 
-Mevcut `backend` ve `frontend` koduna dokunmadan, cok buyuk PDF arsivlerini pgvector tablosuna indeksleyen ayri CLI projesi.
+Mevcut `backend` ve `frontend` koduna dokunmadan, cok buyuk PDF arsivlerini tekil belge yukleme algoritmasiyla toplu isleyen ayri CLI projesi.
 
 Bu proje su isleri yapar:
 
 - PDF dosyalarini recursive bulur.
 - Metin cikarir.
+- Tam metni PostgreSQL `legal_documents` tablosuna yazar.
 - Metni parcalara boler.
 - OpenAI, Gemini, Ollama veya local fallback ile embedding uretir.
-- `knowledge_documents` tablosuna batch olarak yazar.
+- Chunk metinlerini ve embeddinglerini PostgreSQL `legal_document_chunks` tablosuna yazar.
+- Chunklari OpenSearch `legal-document-chunks` indexine yazar.
 - `pdf_ingest_files` tablosuyla kaldigi yerden devam eder.
 
 ## Kurulum
@@ -21,10 +23,10 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-PostgreSQL/pgvector icin repo kokunden:
+PostgreSQL/pgvector ve OpenSearch icin repo kokunden:
 
 ```powershell
-docker compose up -d postgres
+docker compose up -d postgres opensearch
 ```
 
 ## Calistirma
@@ -65,4 +67,5 @@ python -m pdf_vector_ingest ingest --input "D:\pdf-arsivi" --engine local
 - 10 milyon PDF icin tek makinede calistirmak pratik olmayabilir. `--engine spark` yerelde baslayabilir, sonra Spark cluster uzerinde ayni komutla calisacak sekilde tasarlandi.
 - Taranmis/goruntu PDF'ler icin bu proje OCR yapmaz; metin cikarilamazsa dosya `failed` olarak isaretlenir.
 - Embedding boyutu `LAWAI_EMBEDDING_DIMENSIONS` ile veritabanindaki vector boyutuyla ayni olmalidir.
-- Mevcut backend `knowledge_documents` tablosunu okumaya devam eder; bu proje sadece indeksleme icin ek nullable kolonlar ve ayri checkpoint tablosu olusturur.
+- Toplu ingest ile tekil `/api/upload` ayni PostgreSQL tablolari ve ayni OpenSearch indexini kullanir.
+- Embedding saglayicisi kota veya servis hatasi verirse chunk batch'i local embedding fallback ile yazilir.
