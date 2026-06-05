@@ -4,6 +4,10 @@ server:
     max-swallow-size: -1
 
 spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
+    username: ${DATABASE_USERNAME:lawai}
+    password: ${DATABASE_PASSWORD:lawai}
   servlet:
     multipart:
       resolve-lazily: true
@@ -13,6 +17,17 @@ spring:
 app:
   ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
   max-upload-mb: ${MAX_UPLOAD_MB:25}
+  document:
+    upload-dir: ${DOCUMENT_UPLOAD_DIR:uploads/documents}
+    python-command: ${PYTHON_COMMAND:python}
+    pdf-extractor-script: ${PDF_EXTRACTOR_SCRIPT:scripts/extract_pdf_text.py}
+    chunk-size: ${DOCUMENT_CHUNK_SIZE:1200}
+    chunk-overlap: ${DOCUMENT_CHUNK_OVERLAP:150}
+    embedding-dimensions: ${LAWAI_EMBEDDING_DIMENSIONS:384}
+  opensearch:
+    enabled: ${OPENSEARCH_ENABLED:true}
+    base-url: ${OPENSEARCH_BASE_URL:http://localhost:9200}
+    index: ${OPENSEARCH_INDEX:legal-document-chunks}
   auth:
     bootstrap-enabled: ${AUTH_BOOTSTRAP_ENABLED:true}
     bootstrap-name: ${AUTH_BOOTSTRAP_NAME:Yonetici}

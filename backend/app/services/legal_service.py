@@ -21,7 +21,6 @@ from app.services.vector_store import normalize, vector_store
 from app.settings import settings
 
 DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
-LOCAL_EMBEDDING_DIMENSIONS = 384
 AI_REQUEST_TIMEOUT_SECONDS = 12
 
 SAMPLE_PRECEDENTS = [
@@ -43,7 +42,7 @@ class LocalEmbeddings:
         return self._embed(text)
 
     def _embed(self, text: str) -> list[float]:
-        vector = [0.0] * LOCAL_EMBEDDING_DIMENSIONS
+        vector = [0.0] * settings.embedding_dimensions
         tokens = normalize(text).split()
         if not tokens:
             return vector
@@ -123,11 +122,10 @@ class LegalService:
         try:
             embeddings = self._embed_documents([doc.content for doc in request.documents])
         except Exception as exc:
-            return KnowledgeIngestResponse(
-                indexed=0,
-                storage="disabled",
-                message=f"Embedding saglayicisi hata verdi: {exc}",
-            )
+            embeddings = LocalEmbeddings().embed_documents([doc.content for doc in request.documents])
+            fallback_message = f"Embedding saglayicisi hata verdi; local embedding fallback kullanildi. Detay: {exc}"
+        else:
+            fallback_message = None
         try:
             indexed = vector_store.save_all(request.documents, embeddings)
         except Exception as exc:
@@ -138,6 +136,9 @@ class LegalService:
             )
         storage = f"pgvector/{self.provider}" if settings.vector_store.lower() == "pgvector" else f"persistent/{self.provider}"
         message = "Dokumanlar kalici vektor deposuna indekslendi."
+        if fallback_message:
+            storage = f"{storage}+local-fallback"
+            message = fallback_message
         if self.provider == "local":
             message += " Not: local embedding yalnizca gelistirme icindir; emsal kalitesi icin OpenAI, Gemini veya Ollama embedding saglayicisi kullanin ve dokumanlari yeniden indeksleyin."
         return KnowledgeIngestResponse(indexed=indexed, storage=storage, message=message)
@@ -163,7 +164,10 @@ class LegalService:
         if self.embeddings:
             try:
                 if vector_store.has_entries():
-                    query_embedding = self._embed_query(query)
+                    try:
+                        query_embedding = self._embed_query(query)
+                    except Exception:
+                        query_embedding = LocalEmbeddings().embed_query(query)
                     results = vector_store.search(query_embedding, court, chamber, limit, query)
                     if results:
                         return results
