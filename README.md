@@ -9,7 +9,7 @@ Bu proje, web/API katmanini Spring Boot'a, AI/RAG katmanini Python'a ayiracak se
 - Dilekce taslagi uretimi
 - PDF/Word/TXT dokuman on kontrolu
 - Dokuman parcalama ve LangChain embedding hattina indeksleme
-- OpenAI, Gemini veya Ollama ile calisma; ayar yoksa yerel ornek emsal fallback'i
+- Varsayilan olarak Ollama ile calisma; OpenAI/Gemini adaptorleri alternatif olarak korunur.
 
 ## Klasorler
 
@@ -28,24 +28,6 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env
 uvicorn app.main:app --reload --port 8001
-```
-
-OpenAI icin `.env`:
-
-```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-OPENAI_CHAT_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-```
-
-Gemini icin `.env`:
-
-```env
-LAWAI_AI_PROVIDER=gemini
-GOOGLE_API_KEY=...
-GEMINI_CHAT_MODEL=gemini-2.5-flash
-GEMINI_EMBEDDING_MODEL=models/embedding-001
 ```
 
 Ollama icin once gerekli modelleri indirin:

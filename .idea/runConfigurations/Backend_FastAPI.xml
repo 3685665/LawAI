@@ -6,7 +6,7 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
-      <env name="LAWAI_AI_PROVIDER" value="gemini" />
+      <env name="LAWAI_AI_PROVIDER" value="ollama" />
     </envs>
     <option name="SDK_HOME" value="C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\backend\.venv\Scripts\python.exe" />
     <option name="SDK_NAME" value="LawAI Backend .venv" />

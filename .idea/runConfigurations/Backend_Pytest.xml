@@ -4,7 +4,7 @@
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
-      <env name="LAWAI_AI_PROVIDER" value="local" />
+      <env name="LAWAI_AI_PROVIDER" value="ollama" />
       <env name="LAWAI_VECTOR_STORE" value="json" />
     </envs>
     <option name="SDK_HOME" value="$PROJECT_DIR$/backend/.venv/Scripts/python.exe" />
