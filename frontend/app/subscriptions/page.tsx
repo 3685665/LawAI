@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpenCheck, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
 import { authLogout, authMe, listSubscriptions, type AuthUser, type SubscriptionPlan } from "@/lib/api";
 
 type BillingCycle = "monthly" | "yearly";
@@ -152,7 +152,6 @@ function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onTogg
     { href: "/", label: "Asistan", icon: Bot },
     { href: "/", label: "Emsal Arama", icon: FileSearch },
     { href: "/", label: "Dilekce", icon: ScrollText },
-    { href: "/", label: "Egitim", icon: BookOpenCheck },
     { href: "/", label: "Davalar", icon: BriefcaseBusiness },
     { href: "/", label: "Belge Isleme", icon: FileUp },
     { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
@@ -188,4 +187,5 @@ function LoadingCard({ title, text }: { title: string; text: string }) {
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
 }
+
 

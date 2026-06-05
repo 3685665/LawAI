@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   BarChart3,
   Bot,
-  BookOpenCheck,
   BriefcaseBusiness,
   ChevronRight,
   ClipboardList,
@@ -17,7 +16,6 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
-  GraduationCap,
   LoaderCircle,
   MessageSquareMore,
   Palette,
@@ -110,7 +108,6 @@ export default function FeedbackManagementPage() {
       { id: "chat", label: t.tabs.chat, icon: Bot },
       { id: "search", label: t.tabs.search, icon: FileSearch },
       { id: "petition", label: t.tabs.petition, icon: ScrollText },
-      { id: "training", label: t.tabs.training, icon: BookOpenCheck },
       { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness },
       { id: "document", label: t.tabs.document, icon: FileUp },
       { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore },
@@ -595,6 +592,7 @@ export default function FeedbackManagementPage() {
     </main>
   );
 }
+
 
 
 

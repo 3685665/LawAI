@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpenCheck, BriefcaseBusiness, Bot, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, MessageSquareMore, Plus, Save, Scale, ScrollText, ShieldAlert, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, Bot, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, MessageSquareMore, Plus, Save, Scale, ScrollText, ShieldAlert, Trash2, UserRound } from "lucide-react";
 import { authLogout, authMe, createSubscriptionPlan, deleteSubscriptionPlan, listAdminSubscriptions, updateSubscriptionPlan, type AuthUser, type SubscriptionPlan, type SubscriptionPlanPayload } from "@/lib/api";
 
 type PlanForm = {
@@ -278,7 +278,6 @@ function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onTogg
     { href: "/", label: "Asistan", icon: Bot },
     { href: "/", label: "Emsal Arama", icon: FileSearch },
     { href: "/", label: "Dilekce", icon: ScrollText },
-    { href: "/", label: "Egitim", icon: BookOpenCheck },
     { href: "/", label: "Davalar", icon: BriefcaseBusiness },
     { href: "/", label: "Belge Isleme", icon: FileUp },
     { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
@@ -309,4 +308,5 @@ function GateCard({ title, text, linkText }: { title: string; text: string; link
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
 }
+
 

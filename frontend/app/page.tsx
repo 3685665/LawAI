@@ -8,14 +8,12 @@ import {
   ArrowLeft,
   BarChart3,
   Bot,
-  BookOpenCheck,
   BriefcaseBusiness,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
   CreditCard,
   FileUp,
-  GraduationCap,
   FileSearch,
   FileText,
   FolderOpen,
@@ -36,7 +34,6 @@ import {
   X,
   type LucideIcon
 } from "lucide-react";
-import { TrainingPanel, type TrainingTabResponse } from "./training-panel";
 import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 import {
   authChangePassword,
@@ -70,7 +67,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "training" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
+type Tab = "chat" | "search" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type ChatMessage = {
@@ -291,7 +288,6 @@ function getTabLabel(tab: Tab, locale: Locale) {
     chat: { tr: "Asistan", en: "Assistant" },
     search: { tr: "Emsal Arama", en: "Precedent Search" },
     petition: { tr: "Dilekce Taslak", en: "Petition Draft" },
-    training: { tr: "Egitim", en: "Training" },
     cases: { tr: "Davalar", en: "Cases" },
     document: { tr: "Belge Isleme", en: "Document Processing" },
     feedback: { tr: "Geri Bildirim", en: "Feedback" },
@@ -310,12 +306,6 @@ export default function Home() {
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
-  const [training, setTraining] = useState<TrainingTabResponse | null>(null);
-  const [trainingLoading, setTrainingLoading] = useState(false);
-  const [trainingError, setTrainingError] = useState("");
-  const [selectedTrainingModule, setSelectedTrainingModule] = useState(0);
-  const [selectedTrainingPrompt, setSelectedTrainingPrompt] = useState(0);
-  const [trainingDraft, setTrainingDraft] = useState("");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -384,8 +374,7 @@ export default function Home() {
   const [petitionContext, setPetitionContext] = useState("");
   const [petitionContextSources, setPetitionContextSources] = useState({
     upload: false,
-    existing: true,
-    training: false
+    existing: true
   });
   const [petitionEditInstruction, setPetitionEditInstruction] = useState("");
   const [selectedPetitionText, setSelectedPetitionText] = useState("");
@@ -424,8 +413,7 @@ export default function Home() {
         label: locale === "en" ? "Drafting" : "Dilekce",
         icon: ScrollText,
         children: [
-          { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" },
-          { id: "training", label: t.tabs.training, icon: BookOpenCheck, tab: "training" }
+          { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" }
         ]
       },
       {
@@ -579,37 +567,6 @@ export default function Home() {
     });
   }, [authUser]);
 
-  useEffect(() => {
-    if (!authUser || activeTab !== "training" || training || trainingLoading) {
-      return;
-    }
-
-    let cancelled = false;
-    setTrainingLoading(true);
-    setTrainingError("");
-    getJson<TrainingTabResponse>("/training/petition-drafting")
-      .then((data) => {
-        if (cancelled) return;
-        setTraining(data);
-        setSelectedTrainingModule(0);
-        setSelectedTrainingPrompt(0);
-        setTrainingDraft(data.prompts[0]?.prompt ?? "");
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setTrainingError(err instanceof Error ? err.message : "Egitim verisi yuklenemedi.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setTrainingLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, authUser, training, trainingLoading]);
 
   useEffect(() => {
     if (!authUser || (activeTab !== "feedback" && activeTab !== "admin") || feedbackLoaded || feedbackLoading) {
@@ -1186,8 +1143,7 @@ export default function Home() {
     event.preventDefault();
     const selectedSources = [
       petitionContextSources.upload ? t.tools.petitionUploadContext : null,
-      petitionContextSources.existing ? t.tools.petitionExistingDocs : null,
-      petitionContextSources.training ? t.tools.petitionTrainingData : null
+      petitionContextSources.existing ? t.tools.petitionExistingDocs : null
     ].filter(Boolean).join(", ");
     const modelInstruction = petitionModel === "premium"
       ? t.tools.petitionPremiumDesc
@@ -1384,8 +1340,6 @@ export default function Home() {
       setSelectedAdminUserId(null);
       setSelectedAdminUser(null);
       setAdminUserView("list");
-      setTraining(null);
-      setTrainingError("");
       setAuthForm({
         name: "",
         email: "",
@@ -1969,28 +1923,6 @@ export default function Home() {
               </section>
             </section>
           </section>
-        )}
-
-        {activeTab === "training" && (
-          <TrainingPanel
-            locale={locale}
-            loading={trainingLoading}
-            error={trainingError}
-            training={training}
-            selectedModuleIndex={selectedTrainingModule}
-            selectedPromptIndex={selectedTrainingPrompt}
-            draft={trainingDraft}
-            onSelectModule={setSelectedTrainingModule}
-            onSelectPrompt={(index) => {
-              setSelectedTrainingPrompt(index);
-              setTrainingDraft(training?.prompts[index]?.prompt ?? "");
-            }}
-            onChangeDraft={setTrainingDraft}
-            onReload={() => {
-              setTraining(null);
-              setTrainingError("");
-            }}
-          />
         )}
 
         {activeTab === "cases" && <CasesPanel locale={locale} onGoToDocuments={() => setActiveTab("document")} />}
@@ -3058,6 +2990,7 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 
 
 

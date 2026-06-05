@@ -479,5 +479,65 @@
     "detail" : "Belge Isleme ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T16:57:05.6065868Z"
+  }, {
+    "id" : "bff5fece-85c8-48c2-bd8c-e484fc57a0d1",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T16:59:11.0888746Z"
+  }, {
+    "id" : "7128f57d-a6f5-4ffc-9fb1-6c5ed247176a",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:00:37.5722369Z"
+  }, {
+    "id" : "c31f60ec-c4f9-4986-a40e-e39d6a3f68da",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:05:58.1387223Z"
+  }, {
+    "id" : "3ee5103f-ae8e-4c7a-a08b-562f95cf16c7",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce Taslak ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:06:02.7186635Z"
+  }, {
+    "id" : "a48ccd86-24c8-41cd-aab6-8001264dbc18",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:06:16.3871829Z"
   } ]
 }

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #f4f6f8;
   --bg-2: #edf1f5;
   --panel: #ffffff;
@@ -70,9 +70,7 @@ body[data-theme="dark"] .auth-reset-card,
 body[data-theme="dark"] .feedback-card,
 body[data-theme="dark"] .feedback-history-closed,
 body[data-theme="dark"] .feedback-datagrid-wrap,
-body[data-theme="dark"] .auth-credentials,
-body[data-theme="dark"] .training-pill,
-body[data-theme="dark"] .training-modes span {
+body[data-theme="dark"] .auth-credentials {
   background: var(--panel);
   border-color: var(--line);
 }
@@ -2729,193 +2727,6 @@ body[data-theme="dark"] .law-chat-download {
   gap: 10px;
 }
 
-.training-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.training-hero {
-  display: grid;
-  gap: 14px;
-}
-
-.training-hero-head,
-.training-section-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.training-hero-head h2,
-.training-section-head h3 {
-  margin: 0;
-}
-
-.training-hero-head p,
-.training-summary,
-.training-section-head span {
-  color: var(--muted);
-  margin: 0;
-}
-
-.training-summary {
-  max-width: 820px;
-}
-
-.training-pills,
-.training-modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.training-pill,
-.training-modes span {
-  background: #ecf2ef;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--accent-strong);
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-.training-meta {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.training-meta div {
-  background: #f8faf9;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-}
-
-.training-meta span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.training-grid {
-  align-items: start;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(250px, 0.78fr) minmax(340px, 1.02fr) minmax(300px, 0.9fr);
-}
-
-.training-nav,
-.training-detail,
-.training-studio {
-  align-content: start;
-  display: grid;
-  gap: 14px;
-}
-
-.training-list,
-.training-prompt-list {
-  display: grid;
-  gap: 10px;
-}
-
-.training-list-item,
-.training-prompt {
-  background: #f8faf9;
-  border: 1px solid var(--line);
-  color: var(--ink);
-  display: grid;
-  gap: 6px;
-  min-height: 0;
-  padding: 14px;
-  text-align: left;
-}
-
-.training-list-item.active,
-.training-prompt.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(22, 111, 100, 0.18);
-}
-
-.training-list-item strong,
-.training-prompt strong {
-  font-size: 15px;
-}
-
-.training-list-item span,
-.training-prompt span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.training-card-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.training-card {
-  background: #f8faf9;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-}
-
-.training-card strong {
-  display: block;
-}
-
-.training-card ul {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.training-card li {
-  margin-bottom: 6px;
-}
-
-.training-checklist {
-  display: grid;
-  gap: 10px;
-}
-
-.training-check {
-  background: #f8faf9;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-}
-
-.training-check.required {
-  border-color: #b8ddc3;
-}
-
-.training-check span {
-  font-weight: 700;
-}
-
-.training-check small {
-  color: var(--muted);
-}
-
-.training-draft {
-  min-height: 220px;
-}
-
-.training-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.training-actions button {
-  flex: 1;
-}
 
 .cases-layout {
   grid-template-columns: minmax(320px, 0.95fr) minmax(300px, 0.7fr) minmax(360px, 1.1fr);
@@ -3523,88 +3334,6 @@ body[data-theme="dark"] .law-chat-download {
   justify-items: center;
 }
 
-.training-shell .panel {
-  background: var(--panel-strong);
-}
-
-.training-hero {
-  background: #fff;
-}
-
-.training-hero-head h2 {
-  font-size: 22px;
-}
-
-.training-hero-head p,
-.training-summary,
-.training-section-head span {
-  color: var(--muted);
-}
-
-.training-pills,
-.training-modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.training-pill,
-.training-modes span {
-  background: #eef3f7;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--accent-strong);
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-.training-grid {
-  align-items: start;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(250px, 0.78fr) minmax(340px, 1.02fr) minmax(300px, 0.9fr);
-}
-
-.training-list-item,
-.training-prompt {
-  background: #fafbfc;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--ink);
-  display: grid;
-  gap: 6px;
-  min-height: 0;
-  padding: 14px;
-  text-align: left;
-  box-shadow: none;
-}
-
-.training-list-item.active,
-.training-prompt.active {
-  border-color: rgba(31, 79, 122, 0.28);
-  box-shadow: 0 0 0 1px rgba(31, 79, 122, 0.12);
-}
-
-.training-card,
-.training-check {
-  background: #fafbfc;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.training-draft {
-  min-height: 220px;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.training-actions button {
-  flex: 1;
-}
-
-.training-actions .secondary-button {
-  box-shadow: none;
-}
 
 .spin {
   animation: spin 1s linear infinite;
@@ -3615,7 +3344,7 @@ body[data-theme="dark"] .law-chat-download {
 }
 
 @media (max-width: 900px) {
-  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .training-grid, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
+  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
     grid-template-columns: 1fr;
   }
 
@@ -3844,15 +3573,6 @@ body[data-theme="dark"] .law-chat-download {
   .feedback-grid,
   .feedback-workspace {
     grid-template-columns: 1fr;
-  }
-
-  .training-meta,
-  .training-card-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .training-actions {
-    flex-direction: column;
   }
 
   .check-item {
@@ -4167,3 +3887,4 @@ body[data-theme="dark"] .law-chat-download {
     min-height: 0;
   }
 }
+

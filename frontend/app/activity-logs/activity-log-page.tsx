@@ -7,7 +7,6 @@ import {
   AlertCircle,
   BarChart3,
   Bot,
-  BookOpenCheck,
   BriefcaseBusiness,
   ChevronRight,
   ClipboardList,
@@ -16,7 +15,6 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
-  GraduationCap,
   KeyRound,
   LoaderCircle,
   MessageSquareMore,
@@ -394,8 +392,7 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       label: locale === "en" ? "Drafting" : "Dilekce",
       icon: ScrollText,
       children: [
-        { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" },
-        { id: "training", label: locale === "en" ? "Training" : "Egitim", icon: BookOpenCheck, href: "/" }
+        { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" }
       ]
     },
     {
@@ -445,4 +442,5 @@ function isActiveRoute(href: string, mode: Mode) {
   }
   return href === "/admin/activity-logs";
 }
+
 
