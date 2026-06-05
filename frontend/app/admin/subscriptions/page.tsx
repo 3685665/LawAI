@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Bot, ChevronRight, CreditCard, FileSearch, FileText, FolderOpen, GraduationCap, LoaderCircle, MessageSquareMore, Plus, Save, Scale, ShieldAlert, Trash2, Upload, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, BriefcaseBusiness, Bot, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, MessageSquareMore, Plus, Save, Scale, ScrollText, ShieldAlert, Trash2, UserRound } from "lucide-react";
 import { authLogout, authMe, createSubscriptionPlan, deleteSubscriptionPlan, listAdminSubscriptions, updateSubscriptionPlan, type AuthUser, type SubscriptionPlan, type SubscriptionPlanPayload } from "@/lib/api";
 
 type PlanForm = {
@@ -277,10 +277,10 @@ function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onTogg
   const base = [
     { href: "/", label: "Asistan", icon: Bot },
     { href: "/", label: "Emsal Arama", icon: FileSearch },
-    { href: "/", label: "Dilekce", icon: FileText },
-    { href: "/", label: "Egitim", icon: GraduationCap },
-    { href: "/", label: "Davalar", icon: FolderOpen },
-    { href: "/", label: "Belge Isleme", icon: Upload },
+    { href: "/", label: "Dilekce", icon: ScrollText },
+    { href: "/", label: "Egitim", icon: BookOpenCheck },
+    { href: "/", label: "Davalar", icon: BriefcaseBusiness },
+    { href: "/", label: "Belge Isleme", icon: FileUp },
     { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
     { href: "/subscriptions", label: "Abonelik", icon: CreditCard },
     { href: "/", label: "Profil", icon: UserRound }
@@ -294,7 +294,7 @@ function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onTogg
         {base.map((item) => { const Icon = item.icon; return <Link href={item.href} key={item.label} title={item.label}><Icon size={18} /><span>{item.label}</span></Link>; })}
         <div className="sidebar-menu-group">
           <button aria-expanded={adminMenuOpen} className="active" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-          {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link className="active" href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><BarChart3 size={15} /><span>Islem Loglari</span></Link></div> : null}
+          {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link className="active" href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
         </div>
       </nav>
       <div className="sidebar-user"><div className="sidebar-user-avatar">{authUser.name.slice(0, 1).toUpperCase()}</div><div><strong>{authUser.name}</strong><span>{authUser.email}</span><span className="sidebar-user-role">Yonetici</span></div><div className="sidebar-user-actions"><button className="secondary-button" onClick={onLogout} type="button">Cikis</button></div></div>
@@ -309,3 +309,4 @@ function GateCard({ title, text, linkText }: { title: string; text: string; link
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
 }
+

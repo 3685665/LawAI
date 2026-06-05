@@ -8,16 +8,22 @@ import {
   ArrowLeft,
   BarChart3,
   Bot,
+  BookOpenCheck,
+  BriefcaseBusiness,
   ChevronRight,
+  ClipboardList,
   CreditCard,
+  FileUp,
   FileSearch,
   FileText,
   FolderOpen,
   GraduationCap,
   LoaderCircle,
   MessageSquareMore,
+  Palette,
   Scale,
   ShieldAlert,
+  ScrollText,
   Trash2,
   Upload,
   UserRound
@@ -103,14 +109,14 @@ export default function FeedbackManagementPage() {
     const baseTabs = [
       { id: "chat", label: t.tabs.chat, icon: Bot },
       { id: "search", label: t.tabs.search, icon: FileSearch },
-      { id: "petition", label: t.tabs.petition, icon: FileText },
-      { id: "training", label: t.tabs.training, icon: GraduationCap },
-      { id: "cases", label: t.tabs.cases, icon: FolderOpen },
-      { id: "document", label: t.tabs.document, icon: Upload },
+      { id: "petition", label: t.tabs.petition, icon: ScrollText },
+      { id: "training", label: t.tabs.training, icon: BookOpenCheck },
+      { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness },
+      { id: "document", label: t.tabs.document, icon: FileUp },
       { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore },
       { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard },
       { id: "profile", label: t.tabs.profile, icon: UserRound },
-      { id: "settings", label: t.tabs.settings, icon: ShieldAlert }
+      { id: "settings", label: t.tabs.settings, icon: Palette }
     ];
     return authUser?.role === "ADMIN"
       ? [...baseTabs, { id: "admin", label: t.tabs.admin, icon: ShieldAlert }]
@@ -397,7 +403,7 @@ export default function FeedbackManagementPage() {
                       <span>{locale === "en" ? "Subscription Management" : "Abonelik Yonetimi"}</span>
                     </Link>
                     <Link href="/admin/activity-logs" title={locale === "en" ? "Activity Logs" : "Islem Loglari"}>
-                      <BarChart3 size={15} />
+                      <ClipboardList size={15} />
                       <span>{locale === "en" ? "Activity Logs" : "Islem Loglari"}</span>
                     </Link>
                   </div>
@@ -589,5 +595,6 @@ export default function FeedbackManagementPage() {
     </main>
   );
 }
+
 
 

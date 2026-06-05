@@ -431,5 +431,53 @@
     "detail" : "Belge Isleme ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T16:47:37.8138025Z"
+  }, {
+    "id" : "d66fe4cb-d776-4605-bc68-867569a010af",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T16:56:40.678696Z"
+  }, {
+    "id" : "17c0b623-6d2f-459c-8462-6731b4bad89c",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Belge Isleme",
+    "detail" : "Belge Isleme ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T16:57:02.2400747Z"
+  }, {
+    "id" : "14fd9088-589f-4af2-9dd4-f6df240a6e71",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Davalar",
+    "detail" : "Davalar ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T16:57:03.8370644Z"
+  }, {
+    "id" : "1d0fa6ce-8655-4d67-9f79-a6784af3bc5d",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Belge Isleme",
+    "detail" : "Belge Isleme ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T16:57:05.6065868Z"
   } ]
 }

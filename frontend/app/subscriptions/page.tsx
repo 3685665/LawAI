@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronRight, CreditCard, LoaderCircle, Lock, MessageSquareMore, Scale, ShieldAlert, UserRound, BarChart3, Bot, FileSearch, FileText, FolderOpen, GraduationCap, Upload } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
 import { authLogout, authMe, listSubscriptions, type AuthUser, type SubscriptionPlan } from "@/lib/api";
 
 type BillingCycle = "monthly" | "yearly";
@@ -151,10 +151,10 @@ function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onTogg
   const base = [
     { href: "/", label: "Asistan", icon: Bot },
     { href: "/", label: "Emsal Arama", icon: FileSearch },
-    { href: "/", label: "Dilekce", icon: FileText },
-    { href: "/", label: "Egitim", icon: GraduationCap },
-    { href: "/", label: "Davalar", icon: FolderOpen },
-    { href: "/", label: "Belge Isleme", icon: Upload },
+    { href: "/", label: "Dilekce", icon: ScrollText },
+    { href: "/", label: "Egitim", icon: BookOpenCheck },
+    { href: "/", label: "Davalar", icon: BriefcaseBusiness },
+    { href: "/", label: "Belge Isleme", icon: FileUp },
     { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
     { href: "/subscriptions", label: "Abonelik", icon: CreditCard, active: active === "subscriptions" },
     { href: "/", label: "Profil", icon: UserRound }
@@ -172,7 +172,7 @@ function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onTogg
         {authUser.role === "ADMIN" ? (
           <div className="sidebar-menu-group">
             <button aria-expanded={adminMenuOpen} className="" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-            {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><BarChart3 size={15} /><span>Islem Loglari</span></Link></div> : null}
+        {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
           </div>
         ) : null}
       </nav>
@@ -188,3 +188,4 @@ function LoadingCard({ title, text }: { title: string; text: string }) {
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
 }
+

@@ -8,23 +8,31 @@ import {
   ArrowLeft,
   BarChart3,
   Bot,
+  BookOpenCheck,
+  BriefcaseBusiness,
   CheckCircle2,
   ChevronRight,
+  ClipboardList,
   CreditCard,
+  FileUp,
   GraduationCap,
   FileSearch,
   FileText,
   FolderOpen,
+  KeyRound,
   LoaderCircle,
   Mic,
   MessageSquareMore,
+  Palette,
   Scale,
   Search,
   Send,
   Settings,
   ShieldAlert,
+  ScrollText,
   Upload,
   UserRound,
+  UsersRound,
   X,
   type LucideIcon
 } from "lucide-react";
@@ -414,19 +422,19 @@ export default function Home() {
       {
         id: "drafting",
         label: locale === "en" ? "Drafting" : "Dilekce",
-        icon: FileText,
+        icon: ScrollText,
         children: [
-          { id: "petition", label: t.tabs.petition, icon: FileText, tab: "petition" },
-          { id: "training", label: t.tabs.training, icon: GraduationCap, tab: "training" }
+          { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" },
+          { id: "training", label: t.tabs.training, icon: BookOpenCheck, tab: "training" }
         ]
       },
       {
         id: "files",
         label: locale === "en" ? "Files" : "Dosyalar",
-        icon: FolderOpen,
+        icon: BriefcaseBusiness,
         children: [
-          { id: "cases", label: t.tabs.cases, icon: FolderOpen, tab: "cases" },
-          { id: "document", label: t.tabs.document, icon: Upload, tab: "document" }
+          { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness, tab: "cases" },
+          { id: "document", label: t.tabs.document, icon: FileUp, tab: "document" }
         ]
       },
       {
@@ -435,20 +443,20 @@ export default function Home() {
         icon: UserRound,
         children: [
           { id: "profile", label: t.tabs.profile, icon: UserRound, tab: "profile" },
-          { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: BarChart3, href: "/activity-logs" },
+          { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: ClipboardList, href: "/activity-logs" },
           { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
           { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore, tab: "feedback" },
           {
             id: "settings-view",
             label: t.settings.sections.view,
-            icon: Settings,
+            icon: Palette,
             tab: "settings",
             onSelect: () => setSettingsSection("view")
           },
           {
             id: "settings-account",
             label: t.settings.sections.account,
-            icon: BarChart3,
+            icon: KeyRound,
             tab: "settings",
             onSelect: () => setSettingsSection("account")
           }
@@ -466,7 +474,7 @@ export default function Home() {
           {
             id: "admin-users",
             label: locale === "en" ? "User Management" : "Kullanici Yonetimi",
-            icon: UserRound,
+            icon: UsersRound,
             tab: "admin",
             onSelect: () => {
               setAdminSection("users");
@@ -476,7 +484,7 @@ export default function Home() {
           {
             id: "admin-logs",
             label: locale === "en" ? "Activity Logs" : "Islem Loglari",
-            icon: BarChart3,
+            icon: ClipboardList,
             href: "/admin/activity-logs"
           }
         ]
@@ -3050,6 +3058,7 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 
 
 

@@ -7,19 +7,27 @@ import {
   AlertCircle,
   BarChart3,
   Bot,
+  BookOpenCheck,
+  BriefcaseBusiness,
   ChevronRight,
+  ClipboardList,
   CreditCard,
+  FileUp,
   FileSearch,
   FileText,
   FolderOpen,
   GraduationCap,
+  KeyRound,
   LoaderCircle,
   MessageSquareMore,
+  Palette,
   Scale,
   Settings,
   ShieldAlert,
+  ScrollText,
   Upload,
   UserRound,
+  UsersRound,
   type LucideIcon
 } from "lucide-react";
 import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
@@ -384,19 +392,19 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
     {
       id: "drafting",
       label: locale === "en" ? "Drafting" : "Dilekce",
-      icon: FileText,
+      icon: ScrollText,
       children: [
-        { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: FileText, href: "/" },
-        { id: "training", label: locale === "en" ? "Training" : "Egitim", icon: GraduationCap, href: "/" }
+        { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" },
+        { id: "training", label: locale === "en" ? "Training" : "Egitim", icon: BookOpenCheck, href: "/" }
       ]
     },
     {
       id: "files",
       label: locale === "en" ? "Files" : "Dosyalar",
-      icon: FolderOpen,
+      icon: BriefcaseBusiness,
       children: [
-        { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: FolderOpen, href: "/" },
-        { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: Upload, href: "/" }
+        { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: BriefcaseBusiness, href: "/" },
+        { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: FileUp, href: "/" }
       ]
     },
     {
@@ -405,11 +413,11 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       icon: UserRound,
       children: [
         { id: "profile", label: locale === "en" ? "Profile" : "Profil", icon: UserRound, href: "/" },
-        { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: BarChart3, href: "/activity-logs" },
+        { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: ClipboardList, href: "/activity-logs" },
         { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
         { id: "feedback", label: locale === "en" ? "Feedback" : "Geri Bildirim", icon: MessageSquareMore, href: "/" },
-        { id: "settings-view", label: locale === "en" ? "Appearance" : "Gorunum", icon: Settings, href: "/" },
-        { id: "settings-account", label: locale === "en" ? "Change Password" : "Sifre Degistir", icon: BarChart3, href: "/" }
+        { id: "settings-view", label: locale === "en" ? "Appearance" : "Gorunum", icon: Palette, href: "/" },
+        { id: "settings-account", label: locale === "en" ? "Change Password" : "Sifre Degistir", icon: KeyRound, href: "/" }
       ]
     }
   ];
@@ -421,9 +429,9 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       icon: ShieldAlert,
       children: [
         { id: "admin-feedback", label: locale === "en" ? "Feedback Management" : "Sikayet Yonetimi", icon: MessageSquareMore, href: "/feedback-management" },
-        { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UserRound, href: "/" },
+        { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UsersRound, href: "/" },
         { id: "admin-subscriptions", label: locale === "en" ? "Subscription Management" : "Abonelik Yonetimi", icon: CreditCard, href: "/admin/subscriptions" },
-        { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: BarChart3, href: "/admin/activity-logs" }
+        { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: ClipboardList, href: "/admin/activity-logs" }
       ]
     });
   }
@@ -437,3 +445,4 @@ function isActiveRoute(href: string, mode: Mode) {
   }
   return href === "/admin/activity-logs";
 }
+
