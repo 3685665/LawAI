@@ -91,6 +91,43 @@ export type ActivityLogRecord = {
   path: string;
   createdAt: string;
 };
+export type SubscriptionPlan = {
+  id: string;
+  name: string;
+  slug: string;
+  badge?: string | null;
+  description?: string | null;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  currency: string;
+  usageLimit?: string | null;
+  usagePeriod?: string | null;
+  highlighted: boolean;
+  active: boolean;
+  sortOrder: number;
+  features: string[];
+  lockedFeatures: string[];
+  ctaLabel?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+export type SubscriptionPlanPayload = {
+  name: string;
+  slug?: string;
+  badge?: string;
+  description?: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  currency: string;
+  usageLimit?: string;
+  usagePeriod?: string;
+  highlighted: boolean;
+  active: boolean;
+  sortOrder: number;
+  features: string[];
+  lockedFeatures: string[];
+  ctaLabel?: string;
+};
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -248,6 +285,35 @@ export async function updateFeedback(id: string, payload: FeedbackUpdatePayload)
 
 export async function deleteFeedback(id: string): Promise<void> {
   await deleteJson<void>(`/feedback/${id}`);
+}
+
+export async function listSubscriptions(): Promise<SubscriptionPlan[]> {
+  return getJson<SubscriptionPlan[]>("/subscriptions");
+}
+
+export async function listAdminSubscriptions(): Promise<SubscriptionPlan[]> {
+  return getJson<SubscriptionPlan[]>("/subscriptions/admin");
+}
+
+export async function createSubscriptionPlan(payload: SubscriptionPlanPayload): Promise<SubscriptionPlan> {
+  return postJson<SubscriptionPlan>("/subscriptions/admin", payload);
+}
+
+export async function updateSubscriptionPlan(id: string, payload: SubscriptionPlanPayload): Promise<SubscriptionPlan> {
+  const response = await fetch(`${API_BASE}/subscriptions/admin/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function deleteSubscriptionPlan(id: string): Promise<void> {
+  await deleteJson<void>(`/subscriptions/admin/${id}`);
 }
 
 async function readError(response: Response): Promise<string> {

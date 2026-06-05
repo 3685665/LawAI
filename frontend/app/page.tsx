@@ -10,6 +10,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronRight,
+  CreditCard,
   GraduationCap,
   FileSearch,
   FileText,
@@ -435,6 +436,7 @@ export default function Home() {
         children: [
           { id: "profile", label: t.tabs.profile, icon: UserRound, tab: "profile" },
           { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: BarChart3, href: "/activity-logs" },
+          { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
           { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore, tab: "feedback" },
           {
             id: "settings-view",
@@ -460,6 +462,7 @@ export default function Home() {
         icon: ShieldAlert,
         children: [
           { id: "admin-feedback", label: t.adminFeedback.title, icon: MessageSquareMore, href: "/feedback-management" },
+          { id: "admin-subscriptions", label: locale === "en" ? "Subscription Management" : "Abonelik Yonetimi", icon: CreditCard, href: "/admin/subscriptions" },
           {
             id: "admin-users",
             label: locale === "en" ? "User Management" : "Kullanici Yonetimi",

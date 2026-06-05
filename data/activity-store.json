@@ -119,5 +119,65 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T07:40:41.7483221Z"
+  }, {
+    "id" : "f5e38e5a-4cb2-40b5-a7fd-19689221710e",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Profil",
+    "detail" : "Profil ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:51:56.2048219Z"
+  }, {
+    "id" : "fbb047d7-ba38-410c-b51f-059c65f35398",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Kullanici Islemleri",
+    "detail" : "Kullanici islemleri ekrani goruntulendi.",
+    "path" : "/activity-logs",
+    "createdAt" : "2026-06-05T07:52:23.3391677Z"
+  }, {
+    "id" : "b48f1b21-b037-4f53-b2d1-aeeacda03133",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Islem Loglari",
+    "detail" : "Yonetici islem loglari ekrani goruntulendi.",
+    "path" : "/admin/activity-logs",
+    "createdAt" : "2026-06-05T07:52:42.0673997Z"
+  }, {
+    "id" : "73a556a8-eecd-43f4-b80c-294f9ce3917f",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T08:13:07.5307619Z"
+  }, {
+    "id" : "b3c70245-bb78-48ac-b065-1a299d4775ae",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T08:14:27.6848003Z"
   } ]
 }

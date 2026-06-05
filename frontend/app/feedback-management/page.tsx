@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bot,
   ChevronRight,
+  CreditCard,
   FileSearch,
   FileText,
   FolderOpen,
@@ -107,6 +108,7 @@ export default function FeedbackManagementPage() {
       { id: "cases", label: t.tabs.cases, icon: FolderOpen },
       { id: "document", label: t.tabs.document, icon: Upload },
       { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore },
+      { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard },
       { id: "profile", label: t.tabs.profile, icon: UserRound },
       { id: "settings", label: t.tabs.settings, icon: ShieldAlert }
     ];
@@ -375,7 +377,7 @@ export default function FeedbackManagementPage() {
                     <ChevronRight className="sidebar-submenu-chevron" size={15} />
                   </button>
                 ) : (
-                  <Link href="/" title={tab.label}>
+                  <Link href={tab.id === "subscriptions" ? "/subscriptions" : "/"} title={tab.label}>
                     <Icon size={18} />
                     <span>{tab.label}</span>
                   </Link>
@@ -389,6 +391,10 @@ export default function FeedbackManagementPage() {
                     <Link href="/" title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}>
                       <UserRound size={15} />
                       <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
+                    </Link>
+                    <Link href="/admin/subscriptions" title={locale === "en" ? "Subscription Management" : "Abonelik Yonetimi"}>
+                      <CreditCard size={15} />
+                      <span>{locale === "en" ? "Subscription Management" : "Abonelik Yonetimi"}</span>
                     </Link>
                     <Link href="/admin/activity-logs" title={locale === "en" ? "Activity Logs" : "Islem Loglari"}>
                       <BarChart3 size={15} />

@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bot,
   ChevronRight,
+  CreditCard,
   FileSearch,
   FileText,
   FolderOpen,
@@ -405,6 +406,7 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       children: [
         { id: "profile", label: locale === "en" ? "Profile" : "Profil", icon: UserRound, href: "/" },
         { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: BarChart3, href: "/activity-logs" },
+        { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
         { id: "feedback", label: locale === "en" ? "Feedback" : "Geri Bildirim", icon: MessageSquareMore, href: "/" },
         { id: "settings-view", label: locale === "en" ? "Appearance" : "Gorunum", icon: Settings, href: "/" },
         { id: "settings-account", label: locale === "en" ? "Change Password" : "Sifre Degistir", icon: BarChart3, href: "/" }
@@ -420,6 +422,7 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       children: [
         { id: "admin-feedback", label: locale === "en" ? "Feedback Management" : "Sikayet Yonetimi", icon: MessageSquareMore, href: "/feedback-management" },
         { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UserRound, href: "/" },
+        { id: "admin-subscriptions", label: locale === "en" ? "Subscription Management" : "Abonelik Yonetimi", icon: CreditCard, href: "/admin/subscriptions" },
         { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: BarChart3, href: "/admin/activity-logs" }
       ]
     });
