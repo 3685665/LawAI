@@ -539,5 +539,17 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T17:06:16.3871829Z"
+  }, {
+    "id" : "35500322-97af-43ee-93b4-27c7e89f4439",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Davalar",
+    "detail" : "Davalar ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:08:41.113161Z"
   } ]
 }

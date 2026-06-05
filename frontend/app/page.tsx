@@ -408,23 +408,9 @@ export default function Home() {
     const groups: NavigationGroup[] = [
       { id: "assistant", label: t.tabs.chat, icon: Bot, tab: "chat" },
       { id: "precedents", label: t.tabs.search, icon: FileSearch, tab: "search" },
-      {
-        id: "drafting",
-        label: locale === "en" ? "Drafting" : "Dilekce",
-        icon: ScrollText,
-        children: [
-          { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" }
-        ]
-      },
-      {
-        id: "files",
-        label: locale === "en" ? "Files" : "Dosyalar",
-        icon: BriefcaseBusiness,
-        children: [
-          { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness, tab: "cases" },
-          { id: "document", label: t.tabs.document, icon: FileUp, tab: "document" }
-        ]
-      },
+      { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" },
+      { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness, tab: "cases" },
+      { id: "document", label: t.tabs.document, icon: FileUp, tab: "document" },
       {
         id: "account",
         label: locale === "en" ? "Account" : "Hesap",

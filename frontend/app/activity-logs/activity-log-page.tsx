@@ -387,23 +387,9 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
   const groups: NavGroup[] = [
     { id: "assistant", label: locale === "en" ? "Assistant" : "Asistan", icon: Bot, href: "/" },
     { id: "precedents", label: locale === "en" ? "Precedent Search" : "Emsal Arama", icon: FileSearch, href: "/" },
-    {
-      id: "drafting",
-      label: locale === "en" ? "Drafting" : "Dilekce",
-      icon: ScrollText,
-      children: [
-        { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" }
-      ]
-    },
-    {
-      id: "files",
-      label: locale === "en" ? "Files" : "Dosyalar",
-      icon: BriefcaseBusiness,
-      children: [
-        { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: BriefcaseBusiness, href: "/" },
-        { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: FileUp, href: "/" }
-      ]
-    },
+    { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" },
+    { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: BriefcaseBusiness, href: "/" },
+    { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: FileUp, href: "/" },
     {
       id: "account",
       label: locale === "en" ? "Account" : "Hesap",
