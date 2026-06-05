@@ -551,5 +551,65 @@
     "detail" : "Davalar ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-05T17:08:41.113161Z"
+  }, {
+    "id" : "3bb52bac-8e6f-49d8-a0fd-4b31a0bf6c90",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:17:01.7878572Z"
+  }, {
+    "id" : "f6eea111-0ea9-4202-8a36-95738a64c675",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Emsal Arama",
+    "detail" : "Emsal Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:17:04.4749025Z"
+  }, {
+    "id" : "cc740df0-b4e2-4e95-addc-963221f10d7b",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce Taslak ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:17:06.2274257Z"
+  }, {
+    "id" : "85523e2d-cccd-46ee-9d4c-b59b7d6092ad",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Davalar",
+    "detail" : "Davalar ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:17:09.7557875Z"
+  }, {
+    "id" : "6c2c971f-3607-45cc-a2ef-739b4e78c50e",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Belge Isleme",
+    "detail" : "Belge Isleme ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T17:17:18.2063253Z"
   } ]
 }
