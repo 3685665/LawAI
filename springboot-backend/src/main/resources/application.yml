@@ -23,7 +23,7 @@ app:
     pdf-extractor-script: ${PDF_EXTRACTOR_SCRIPT:scripts/extract_pdf_text.py}
     chunk-size: ${DOCUMENT_CHUNK_SIZE:1200}
     chunk-overlap: ${DOCUMENT_CHUNK_OVERLAP:150}
-    embedding-dimensions: ${LAWAI_EMBEDDING_DIMENSIONS:384}
+    embedding-dimensions: ${LAWAI_EMBEDDING_DIMENSIONS:768}
   opensearch:
     enabled: ${OPENSEARCH_ENABLED:true}
     base-url: ${OPENSEARCH_BASE_URL:http://localhost:9200}

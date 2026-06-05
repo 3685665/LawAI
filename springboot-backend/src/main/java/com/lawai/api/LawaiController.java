@@ -8,12 +8,15 @@ import com.lawai.api.dto.KnowledgeIngestRequest;
 import com.lawai.api.dto.KnowledgeIngestResponse;
 import com.lawai.api.dto.PetitionRequest;
 import com.lawai.api.dto.PetitionResponse;
+import com.lawai.api.dto.PrecedentDto;
 import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
 import com.lawai.api.service.AiServiceClient;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.DocumentService;
 import com.lawai.auth.model.AuthenticatedUser;
+import com.lawai.document.dto.DocumentSearchResult;
+import com.lawai.document.service.DocumentProcessingService;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -27,17 +30,26 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 public class LawaiController {
 
   private final AiServiceClient aiServiceClient;
   private final DocumentService documentService;
+  private final DocumentProcessingService documentProcessingService;
   private final ActivityLogService activityLogService;
 
-  public LawaiController(AiServiceClient aiServiceClient, DocumentService documentService, ActivityLogService activityLogService) {
+  public LawaiController(
+      AiServiceClient aiServiceClient,
+      DocumentService documentService,
+      DocumentProcessingService documentProcessingService,
+      ActivityLogService activityLogService
+  ) {
     this.aiServiceClient = aiServiceClient;
     this.documentService = documentService;
+    this.documentProcessingService = documentProcessingService;
     this.activityLogService = activityLogService;
   }
 
@@ -55,9 +67,18 @@ public class LawaiController {
 
   @PostMapping("/precedents/search")
   public PrecedentSearchResponse searchPrecedents(@Valid @RequestBody PrecedentSearchRequest request, Authentication authentication) {
-    PrecedentSearchResponse response = aiServiceClient.searchPrecedents(request);
+    List<PrecedentDto> results = List.of();
+    try {
+      results = documentProcessingService.searchWholeDocuments(request.query(), 1)
+          .results()
+          .stream()
+          .map(this::toPrecedent)
+          .toList();
+    } catch (RuntimeException ignored) {
+      // Keep the endpoint stable if the uploaded-document index is empty or unavailable.
+    }
     activityLogService.logBackend(requireUser(authentication), "precedent-search", "Emsal Arama", "Emsal karar aramasi yapildi.", "/api/precedents/search");
-    return response;
+    return new PrecedentSearchResponse(request.query(), results);
   }
 
   @PostMapping("/petitions")
@@ -106,5 +127,25 @@ public class LawaiController {
       return user;
     }
     throw new BadCredentialsException("Oturum gerekli.");
+  }
+
+  private PrecedentDto toPrecedent(DocumentSearchResult result) {
+    return new PrecedentDto(
+        "Yuklenen belge",
+        "OpenSearch",
+        "DOC-" + result.documentId(),
+        null,
+        null,
+        result.filename(),
+        preview(result.content(), 450),
+        result.content()
+    );
+  }
+
+  private String preview(String content, int maxLength) {
+    if (content == null || content.length() <= maxLength) {
+      return content;
+    }
+    return content.substring(0, maxLength) + "...";
   }
 }

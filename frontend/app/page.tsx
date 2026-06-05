@@ -1050,6 +1050,9 @@ export default function Home() {
 
   function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
     const normalizedQuery = query.trim();
+    setPrecedents([]);
+    setSelectedPrecedentIndex(null);
+    setPrecedentSummary("");
     if (!normalizedQuery) {
       setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
       return;
@@ -1064,7 +1067,6 @@ export default function Home() {
       });
       setPrecedents(data.results);
       setSelectedPrecedentIndex(data.results.length ? 0 : null);
-      setPrecedentSummary("");
     });
   }
 

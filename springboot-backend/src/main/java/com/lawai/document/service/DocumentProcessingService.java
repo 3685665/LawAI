@@ -87,6 +87,11 @@ public class DocumentProcessingService {
     return new DocumentSearchResponse(query, "pgvector", documentRepository.searchByVector(queryEmbedding, limit));
   }
 
+  public DocumentSearchResponse searchWholeDocuments(String query, Integer requestedLimit) {
+    int limit = Math.min(Math.max(requestedLimit == null ? 1 : requestedLimit, 1), 5);
+    return new DocumentSearchResponse(query, "opensearch", openSearchClient.searchWholeDocuments(query, limit));
+  }
+
   private Path store(MultipartFile file, String filename) {
     try {
       Path uploadDir = Path.of(properties.uploadDir()).toAbsolutePath().normalize();
@@ -104,9 +109,10 @@ public class DocumentProcessingService {
   }
 
   private String extractPdfText(Path storedPath) {
+    Path extractorScript = resolvePdfExtractorScript();
     ProcessBuilder builder = new ProcessBuilder(
         properties.pythonCommand(),
-        properties.pdfExtractorScript(),
+        extractorScript.toString(),
         storedPath.toString()
     );
     builder.redirectErrorStream(false);
@@ -125,6 +131,22 @@ public class DocumentProcessingService {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("Python PDF metin cikarimi kesildi.", exception);
     }
+  }
+
+  private Path resolvePdfExtractorScript() {
+    Path configured = Path.of(properties.pdfExtractorScript());
+    if (configured.isAbsolute() && Files.exists(configured)) {
+      return configured;
+    }
+    Path fromWorkingDirectory = configured.toAbsolutePath().normalize();
+    if (Files.exists(fromWorkingDirectory)) {
+      return fromWorkingDirectory;
+    }
+    Path fromRepoRoot = Path.of("springboot-backend").resolve(configured).toAbsolutePath().normalize();
+    if (Files.exists(fromRepoRoot)) {
+      return fromRepoRoot;
+    }
+    throw new IllegalStateException("Python PDF metin cikarimi scripti bulunamadi: " + properties.pdfExtractorScript());
   }
 
   private List<RawChunk> chunk(String text) {

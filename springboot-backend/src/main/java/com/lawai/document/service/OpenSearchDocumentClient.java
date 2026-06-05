@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,6 +70,31 @@ public class OpenSearchDocumentClient {
     return parseSearchResponse(response);
   }
 
+  public List<DocumentSearchResult> searchWholeDocuments(String query, int limit) {
+    if (!properties.enabled()) {
+      return List.of();
+    }
+    ensureIndex();
+    String body = toJson(Map.of(
+        "size", Math.max(limit * 5, 5),
+        "query", Map.of(
+            "match", Map.of(
+                "content", Map.of("query", query)
+            )
+        )
+    ));
+    String response = request("POST", "/" + properties.index() + "/_search", body);
+    LinkedHashMap<Long, ScoredDocumentHit> documentHits = parseDocumentHits(response);
+    List<DocumentSearchResult> results = new ArrayList<>();
+    for (ScoredDocumentHit hit : documentHits.values()) {
+      results.add(loadWholeDocument(hit));
+      if (results.size() >= limit) {
+        break;
+      }
+    }
+    return results;
+  }
+
   private synchronized void ensureIndex() {
     if (ready || !properties.enabled()) {
       return;
@@ -104,6 +130,65 @@ public class OpenSearchDocumentClient {
         ));
       }
       return results;
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("OpenSearch cevabi parse edilemedi: " + exception.getMessage(), exception);
+    }
+  }
+
+  private LinkedHashMap<Long, ScoredDocumentHit> parseDocumentHits(String json) {
+    try {
+      JsonNode hits = objectMapper.readTree(json).path("hits").path("hits");
+      LinkedHashMap<Long, ScoredDocumentHit> documentHits = new LinkedHashMap<>();
+      for (JsonNode hit : hits) {
+        JsonNode source = hit.path("_source");
+        long documentId = source.path("documentId").asLong();
+        if (!documentHits.containsKey(documentId)) {
+          documentHits.put(documentId, new ScoredDocumentHit(
+              documentId,
+              source.path("filename").asText(),
+              hit.path("_score").asDouble()
+          ));
+        }
+      }
+      return documentHits;
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("OpenSearch cevabi parse edilemedi: " + exception.getMessage(), exception);
+    }
+  }
+
+  private DocumentSearchResult loadWholeDocument(ScoredDocumentHit hit) {
+    String body = toJson(Map.of(
+        "size", 1000,
+        "query", Map.of(
+            "term", Map.of(
+                "documentId", hit.documentId()
+            )
+        ),
+        "sort", List.of(
+            Map.of("chunkIndex", Map.of("order", "asc"))
+        )
+    ));
+    String response = request("POST", "/" + properties.index() + "/_search", body);
+    try {
+      JsonNode hits = objectMapper.readTree(response).path("hits").path("hits");
+      String filename = hit.filename();
+      StringBuilder content = new StringBuilder();
+      for (JsonNode chunkHit : hits) {
+        JsonNode source = chunkHit.path("_source");
+        filename = source.path("filename").asText(filename);
+        if (!content.isEmpty()) {
+          content.append("\n\n");
+        }
+        content.append(source.path("content").asText());
+      }
+      return new DocumentSearchResult(
+          hit.documentId(),
+          0,
+          filename,
+          0,
+          content.toString(),
+          hit.score()
+      );
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("OpenSearch cevabi parse edilemedi: " + exception.getMessage(), exception);
     }
@@ -146,5 +231,8 @@ public class OpenSearchDocumentClient {
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("JSON serialize edilemedi: " + exception.getMessage(), exception);
     }
+  }
+
+  private record ScoredDocumentHit(long documentId, String filename, double score) {
   }
 }
