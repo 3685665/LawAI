@@ -20,8 +20,6 @@ class Settings(BaseSettings):
     ollama_embedding_model: str = Field(default="nomic-embed-text", validation_alias="OLLAMA_EMBEDDING_MODEL")
     embedding_dimensions: int = Field(default=384, validation_alias=AliasChoices("LAWAI_EMBEDDING_DIMENSIONS", "EMBEDDING_DIMENSIONS"))
     min_vector_similarity: float = Field(default=0.12, validation_alias=AliasChoices("LAWAI_MIN_VECTOR_SIMILARITY", "MIN_VECTOR_SIMILARITY"))
-    min_keyword_overlap_ratio: float = Field(default=0.45, validation_alias=AliasChoices("LAWAI_MIN_KEYWORD_OVERLAP_RATIO", "MIN_KEYWORD_OVERLAP_RATIO"))
-    min_keyword_overlap_terms: int = Field(default=2, validation_alias=AliasChoices("LAWAI_MIN_KEYWORD_OVERLAP_TERMS", "MIN_KEYWORD_OVERLAP_TERMS"))
     max_upload_mb: int = Field(default=25, validation_alias="MAX_UPLOAD_MB")
 
     model_config = SettingsConfigDict(

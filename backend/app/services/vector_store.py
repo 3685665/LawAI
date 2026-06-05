@@ -1,6 +1,5 @@
 import json
 import math
-import re
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +10,6 @@ from app.models.schemas import KnowledgeDocumentRequest, PrecedentDto
 from app.settings import settings
 
 STORE_PATH = Path(__file__).resolve().parents[2] / "data" / "vector_store.json"
-CHUNK_TOPIC_PATTERN = re.compile(r"\s*\(bolum\s+(\d+)/\d+\)\s*$", re.IGNORECASE)
 STOPWORDS = {
     "bir", "bu", "su", "şu", "ve", "veya", "ile", "icin", "için", "gibi", "daha", "kisa", "kısa",
     "cevap", "ver", "nedir", "nelerdir", "hangi", "hakkinda", "hakkında", "merhaba", "selam",
@@ -31,64 +29,6 @@ def tokenize(value: str | None) -> set[str]:
     normalized = normalize(value)
     cleaned = "".join(ch if ch.isalnum() else " " for ch in normalized)
     return {token for token in cleaned.split() if len(token) > 2 and token not in STOPWORDS}
-
-
-def keyword_overlap(query_tokens: set[str], document_tokens: set[str]) -> int:
-    matches = 0
-    for query_token in query_tokens:
-        if any(_tokens_match(query_token, document_token) for document_token in document_tokens):
-            matches += 1
-    return matches
-
-
-def has_keyword_overlap(query_tokens: set[str], document_tokens: set[str]) -> bool:
-    if not query_tokens:
-        return True
-    overlap = keyword_overlap(query_tokens, document_tokens)
-    required_terms = min(settings.min_keyword_overlap_terms, len(query_tokens))
-    required_ratio = settings.min_keyword_overlap_ratio
-    return overlap >= required_terms and (overlap / len(query_tokens)) >= required_ratio
-
-
-def _tokens_match(left: str, right: str) -> bool:
-    if left == right:
-        return True
-    if len(left) < 5 or len(right) < 5:
-        return False
-    return left in right or right in left
-
-
-def base_topic(value: str | None) -> str:
-    if not value:
-        return ""
-    return CHUNK_TOPIC_PATTERN.sub("", value).strip() or value
-
-
-def chunk_index(value: str | None) -> int:
-    if not value:
-        return 0
-    match = CHUNK_TOPIC_PATTERN.search(value)
-    return int(match.group(1)) if match else 0
-
-
-def same_source(left: KnowledgeDocumentRequest | PrecedentDto, right: PrecedentDto) -> bool:
-    return (
-        _source_field_matches(left.court, right.court, fallback="Yuklenen kaynak")
-        and normalize(left.chamber) == normalize(right.chamber)
-        and normalize(left.docketNo) == normalize(right.docketNo)
-        and normalize(left.decisionNo) == normalize(right.decisionNo)
-        and normalize(left.date) == normalize(right.date)
-        and normalize(base_topic(left.topic)) == normalize(base_topic(right.topic))
-    )
-
-
-def _source_field_matches(left: str | None, right: str | None, fallback: str) -> bool:
-    normalized_left = normalize(left)
-    normalized_right = normalize(right)
-    normalized_fallback = normalize(fallback)
-    if normalized_left == normalized_right:
-        return True
-    return not normalized_left and normalized_right == normalized_fallback
 
 
 def cosine_similarity(left: list[float], right: list[float]) -> float:
@@ -146,7 +86,7 @@ class JsonVectorStore:
                 continue
             if query_tokens:
                 document_tokens = tokenize(" ".join([doc.topic, doc.summary, doc.content]))
-                if not has_keyword_overlap(query_tokens, document_tokens):
+                if not query_tokens.intersection(document_tokens):
                     continue
             score = cosine_similarity(query_embedding, entry.embedding)
             if score >= settings.min_vector_similarity:
@@ -154,14 +94,6 @@ class JsonVectorStore:
 
         ranked.sort(key=lambda item: item[0], reverse=True)
         return [self._to_precedent(entry.document) for _, entry in ranked[:limit]]
-
-    def source_chunks(self, precedent: PrecedentDto) -> list[PrecedentDto]:
-        chunks = [
-            self._to_precedent(entry.document)
-            for entry in self._entries
-            if same_source(entry.document, precedent)
-        ]
-        return sorted(chunks, key=lambda item: (chunk_index(item.topic), item.topic))
 
     def _to_precedent(self, doc: KnowledgeDocumentRequest) -> PrecedentDto:
         return PrecedentDto(
@@ -294,7 +226,7 @@ class PgVectorStore:
             row_court, row_chamber, docket_no, decision_no, decision_date, topic, summary, content, similarity = row
             if float(similarity or 0) < settings.min_vector_similarity:
                 continue
-            if query_tokens and not has_keyword_overlap(query_tokens, tokenize(" ".join([topic, summary, content]))):
+            if query_tokens and not query_tokens.intersection(tokenize(" ".join([topic, summary, content]))):
                 continue
             results.append(
                 PrecedentDto(
@@ -311,52 +243,6 @@ class PgVectorStore:
             if len(results) >= limit:
                 break
         return results
-
-    def source_chunks(self, precedent: PrecedentDto) -> list[PrecedentDto]:
-        self._ensure_schema()
-        topic = base_topic(precedent.topic)
-        filters = [
-            _court_source_filter(precedent.court),
-            "lower(coalesce(chamber, '')) = lower(%s)",
-            "lower(coalesce(docket_no, '')) = lower(%s)",
-            "lower(coalesce(decision_no, '')) = lower(%s)",
-            "lower(coalesce(decision_date, '')) = lower(%s)",
-            "(topic = %s OR topic LIKE %s)",
-        ]
-        params = _court_source_params(precedent.court) + [
-            precedent.chamber or "",
-            precedent.docketNo or "",
-            precedent.decisionNo or "",
-            precedent.date or "",
-            topic,
-            f"{topic} (bolum %/%",
-        ]
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT court, chamber, docket_no, decision_no, decision_date, topic, summary, content
-                    FROM knowledge_documents
-                    WHERE {' AND '.join(filters)}
-                    ORDER BY topic
-                    """,
-                    params,
-                )
-                rows = cur.fetchall()
-        chunks = [
-            PrecedentDto(
-                court=row_court or "Yuklenen kaynak",
-                chamber=row_chamber,
-                docketNo=docket_no,
-                decisionNo=decision_no,
-                date=str(decision_date) if decision_date else None,
-                topic=row_topic,
-                summary=summary,
-                content=content,
-            )
-            for row_court, row_chamber, docket_no, decision_no, decision_date, row_topic, summary, content in rows
-        ]
-        return sorted(chunks, key=lambda item: (chunk_index(item.topic), item.topic))
 
     def _ensure_schema(self) -> None:
         if self._ready:
@@ -406,15 +292,3 @@ def create_vector_store():
 
 
 vector_store = create_vector_store()
-
-
-def _court_source_filter(court: str | None) -> str:
-    if normalize(court) == normalize("Yuklenen kaynak"):
-        return "(coalesce(court, '') = '' OR lower(court) = lower(%s))"
-    return "lower(coalesce(court, '')) = lower(%s)"
-
-
-def _court_source_params(court: str | None) -> list[str]:
-    if normalize(court) == normalize("Yuklenen kaynak"):
-        return ["Yuklenen kaynak"]
-    return [court or ""]
