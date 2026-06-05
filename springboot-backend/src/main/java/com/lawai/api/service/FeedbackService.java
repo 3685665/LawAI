@@ -96,7 +96,7 @@ public class FeedbackService {
     boolean updated = false;
     List<FeedbackRecord> rewritten = new ArrayList<>(items.size());
     for (FeedbackRecord item : items) {
-      if (item.id().equals(feedbackId) && item.userId().equals(user.id())) {
+      if (item.id().equals(feedbackId)) {
         rewritten.add(new FeedbackRecord(
             item.id(),
             item.userId(),

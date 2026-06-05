@@ -5,6 +5,7 @@ import com.lawai.api.dto.FeedbackRecordDto;
 import com.lawai.api.dto.FeedbackSubmissionResponse;
 import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.dto.FeedbackStatusUpdateRequest;
+import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.FeedbackService;
 import com.lawai.auth.model.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -27,9 +28,11 @@ import java.util.List;
 public class FeedbackController {
 
   private final FeedbackService feedbackService;
+  private final ActivityLogService activityLogService;
 
-  public FeedbackController(FeedbackService feedbackService) {
+  public FeedbackController(FeedbackService feedbackService, ActivityLogService activityLogService) {
     this.feedbackService = feedbackService;
+    this.activityLogService = activityLogService;
   }
 
   @GetMapping
@@ -39,7 +42,9 @@ public class FeedbackController {
 
   @PostMapping
   public FeedbackSubmissionResponse submit(@Valid @RequestBody FeedbackCreateRequest request, Authentication authentication) {
-    FeedbackRecordDto feedback = feedbackService.submit(requireUser(authentication), request);
+    AuthenticatedUser user = requireUser(authentication);
+    FeedbackRecordDto feedback = feedbackService.submit(user, request);
+    activityLogService.logBackend(user, "feedback-create", "Geri Bildirim", "Geri bildirim gonderildi: " + feedback.subject(), "/api/feedback");
     return new FeedbackSubmissionResponse("Geri bildiriminiz alindi.", feedback);
   }
 
@@ -49,7 +54,10 @@ public class FeedbackController {
       @Valid @RequestBody FeedbackStatusUpdateRequest request,
       Authentication authentication
   ) {
-    return feedbackService.updateStatus(requireUser(authentication), id, request);
+    AuthenticatedUser user = requireUser(authentication);
+    FeedbackRecordDto response = feedbackService.updateStatus(user, id, request);
+    activityLogService.logBackend(user, "feedback-status-update", "Sikayet Yonetimi", "Geri bildirim durumu guncellendi: " + id, "/api/feedback/" + id + "/status");
+    return response;
   }
 
   @PatchMapping("/{id}")
@@ -58,12 +66,17 @@ public class FeedbackController {
       @Valid @RequestBody FeedbackUpdateRequest request,
       Authentication authentication
   ) {
-    return feedbackService.update(requireUser(authentication), id, request);
+    AuthenticatedUser user = requireUser(authentication);
+    FeedbackRecordDto response = feedbackService.update(user, id, request);
+    activityLogService.logBackend(user, "feedback-update", "Sikayet Yonetimi", "Geri bildirim guncellendi: " + id, "/api/feedback/" + id);
+    return response;
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable String id, Authentication authentication) {
-    feedbackService.delete(requireUser(authentication), id);
+    AuthenticatedUser user = requireUser(authentication);
+    feedbackService.delete(user, id);
+    activityLogService.logBackend(user, "feedback-delete", "Sikayet Yonetimi", "Geri bildirim silindi: " + id, "/api/feedback/" + id);
     return ResponseEntity.noContent().build();
   }
 

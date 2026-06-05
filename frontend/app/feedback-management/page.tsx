@@ -6,6 +6,7 @@ import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
   AlertCircle,
   ArrowLeft,
+  BarChart3,
   Bot,
   ChevronRight,
   FileSearch,
@@ -388,6 +389,10 @@ export default function FeedbackManagementPage() {
                     <Link href="/" title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}>
                       <UserRound size={15} />
                       <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
+                    </Link>
+                    <Link href="/admin/activity-logs" title={locale === "en" ? "Activity Logs" : "Islem Loglari"}>
+                      <BarChart3 size={15} />
+                      <span>{locale === "en" ? "Activity Logs" : "Islem Loglari"}</span>
                     </Link>
                   </div>
                 )}

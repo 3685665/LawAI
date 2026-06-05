@@ -37,6 +37,7 @@ import {
   authMe,
   authRegister,
   authUpdateProfile,
+  createActivityLog,
   CaseDocument as ApiCaseDocument,
   CaseRecord,
   CaseTemplate,
@@ -276,6 +277,22 @@ function getFeedbackStatusLabel(value: string) {
   return isFeedbackStatus(value) ? feedbackStatusLabels[value] : value;
 }
 
+function getTabLabel(tab: Tab, locale: Locale) {
+  const labels: Record<Tab, { tr: string; en: string }> = {
+    chat: { tr: "Asistan", en: "Assistant" },
+    search: { tr: "Emsal Arama", en: "Precedent Search" },
+    petition: { tr: "Dilekce Taslak", en: "Petition Draft" },
+    training: { tr: "Egitim", en: "Training" },
+    cases: { tr: "Davalar", en: "Cases" },
+    document: { tr: "Belge Isleme", en: "Document Processing" },
+    feedback: { tr: "Geri Bildirim", en: "Feedback" },
+    profile: { tr: "Profil", en: "Profile" },
+    settings: { tr: "Ayarlar", en: "Settings" },
+    admin: { tr: "Yonetim", en: "Management" }
+  };
+  return labels[tab][locale];
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
   const [privateMode] = useState(true);
@@ -417,6 +434,7 @@ export default function Home() {
         icon: UserRound,
         children: [
           { id: "profile", label: t.tabs.profile, icon: UserRound, tab: "profile" },
+          { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: BarChart3, href: "/activity-logs" },
           { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore, tab: "feedback" },
           {
             id: "settings-view",
@@ -451,6 +469,12 @@ export default function Home() {
               setAdminSection("users");
               setAdminUserView("list");
             }
+          },
+          {
+            id: "admin-logs",
+            label: locale === "en" ? "Activity Logs" : "Islem Loglari",
+            icon: BarChart3,
+            href: "/admin/activity-logs"
           }
         ]
       });
@@ -589,6 +613,19 @@ export default function Home() {
     }
     void loadAdminUsers();
   }, [activeTab, adminSection, adminUsers.length, adminUsersLoading, authUser]);
+
+  useEffect(() => {
+    if (!authUser) {
+      return;
+    }
+    const screen = getTabLabel(activeTab, locale);
+    void createActivityLog({
+      action: "screen-view",
+      screen,
+      detail: `${screen} ekrani goruntulendi.`,
+      path: window.location.pathname
+    }).catch(() => undefined);
+  }, [activeTab, authUser, locale]);
 
   const filteredFeedbackItems = useMemo(() => {
     const query = feedbackSearch.trim().toLowerCase();
@@ -2274,6 +2311,7 @@ export default function Home() {
                     )}
                   </article>
                 )}
+
             </section>
           </section>
         )}

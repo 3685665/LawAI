@@ -11,8 +11,12 @@ import com.lawai.api.dto.PetitionResponse;
 import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
 import com.lawai.api.service.AiServiceClient;
+import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.DocumentService;
+import com.lawai.auth.model.AuthenticatedUser;
 import jakarta.validation.Valid;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +33,12 @@ public class LawaiController {
 
   private final AiServiceClient aiServiceClient;
   private final DocumentService documentService;
+  private final ActivityLogService activityLogService;
 
-  public LawaiController(AiServiceClient aiServiceClient, DocumentService documentService) {
+  public LawaiController(AiServiceClient aiServiceClient, DocumentService documentService, ActivityLogService activityLogService) {
     this.aiServiceClient = aiServiceClient;
     this.documentService = documentService;
+    this.activityLogService = activityLogService;
   }
 
   @GetMapping("/health")
@@ -41,41 +47,64 @@ public class LawaiController {
   }
 
   @PostMapping("/chat")
-  public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
-    return aiServiceClient.chat(request);
+  public ChatResponse chat(@Valid @RequestBody ChatRequest request, Authentication authentication) {
+    ChatResponse response = aiServiceClient.chat(request);
+    activityLogService.logBackend(requireUser(authentication), "chat", "Asistan", "AI sohbet analizi yapildi.", "/api/chat");
+    return response;
   }
 
   @PostMapping("/precedents/search")
-  public PrecedentSearchResponse searchPrecedents(@Valid @RequestBody PrecedentSearchRequest request) {
-    return aiServiceClient.searchPrecedents(request);
+  public PrecedentSearchResponse searchPrecedents(@Valid @RequestBody PrecedentSearchRequest request, Authentication authentication) {
+    PrecedentSearchResponse response = aiServiceClient.searchPrecedents(request);
+    activityLogService.logBackend(requireUser(authentication), "precedent-search", "Emsal Arama", "Emsal karar aramasi yapildi.", "/api/precedents/search");
+    return response;
   }
 
   @PostMapping("/petitions")
-  public PetitionResponse petitions(@Valid @RequestBody PetitionRequest request) {
-    return aiServiceClient.generatePetition(request);
+  public PetitionResponse petitions(@Valid @RequestBody PetitionRequest request, Authentication authentication) {
+    PetitionResponse response = aiServiceClient.generatePetition(request);
+    activityLogService.logBackend(requireUser(authentication), "petition-create", "Dilekce Taslak", "Dilekce taslagi olusturuldu.", "/api/petitions");
+    return response;
   }
 
   @PostMapping(value = "/documents/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public DocumentAnalysisResponse analyzeDocument(@RequestPart("file") MultipartFile file) {
-    return documentService.analyze(file);
+  public DocumentAnalysisResponse analyzeDocument(@RequestPart("file") MultipartFile file, Authentication authentication) {
+    DocumentAnalysisResponse response = documentService.analyze(file);
+    activityLogService.logBackend(requireUser(authentication), "document-analyze", "Belge Isleme", "Belge on kontrolu yapildi: " + file.getOriginalFilename(), "/api/documents/analyze");
+    return response;
   }
 
   @PostMapping(value = "/documents/ingest", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public DocumentIngestResponse ingestDocument(
       @RequestPart("file") MultipartFile file,
       @RequestParam(value = "topic", required = false) String topic,
-      @RequestParam(value = "court", required = false) String court
+      @RequestParam(value = "court", required = false) String court,
+      Authentication authentication
   ) {
-    return documentService.ingest(file, topic, court);
+    DocumentIngestResponse response = documentService.ingest(file, topic, court);
+    activityLogService.logBackend(requireUser(authentication), "document-ingest", "Belge Isleme", "Belge bilgi bankasina eklendi: " + file.getOriginalFilename(), "/api/documents/ingest");
+    return response;
   }
 
   @PostMapping("/knowledge/documents")
-  public KnowledgeIngestResponse ingestKnowledge(@Valid @RequestBody KnowledgeIngestRequest request) {
-    return aiServiceClient.ingestKnowledge(request);
+  public KnowledgeIngestResponse ingestKnowledge(@Valid @RequestBody KnowledgeIngestRequest request, Authentication authentication) {
+    KnowledgeIngestResponse response = aiServiceClient.ingestKnowledge(request);
+    activityLogService.logBackend(requireUser(authentication), "knowledge-ingest", "Bilgi Bankasi", "Bilgi dokumani indekslendi.", "/api/knowledge/documents");
+    return response;
   }
 
   @PostMapping("/knowledge/seed-precedents")
-  public KnowledgeIngestResponse seedPrecedents() {
-    return aiServiceClient.seedPrecedents();
+  public KnowledgeIngestResponse seedPrecedents(Authentication authentication) {
+    KnowledgeIngestResponse response = aiServiceClient.seedPrecedents();
+    activityLogService.logBackend(requireUser(authentication), "knowledge-seed", "Bilgi Bankasi", "Ornek emsal verileri indekslendi.", "/api/knowledge/seed-precedents");
+    return response;
+  }
+
+  private AuthenticatedUser requireUser(Authentication authentication) {
+    Object principal = authentication == null ? null : authentication.getPrincipal();
+    if (principal instanceof AuthenticatedUser user) {
+      return user;
+    }
+    throw new BadCredentialsException("Oturum gerekli.");
   }
 }

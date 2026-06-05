@@ -1,0 +1,123 @@
+{
+  "logs" : [ {
+    "id" : "a8178e68-2846-4c17-8405-d4d59a5d9bde",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:34:36.3401836Z"
+  }, {
+    "id" : "382711ce-ab8a-45a9-b077-09d4642889e6",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Emsal Arama",
+    "detail" : "Emsal Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:34:42.30569Z"
+  }, {
+    "id" : "5abc8832-8f78-4c01-8d48-c27795e49ed7",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "precedent-search",
+    "screen" : "Emsal Arama",
+    "detail" : "Emsal karar aramasi yapildi.",
+    "path" : "/api/precedents/search",
+    "createdAt" : "2026-06-05T07:34:48.2911904Z"
+  }, {
+    "id" : "7f6d1b04-a0d9-45c9-a58d-adf96a027fe8",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:35:07.794703Z"
+  }, {
+    "id" : "e152475b-829a-468e-935b-9cc601f910c4",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Yonetim",
+    "detail" : "Yonetim ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:35:15.7407688Z"
+  }, {
+    "id" : "dd9c0d53-40d9-4cd9-97af-72c408af26b1",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "feedback-update",
+    "screen" : "Sikayet Yonetimi",
+    "detail" : "Geri bildirim guncellendi: e907e3f6-b9ae-4739-8fc3-a504a5494a6a",
+    "path" : "/api/feedback/e907e3f6-b9ae-4739-8fc3-a504a5494a6a",
+    "createdAt" : "2026-06-05T07:35:47.045683Z"
+  }, {
+    "id" : "fd47b014-6a2f-4bdc-bcd3-fc3255423fe6",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:35:55.0935372Z"
+  }, {
+    "id" : "8f84710e-b44f-40b8-9ea9-c5f7b75bcaa1",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Kullanici Islemleri",
+    "detail" : "Kullanici Islemleri ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:36:00.1385072Z"
+  }, {
+    "id" : "0472e4e3-ac3e-42ea-964f-b2a493590764",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Yonetim",
+    "detail" : "Yonetim ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:36:27.7449787Z"
+  }, {
+    "id" : "5b50ecc2-b424-4aff-bc04-b41f9d701fc5",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-05T07:40:41.7483221Z"
+  } ]
+}

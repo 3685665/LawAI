@@ -1,5 +1,6 @@
 package com.lawai.auth;
 
+import com.lawai.api.service.ActivityLogService;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
@@ -8,6 +9,7 @@ import com.lawai.auth.dto.AuthProfileUpdateRequest;
 import com.lawai.auth.dto.AuthRegisterRequest;
 import com.lawai.auth.dto.AuthSessionResponse;
 import com.lawai.auth.dto.AuthUserDto;
+import com.lawai.auth.model.AuthenticatedUser;
 import com.lawai.auth.security.SessionAuthenticationFilter;
 import com.lawai.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -32,10 +34,12 @@ import java.util.List;
 public class AuthController {
 
   private final AuthService authService;
+  private final ActivityLogService activityLogService;
   private final boolean cookieSecure;
 
-  public AuthController(AuthService authService, @Value("${app.auth.cookie-secure:false}") boolean cookieSecure) {
+  public AuthController(AuthService authService, ActivityLogService activityLogService, @Value("${app.auth.cookie-secure:false}") boolean cookieSecure) {
     this.authService = authService;
+    this.activityLogService = activityLogService;
     this.cookieSecure = cookieSecure;
   }
 
@@ -44,7 +48,9 @@ public class AuthController {
     authService.register(request);
     String token = authService.issueSessionToken(new AuthLoginRequest(request.email(), request.password(), true));
     setSessionCookie(response, token, true);
-    return new AuthSessionResponse(authService.currentUser(token));
+    AuthUserDto user = authService.currentUser(token);
+    activityLogService.logBackend(toAuthenticatedUser(user), "auth-register", "Oturum", "Yeni kullanici kaydi yapildi.", "/api/auth/register");
+    return new AuthSessionResponse(user);
   }
 
   @PostMapping("/login")
@@ -52,12 +58,21 @@ public class AuthController {
     authService.login(request);
     String token = authService.issueSessionToken(request);
     setSessionCookie(response, token, Boolean.TRUE.equals(request.rememberMe()));
-    return new AuthSessionResponse(authService.currentUser(token));
+    AuthUserDto user = authService.currentUser(token);
+    activityLogService.logBackend(toAuthenticatedUser(user), "auth-login", "Oturum", "Kullanici giris yapti.", "/api/auth/login");
+    return new AuthSessionResponse(user);
   }
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
-    authService.logout(extractSessionToken(request));
+    String token = extractSessionToken(request);
+    try {
+      AuthUserDto user = authService.currentUser(token);
+      activityLogService.logBackend(toAuthenticatedUser(user), "auth-logout", "Oturum", "Kullanici cikis yapti.", "/api/auth/logout");
+    } catch (RuntimeException ignored) {
+      // Logout should still clear invalid or expired cookies.
+    }
+    authService.logout(token);
     clearSessionCookie(response);
     return ResponseEntity.ok().body(java.util.Map.of("message", "Cikis yapildi."));
   }
@@ -79,7 +94,9 @@ public class AuthController {
 
   @PutMapping("/me")
   public AuthUserDto updateMe(@Valid @RequestBody AuthProfileUpdateRequest request, HttpServletRequest httpRequest) {
-    return authService.updateProfile(extractSessionToken(httpRequest), request);
+    AuthUserDto user = authService.updateProfile(extractSessionToken(httpRequest), request);
+    activityLogService.logBackend(toAuthenticatedUser(user), "profile-update", "Profil", "Profil bilgileri guncellendi.", "/api/auth/me");
+    return user;
   }
 
   @PostMapping("/password/forgot")
@@ -92,7 +109,9 @@ public class AuthController {
     AuthUserDto user = authService.resetPassword(request.token(), request.newPassword());
     String token = authService.issueSessionToken(new AuthLoginRequest(user.email(), request.newPassword(), true));
     setSessionCookie(response, token, true);
-    return new AuthSessionResponse(authService.currentUser(token));
+    AuthUserDto currentUser = authService.currentUser(token);
+    activityLogService.logBackend(toAuthenticatedUser(currentUser), "password-reset", "Oturum", "Sifre sifirlandi.", "/api/auth/password/reset");
+    return new AuthSessionResponse(currentUser);
   }
 
   @PostMapping("/password/change")
@@ -100,7 +119,9 @@ public class AuthController {
     AuthUserDto user = authService.changePassword(extractSessionToken(httpRequest), request);
     String token = authService.issueSessionToken(new AuthLoginRequest(user.email(), request.newPassword(), true));
     setSessionCookie(response, token, true);
-    return new AuthSessionResponse(authService.currentUser(token));
+    AuthUserDto currentUser = authService.currentUser(token);
+    activityLogService.logBackend(toAuthenticatedUser(currentUser), "password-change", "Ayarlar", "Sifre degistirildi.", "/api/auth/password/change");
+    return new AuthSessionResponse(currentUser);
   }
 
   private void setSessionCookie(HttpServletResponse response, String token, boolean rememberMe) {
@@ -133,5 +154,9 @@ public class AuthController {
       }
     }
     return null;
+  }
+
+  private AuthenticatedUser toAuthenticatedUser(AuthUserDto user) {
+    return new AuthenticatedUser(user.id(), user.name(), user.email(), user.role());
   }
 }

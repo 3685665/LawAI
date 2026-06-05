@@ -78,6 +78,19 @@ export type FeedbackUpdatePayload = {
   message: string;
   status: FeedbackStatus;
 };
+export type ActivityLogRecord = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: string;
+  source: string;
+  action: string;
+  screen: string;
+  detail: string;
+  path: string;
+  createdAt: string;
+};
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -203,6 +216,18 @@ export async function listUsers(): Promise<AuthUser[]> {
 
 export async function getUser(id: string): Promise<AuthUser> {
   return getJson<AuthUser>(`/auth/users/${id}`);
+}
+
+export async function createActivityLog(payload: { action: string; screen: string; detail?: string; path?: string }): Promise<ActivityLogRecord> {
+  return postJson<ActivityLogRecord>("/activity-logs", payload);
+}
+
+export async function listMyActivityLogs(): Promise<ActivityLogRecord[]> {
+  return getJson<ActivityLogRecord[]>("/activity-logs/me");
+}
+
+export async function listActivityLogs(): Promise<ActivityLogRecord[]> {
+  return getJson<ActivityLogRecord[]>("/activity-logs");
 }
 
 export async function submitFeedback(payload: { type: string; subject: string; message: string }): Promise<FeedbackSubmissionResponse> {
