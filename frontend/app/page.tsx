@@ -694,17 +694,19 @@ export default function Home() {
   ], [locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
-    "Determining child living standard and parent income in child support amount",
-    "Eviction in indefinite-term lease due to lessor's personal need",
-    "Event characteristics and party fault rates in moral compensation amount",
-    "Proof criteria for collusion claims in title cancellation and registration cases",
-    "Limitation period start for severance and notice pay based on termination date",
-    "Net income calculation and discount rates in loss of support compensation"
+    "Kira alacagi temerrut ihtarname odeme kayitlari",
+    "Erken tahliye makul sure kira bedeli anahtar teslimi",
+    "Ise iade fesih nedeni somut deliller",
+    "Idari islem yetki sekil sebep maksat",
+    "Adil yargilanma gerekceli karar makul sure",
+    "Rekabet ihlali pazar gucu tuketici refahi"
   ] : [
-    "Istirak nafakasinin miktarinin saptanmasinda cocugun yasam standardi ve ebeveyn gelirleri",
-    "Belirsiz sureli kira sozlesmesinde tahliye - kiraya verenin ihtiyac nedeniyle actigi davalar",
-    "Manevi tazminat miktarinin belirlenmesinde olayin niteligi ve taraf kusur oranlari",
-    "Tapu iptali ve tescil davalarinda muris muvazaasi iddiasinin ispat kriterleri"
+    "Kira alacagi temerrut ihtarname odeme kayitlari",
+    "Erken tahliye makul sure kira bedeli anahtar teslimi",
+    "Ise iade fesih nedeni somut deliller",
+    "Idari islem yetki sekil sebep maksat",
+    "Adil yargilanma gerekceli karar makul sure",
+    "Rekabet ihlali pazar gucu tuketici refahi"
   ], [locale]);
 
   const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [

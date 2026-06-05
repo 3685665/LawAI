@@ -1,4 +1,5 @@
 import hashlib
+import re
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -17,7 +18,7 @@ from app.models.schemas import (
     PrecedentSearchRequest,
     PrecedentSearchResponse,
 )
-from app.services.vector_store import normalize, vector_store
+from app.services.vector_store import base_topic, normalize, vector_store
 from app.settings import settings
 
 DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
@@ -164,12 +165,12 @@ class LegalService:
             try:
                 if vector_store.has_entries():
                     query_embedding = self._embed_query(query)
-                    results = vector_store.search(query_embedding, court, chamber, limit, query)
+                    results = vector_store.search(query_embedding, court, chamber, max(limit * 4, limit), query)
                     if results:
-                        return results
+                        return self._group_precedent_chunks(results, limit)
             except Exception:
                 pass
-        return self._search_samples(query, court, chamber, limit) if use_samples else []
+        return self._group_precedent_chunks(self._search_samples(query, court, chamber, limit), limit) if use_samples else []
 
     def _embed_documents(self, texts: list[str]) -> list[list[float]]:
         if self.provider == "gemini":
@@ -217,6 +218,122 @@ class LegalService:
         ]
         scored = [(score(item), item) for item in filtered]
         return [item for item_score, item in sorted(scored, key=lambda pair: pair[0], reverse=True) if item_score > 0][:limit]
+
+    def _group_precedent_chunks(self, precedents: list[PrecedentDto], limit: int) -> list[PrecedentDto]:
+        grouped: dict[tuple[str, str, str, str, str, str], list[PrecedentDto]] = {}
+        order: list[tuple[str, str, str, str, str, str]] = []
+        for item in precedents:
+            source_topic = base_topic(item.topic)
+            key = (
+                normalize(item.court),
+                normalize(item.chamber),
+                normalize(item.docketNo),
+                normalize(item.decisionNo),
+                normalize(item.date),
+                normalize(source_topic),
+            )
+            if key not in grouped:
+                grouped[key] = []
+                order.append(key)
+            grouped[key].append(item)
+
+        merged: list[PrecedentDto] = []
+        for key in order:
+            items = grouped[key]
+            first = items[0]
+            source_items = vector_store.source_chunks(first) or items
+            topic = base_topic(first.topic)
+            summary = first.summary
+            content = self._merge_source_content(source_items)
+            merged.append(
+                PrecedentDto(
+                    court=first.court,
+                    chamber=first.chamber,
+                    docketNo=first.docketNo,
+                    decisionNo=first.decisionNo,
+                    date=first.date,
+                    topic=topic,
+                    summary=summary,
+                    content=content,
+                )
+            )
+            if len(merged) >= limit:
+                break
+        return merged
+
+    def _merge_source_content(self, source_items: list[PrecedentDto]) -> str | None:
+        merged: list[str] = []
+        seen_keys: set[str] = set()
+        for item in source_items:
+            raw_content = (item.content or item.summary or "").strip()
+            for paragraph in self._split_paragraphs(raw_content):
+                if self._is_boilerplate_paragraph(paragraph):
+                    continue
+                paragraph_key = self._paragraph_key(paragraph)
+                if not paragraph_key or paragraph_key in seen_keys:
+                    continue
+                if self._is_near_duplicate(paragraph_key, seen_keys):
+                    continue
+                seen_keys.add(paragraph_key)
+                merged.append(paragraph)
+        if not merged:
+            return None
+        return "\n\n".join(merged)
+
+    def _split_paragraphs(self, content: str) -> list[str]:
+        compact_lines = [" ".join(line.split()) for line in content.splitlines()]
+        paragraphs: list[str] = []
+        current: list[str] = []
+        for line in compact_lines:
+            if not line:
+                if current:
+                    paragraphs.append(" ".join(current))
+                    current = []
+                continue
+            current.append(line)
+        if current:
+            paragraphs.append(" ".join(current))
+        if len(paragraphs) <= 1:
+            return [paragraph for paragraph in re.split(r"(?<=[.!?])\s+(?=\d+\.|[A-ZÇĞİÖŞÜ])", content.strip()) if paragraph.strip()]
+        return paragraphs
+
+    def _is_boilerplate_paragraph(self, paragraph: str) -> bool:
+        normalized = normalize(paragraph)
+        if len(normalized) < 12:
+            return True
+        boilerplate_markers = [
+            "kullanici tarafindan",
+            "yargitay ictihat merkezinde yayimlanan kararlardaki kisisel veriler",
+            "kisisel verilerin anonim",
+            "anonim hale getirilmesine dair yonerge",
+        ]
+        if any(marker in normalized for marker in boilerplate_markers):
+            return True
+        return bool(re.fullmatch(r"\d+\s*/\s*\d+", normalized))
+
+    def _paragraph_key(self, paragraph: str) -> str:
+        normalized = normalize(paragraph)
+        return re.sub(r"\s+", " ", normalized).strip()
+
+    def _is_near_duplicate(self, paragraph_key: str, seen_keys: set[str]) -> bool:
+        if len(paragraph_key) < 80:
+            return False
+        for seen_key in seen_keys:
+            if len(seen_key) < 80:
+                continue
+            if paragraph_key in seen_key or seen_key in paragraph_key:
+                return True
+            shorter, longer = sorted((paragraph_key, seen_key), key=len)
+            if len(shorter) / len(longer) >= 0.85 and self._token_overlap_ratio(shorter, longer) >= 0.9:
+                return True
+        return False
+
+    def _token_overlap_ratio(self, left: str, right: str) -> float:
+        left_tokens = set(left.split())
+        right_tokens = set(right.split())
+        if not left_tokens or not right_tokens:
+            return 0.0
+        return len(left_tokens.intersection(right_tokens)) / min(len(left_tokens), len(right_tokens))
 
     def _chat_model(self) -> BaseChatModel | None:
         if self.provider == "openai" and settings.openai_api_key:
