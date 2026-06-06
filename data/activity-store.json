@@ -2963,5 +2963,17 @@
     "detail" : "Emsal karar aramasi yapildi.",
     "path" : "/api/precedents/search",
     "createdAt" : "2026-06-06T12:53:10.3401953Z"
+  }, {
+    "id" : "55ee781f-3b90-4b8b-8e19-f0be4581d9bc",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "chat",
+    "screen" : "Asistan",
+    "detail" : "AI sohbet analizi yapildi.",
+    "path" : "/api/chat",
+    "createdAt" : "2026-06-06T12:54:57.3387124Z"
   } ]
 }
