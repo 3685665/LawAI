@@ -21,7 +21,7 @@ from app.services.vector_store import normalize, vector_store
 from app.settings import settings
 
 DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
-AI_REQUEST_TIMEOUT_SECONDS = 12
+AI_REQUEST_TIMEOUT_SECONDS = 90
 
 SAMPLE_PRECEDENTS = [
     PrecedentDto(court="Yargitay", chamber="9. Hukuk Dairesi", docketNo="2022/1845", decisionNo="2022/7281", date="2022-06-14", topic="Ise iade", summary="Fesih nedeninin somut delillerle ispatlanamamasi halinde ise iade kosullari degerlendirilir."),
@@ -49,7 +49,7 @@ class LocalEmbeddings:
 
         for token in tokens:
             digest = hashlib.sha256(token.encode("utf-8")).digest()
-            index = int.from_bytes(digest[:4], "big") % LOCAL_EMBEDDING_DIMENSIONS
+            index = int.from_bytes(digest[:4], "big") % settings.embedding_dimensions
             sign = 1.0 if digest[4] % 2 == 0 else -1.0
             vector[index] += sign
 
@@ -100,15 +100,14 @@ class LegalService:
         )
 
     def generate_petition(self, request: PetitionRequest) -> PetitionResponse:
-        indexed_citations = self.search(f"{request.facts} {request.demands or ''}", None, None, 2, use_samples=False)
-        citations = indexed_citations
+        citations: list[PrecedentDto] = []
         body = self._local_petition(request)
 
-        if self.chat_model and indexed_citations:
+        if self.chat_model:
             try:
-                body = self._petition_with_ai(request, indexed_citations)
-            except Exception:
-                body += "\n\nNOT: AI saglayicisi su anda yanit vermedigi icin yerel taslak modu kullanildi."
+                body = self._petition_with_ai(request, citations)
+            except Exception as exc:
+                body += f"\n\nNOT: AI saglayicisi su anda yanit vermedigi icin yerel taslak modu kullanildi. Detay: {exc}"
 
         return PetitionResponse(
             title=f"{request.petitionType} Dilekcesi",
@@ -199,8 +198,15 @@ class LegalService:
 
     def _petition_with_ai(self, request: PetitionRequest, citations: list[PrecedentDto]) -> str:
         prompt = (
-            "Asagidaki bilgilere gore Turk hukuk uygulamasina uygun, avukat tarafindan kontrol edilecek bir dilekce taslagi hazirla. "
-            "Uydurma mahkeme karari veya mevzuat atfi yapma; sadece verilen emsal baglamindan yararlan.\n\n"
+            "Turk hukuk uygulamasina uygun, avukat tarafindan kontrol edilecek tam bir dilekce taslagi hazirla.\n"
+            "Kullanicinin verdigi bilgileri esas al; bilgi eksikse makul basliklar kullan ama olay, taraf, tarih, karar veya mevzuat uydurma.\n"
+            "Uydurma mahkeme karari veya emsal atfi yapma. Emsal baglami varsa sadece onu kullan; yoksa emsal atfi ekleme.\n"
+            "Markdown kullanma. Ciktiyi yalnizca dilekce metni olarak ver.\n"
+            "Basliklari sadece su sirayla ve birer kez kullan: MAHKEME, TARAFLAR, KONU, ACIKLAMALAR, HUKUKI NEDENLER, DELILLER, SONUC VE TALEP.\n"
+            "Alacak, kira, tazminat veya hukuk davalarinda suc, ceza, sanik, magdur gibi ceza hukuku ifadeleri kullanma.\n"
+            "HUKUKI NEDENLER bolumunde yalnizca genel ve guvenli dayanaklari yaz: ilgili Turk Borclar Kanunu, HMK ve sair mevzuat.\n"
+            "SONUC VE TALEP bolumunde talebi davalidan tahsil, yargilama gideri ve vekalet ucreti seklinde dogru taraf yonuyle kur.\n"
+            "ACIKLAMALAR bolumunu kullanicinin vakialarina gore somut ve maddeli yaz. SONUC VE TALEP bolumunu verilen taleplere gore netlestir.\n\n"
             f"Dilekce turu: {request.petitionType}\nMahkeme: {request.court}\nTaraflar: {request.parties}\n"
             f"Vakialar: {request.facts}\nTalepler: {request.demands or ''}\n\nEmsal baglami:\n{self._format_citations(citations)}"
         )
@@ -244,8 +250,8 @@ class LegalService:
                 model=settings.ollama_chat_model,
                 base_url=settings.ollama_base_url,
                 temperature=0.2,
-                num_ctx=2048,
-                num_predict=96,
+                num_ctx=4096,
+                num_predict=900,
                 keep_alive="5m",
                 sync_client_kwargs={"timeout": AI_REQUEST_TIMEOUT_SECONDS},
             )

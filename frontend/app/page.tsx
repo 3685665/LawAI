@@ -1156,6 +1156,7 @@ export default function Home() {
     };
     run("petition", async () => {
       setPetitionEditPreview(null);
+      setPetitionResult(null);
       setPetitionResult(await postJson<PetitionResponse>("/petitions", enrichedPetition));
     });
   }
