@@ -19,3 +19,6 @@ spark-warehouse/
 metastore_db/
 derby.log
 .ipynb_checkpoints/
+
+# Uploaded PDF files
+uploads/**/*.pdf

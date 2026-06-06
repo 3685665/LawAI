@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models.schemas import (
@@ -8,9 +8,11 @@ from app.models.schemas import (
     KnowledgeIngestResponse,
     PetitionRequest,
     PetitionResponse,
+    PdfTextExtractionResponse,
     PrecedentSearchRequest,
     PrecedentSearchResponse,
 )
+from app.services.document_service import document_service
 from app.services.legal_service import legal_service
 
 app = FastAPI(title="LawAI Next LangChain API")
@@ -47,6 +49,16 @@ def search_precedents(request: PrecedentSearchRequest) -> PrecedentSearchRespons
 @app.post("/api/petitions", response_model=PetitionResponse)
 def petitions(request: PetitionRequest) -> PetitionResponse:
     return legal_service.generate_petition(request)
+
+
+@app.post("/api/documents/extract-pdf-text", response_model=PdfTextExtractionResponse)
+async def extract_pdf_text(file: UploadFile = File(...)) -> PdfTextExtractionResponse:
+    try:
+        return await document_service.extract_pdf_text(file)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"PDF text extraction failed: {exc}") from exc
 
 
 @app.post("/api/knowledge/documents", response_model=KnowledgeIngestResponse)

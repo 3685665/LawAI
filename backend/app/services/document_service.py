@@ -11,6 +11,7 @@ from app.models.schemas import (
     DocumentIngestResponse,
     KnowledgeDocumentRequest,
     KnowledgeIngestRequest,
+    PdfTextExtractionResponse,
 )
 from app.services.legal_service import legal_service
 from app.settings import settings
@@ -20,6 +21,21 @@ MIN_EXTRACTED_CHARACTERS = 40
 
 
 class DocumentService:
+    async def extract_pdf_text(self, file: UploadFile) -> PdfTextExtractionResponse:
+        content = await file.read()
+        filename = file.filename or "document.pdf"
+        if Path(filename).suffix.lower() != ".pdf":
+            raise ValueError("PDF metin cikarimi yalnizca PDF dosyalari icin kullanilir.")
+        if not content:
+            raise ValueError("Dosya bos gorunuyor.")
+
+        text = self._extract_text(filename, content)
+        return PdfTextExtractionResponse(
+            filename=filename,
+            extractedCharacters=len(text),
+            text=text,
+        )
+
     async def analyze(self, file: UploadFile) -> DocumentAnalysisResponse:
         content = await file.read()
         filename = file.filename or "yuklenen-dokuman"

@@ -336,12 +336,29 @@
   },
   "document": {
     "title": "Upload document and add to knowledge base",
+    "subtitle": "The PDF is saved, text is extracted, split into chunks, and written to the search systems in one flow.",
+    "pipelineTitle": "Processing flow",
+    "pipelineIntro": "After upload, the document passes through the full pipeline below.",
+    "pipelineSteps": [
+      "The PDF file is saved to local disk.",
+      "Text is extracted by the Python PDF service.",
+      "Full text is stored in PostgreSQL legal_documents.",
+      "Text is split into chunks and saved to PostgreSQL.",
+      "Chunks are indexed in OpenSearch.",
+      "Embeddings are written to pgvector."
+    ],
+    "beforeUploadTitle": "Before uploading",
+    "beforeUploadItems": [
+      "Use PDFs with selectable text.",
+      "Scanned image PDFs may not produce text because OCR is not enabled.",
+      "Uploading the same file again creates a new document record."
+    ],
     "chooseFile": "Choose your file",
-    "fileHint": "PDF, Word, TXT - up to 25 MB",
+    "fileHint": "PDF - up to 25 MB",
     "topic": "Topic title",
     "court": "Court (optional)",
     "analyze": "Pre-check",
-    "ingest": "Add to knowledge base",
+    "ingest": "Upload and process",
     "result": "Result",
     "empty": "A summary appears here after you upload a file and start processing.",
     "processing": "Processing...",
@@ -350,12 +367,19 @@
     "size": "Size",
     "extractedText": "Extracted text",
     "characters": "characters",
-    "indexedParts": "{count} chunks indexed",
+    "indexedParts": "{count} chunks saved",
+    "documentId": "Document ID",
+    "storedPath": "Stored path",
+    "postgres": "PostgreSQL",
+    "pipelineCompleted": "Document processing pipeline completed.",
+    "resultHelp": "These numbers show which systems received the document. OpenSearch is used for precedent-style search, pgvector for semantic search.",
+    "contentSummary": "Content summary",
+    "textPreview": "Text preview",
     "goChat": "Go to chat",
     "errors": {
       "noFile": "No file selected.",
       "selectFirst": "Select a file first.",
-      "unsupported": "Only PDF, Word and text files are supported.",
+      "unsupported": "The document processing pipeline currently supports PDF files only.",
       "tooLarge": "File exceeds the 25 MB limit.",
       "empty": "File appears to be empty."
     }

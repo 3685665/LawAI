@@ -6,13 +6,23 @@
     "passwordHash" : "$2a$10$8jBnxrT3MQ5lBRolF45ZK.Fgs6JfOjjKfyBNrFMRti9JIU94XqdEK",
     "role" : "ADMIN",
     "createdAt" : "2026-06-02T22:49:20.4135034Z",
-    "lastLoginAt" : "2026-06-06T11:06:27.8033144Z"
+    "lastLoginAt" : "2026-06-06T12:01:00.2227133Z"
   } ],
   "sessions" : [ {
     "tokenHash" : "$2a$10$DYiPqL8AZ7kbdacCumXz.O2zWbBdhi2LhXaDlrCs4eV7VROdU7KBq",
     "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
     "expiresAt" : "2026-07-06T11:06:27.8033144Z",
     "createdAt" : "2026-06-06T11:06:27.8033144Z"
+  }, {
+    "tokenHash" : "$2a$10$TFw49DJ6iNkYVeJMMakqP.2YxXCdKNhU4aisBSm5GxbbYc446mVbe",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "expiresAt" : "2026-07-06T11:54:11.2220029Z",
+    "createdAt" : "2026-06-06T11:54:11.2220029Z"
+  }, {
+    "tokenHash" : "$2a$10$YEvGQPJxTKHrMyABXjto.ulXSAShK4/tfaUKcA9hYRMokzbRabknO",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "expiresAt" : "2026-07-06T12:01:00.2227133Z",
+    "createdAt" : "2026-06-06T12:01:00.2227133Z"
   } ],
   "passwordResets" : [ ]
 }

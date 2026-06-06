@@ -92,3 +92,9 @@ class DocumentIngestResponse(BaseModel):
     message: str
     textPreview: str
     warnings: list[str]
+
+
+class PdfTextExtractionResponse(BaseModel):
+    filename: str
+    extractedCharacters: int
+    text: str

@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -23,17 +22,20 @@ public class DocumentProcessingService {
   private static final int MIN_TEXT_LENGTH = 40;
 
   private final DocumentProcessingProperties properties;
+  private final PdfTextExtractionClient pdfTextExtractionClient;
   private final DocumentEmbeddingService embeddingService;
   private final DocumentRepository documentRepository;
   private final OpenSearchDocumentClient openSearchClient;
 
   public DocumentProcessingService(
       DocumentProcessingProperties properties,
+      PdfTextExtractionClient pdfTextExtractionClient,
       DocumentEmbeddingService embeddingService,
       DocumentRepository documentRepository,
       OpenSearchDocumentClient openSearchClient
   ) {
     this.properties = properties;
+    this.pdfTextExtractionClient = pdfTextExtractionClient;
     this.embeddingService = embeddingService;
     this.documentRepository = documentRepository;
     this.openSearchClient = openSearchClient;
@@ -45,7 +47,7 @@ public class DocumentProcessingService {
       throw new IllegalArgumentException("Belge isleme hatti su an PDF dosyalari icin tasarlandi.");
     }
     Path storedPath = store(file, filename);
-    String text = extractPdfText(storedPath);
+    String text = pdfTextExtractionClient.extract(file, filename);
     if (text.length() < MIN_TEXT_LENGTH) {
       throw new IllegalArgumentException("PDF'den yeterli metin cikarilamadi. OCR gerektiren taranmis PDF olabilir.");
     }
@@ -73,7 +75,9 @@ public class DocumentProcessingService {
         storedChunks.size(),
         opensearchIndexed,
         storedChunks.size(),
-        "Belge diske kaydedildi, metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
+        "Belge diske kaydedildi, metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.",
+        summarize(text, filename, chunks.size()),
+        preview(text, 1200)
     );
   }
 
@@ -108,47 +112,6 @@ public class DocumentProcessingService {
     }
   }
 
-  private String extractPdfText(Path storedPath) {
-    Path extractorScript = resolvePdfExtractorScript();
-    ProcessBuilder builder = new ProcessBuilder(
-        properties.pythonCommand(),
-        extractorScript.toString(),
-        storedPath.toString()
-    );
-    builder.redirectErrorStream(false);
-    try {
-      Process process = builder.start();
-      String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-      String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-      int exitCode = process.waitFor();
-      if (exitCode != 0) {
-        throw new IllegalStateException("Python PDF metin cikarimi basarisiz: " + stderr.trim());
-      }
-      return stdout.trim();
-    } catch (IOException exception) {
-      throw new IllegalStateException("Python PDF metin cikarimi calistirilamadi: " + exception.getMessage(), exception);
-    } catch (InterruptedException exception) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("Python PDF metin cikarimi kesildi.", exception);
-    }
-  }
-
-  private Path resolvePdfExtractorScript() {
-    Path configured = Path.of(properties.pdfExtractorScript());
-    if (configured.isAbsolute() && Files.exists(configured)) {
-      return configured;
-    }
-    Path fromWorkingDirectory = configured.toAbsolutePath().normalize();
-    if (Files.exists(fromWorkingDirectory)) {
-      return fromWorkingDirectory;
-    }
-    Path fromRepoRoot = Path.of("springboot-backend").resolve(configured).toAbsolutePath().normalize();
-    if (Files.exists(fromRepoRoot)) {
-      return fromRepoRoot;
-    }
-    throw new IllegalStateException("Python PDF metin cikarimi scripti bulunamadi: " + properties.pdfExtractorScript());
-  }
-
   private List<RawChunk> chunk(String text) {
     int chunkSize = Math.max(properties.chunkSize(), 200);
     int overlap = Math.min(Math.max(properties.chunkOverlap(), 0), chunkSize - 1);
@@ -170,6 +133,39 @@ public class DocumentProcessingService {
     String original = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "document.pdf";
     String name = Path.of(original).getFileName().toString();
     return name.replaceAll("[^A-Za-z0-9._-]", "_");
+  }
+
+  private String summarize(String text, String filename, int chunkCount) {
+    String normalized = normalizeWhitespace(text);
+    String firstSentence = firstSentence(normalized);
+    return "Belge icerigi ozeti: " + firstSentence
+        + " Dosya adi: " + filename
+        + ". Toplam " + text.length() + " karakter metin cikarildi ve " + chunkCount + " chunk olusturuldu.";
+  }
+
+  private String firstSentence(String text) {
+    if (!StringUtils.hasText(text)) {
+      return "PDF icinden okunabilir metin cikarildi.";
+    }
+    int max = Math.min(text.length(), 700);
+    int sentenceEnd = -1;
+    for (String marker : List.of(". ", "? ", "! ", "\n")) {
+      int index = text.indexOf(marker);
+      if (index > 80 && index < max) {
+        sentenceEnd = sentenceEnd < 0 ? index + 1 : Math.min(sentenceEnd, index + 1);
+      }
+    }
+    String summary = sentenceEnd > 0 ? text.substring(0, sentenceEnd) : text.substring(0, max);
+    return summary.trim() + (summary.length() < text.length() && !summary.endsWith(".") ? "..." : "");
+  }
+
+  private String preview(String text, int maxLength) {
+    String normalized = normalizeWhitespace(text);
+    return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength).trim() + "...";
+  }
+
+  private String normalizeWhitespace(String text) {
+    return text == null ? "" : text.replaceAll("\\s+", " ").trim();
   }
 
   private record RawChunk(int index, String content) {

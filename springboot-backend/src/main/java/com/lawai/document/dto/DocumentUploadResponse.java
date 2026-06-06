@@ -9,6 +9,8 @@ public record DocumentUploadResponse(
     int postgresChunks,
     int opensearchIndexed,
     int pgvectorEmbeddings,
-    String message
+    String message,
+    String summary,
+    String textPreview
 ) {
 }

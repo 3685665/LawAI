@@ -13,7 +13,7 @@
   <artifactId>lawai-springboot-backend</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>lawai-springboot-backend</name>
-  <description>Spring Boot API for LawAI; Python keeps AI-specific work.</description>
+  <description>Spring Boot API for LawAI.</description>
 
   <properties>
     <java.version>24</java.version>

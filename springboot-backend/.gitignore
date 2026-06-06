@@ -32,3 +32,6 @@ jacoco.exec
 # Misc
 *.tmp
 *.swp
+
+# Uploaded PDF files
+uploads/**/*.pdf

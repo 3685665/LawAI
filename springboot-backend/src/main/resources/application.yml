@@ -19,8 +19,6 @@ app:
   max-upload-mb: ${MAX_UPLOAD_MB:25}
   document:
     upload-dir: ${DOCUMENT_UPLOAD_DIR:uploads/documents}
-    python-command: ${PYTHON_COMMAND:python}
-    pdf-extractor-script: ${PDF_EXTRACTOR_SCRIPT:scripts/extract_pdf_text.py}
     chunk-size: ${DOCUMENT_CHUNK_SIZE:1200}
     chunk-overlap: ${DOCUMENT_CHUNK_OVERLAP:150}
     embedding-dimensions: ${LAWAI_EMBEDDING_DIMENSIONS:768}

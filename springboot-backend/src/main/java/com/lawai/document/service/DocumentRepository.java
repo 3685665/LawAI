@@ -7,7 +7,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,7 +31,7 @@ public class DocumentRepository {
           INSERT INTO legal_documents (filename, content_type, size_bytes, stored_path, extracted_text)
           VALUES (?, ?, ?, ?, ?)
           """,
-          Statement.RETURN_GENERATED_KEYS
+          new String[] {"id"}
       );
       statement.setString(1, filename);
       statement.setString(2, contentType);
@@ -88,7 +87,7 @@ public class DocumentRepository {
           INSERT INTO legal_document_chunks (document_id, chunk_index, content, embedding)
           VALUES (?, ?, ?, ?::vector)
           """,
-          Statement.RETURN_GENERATED_KEYS
+          new String[] {"id"}
       );
       statement.setLong(1, documentId);
       statement.setInt(2, chunk.chunkIndex());

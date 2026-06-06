@@ -2852,6 +2852,28 @@ body[data-theme="dark"] .law-chat-download {
   display: none;
 }
 
+.document-info-card {
+  background: linear-gradient(135deg, #f8fbff, #eef6f1);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.document-info-card strong,
+.document-pipeline strong {
+  color: var(--ink);
+}
+
+.document-info-card ul {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .selected-file {
   align-items: center;
   display: flex;
@@ -2887,6 +2909,112 @@ body[data-theme="dark"] .law-chat-download {
 .document-summary {
   display: grid;
   gap: 14px;
+}
+
+.document-pipeline {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
+.document-pipeline p {
+  color: var(--muted);
+  margin: 3px 0 0;
+}
+
+.document-pipeline ol {
+  counter-reset: pipeline;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.document-pipeline li {
+  align-items: start;
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  padding: 10px;
+}
+
+.document-pipeline li span {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.document-pipeline li p {
+  margin: 3px 0 0;
+}
+
+.document-result-help {
+  background: #f6f8fb;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  margin: 0;
+  padding: 12px;
+}
+
+.document-content-summary,
+.document-text-preview {
+  background: #fffdf8;
+  border: 1px solid #eadfca;
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+}
+
+.document-content-summary span,
+.document-text-preview span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.document-content-summary p {
+  margin: 0;
+}
+
+.document-text-preview pre {
+  margin: 0;
+}
+
+.stored-path {
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.stored-path span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stored-path code {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .cases-shell {

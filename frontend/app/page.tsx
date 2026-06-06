@@ -151,21 +151,26 @@ type CaseDocument = {
   group: string;
 };
 type UploadResponse = {
+  documentId?: number;
   filename: string;
-  size: number;
-  contentType: string;
+  storedPath?: string;
+  size?: number;
+  contentType?: string;
   detectedIssues?: string[];
   summary?: string;
   extractedCharacters?: number;
   chunkCount?: number;
   indexed?: number;
+  postgresChunks?: number;
+  opensearchIndexed?: number;
+  pgvectorEmbeddings?: number;
   storage?: string;
   message?: string;
   textPreview?: string;
   warnings?: string[];
 };
 
-const acceptedExtensions = [".pdf", ".doc", ".docx", ".txt"];
+const acceptedExtensions = [".pdf"];
 const maxFileBytes = 25 * 1024 * 1024;
 
 const caseTypeLabels: Record<CaseType, string> = {
@@ -2339,9 +2344,8 @@ export default function Home() {
 function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; loading: string; run: (action: string, fn: () => Promise<void>) => void; onGoToChat: () => void }) {
   const t = getMessages(locale).document;
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const uploadInFlightRef = useRef(false);
   const [file, setFile] = useState<File | null>(null);
-  const [topic, setTopic] = useState("");
-  const [court, setCourt] = useState("");
   const [localError, setLocalError] = useState("");
   const [result, setResult] = useState<UploadResponse | null>(null);
 
@@ -2356,33 +2360,44 @@ function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; l
     setLocalError("");
     setFile(nextFile);
     setResult(null);
-    if (nextFile && !topic.trim()) setTopic(nextFile.name.replace(/\.[^.]+$/, ""));
   }
 
-  function runUpload(action: "analyze" | "ingest") {
+  function runUpload() {
+    if (uploadInFlightRef.current) {
+      return;
+    }
     if (!file) {
       setLocalError(t.errors.selectFirst);
       return;
     }
-    run(action, async () => {
-      const form = new FormData();
-      form.append("file", file, file.name);
-      if (action === "ingest") {
-        if (topic.trim()) form.append("topic", topic.trim());
-        if (court.trim()) form.append("court", court.trim());
+    uploadInFlightRef.current = true;
+    run("document-upload", async () => {
+      try {
+        const form = new FormData();
+        form.append("file", file, file.name);
+        setResult(await uploadMultipart<UploadResponse>("/upload", form));
+      } finally {
+        uploadInFlightRef.current = false;
       }
-      setResult(await uploadMultipart<UploadResponse>(action === "ingest" ? "/documents/ingest" : "/documents/analyze", form));
     });
   }
 
   const isBusy = Boolean(loading);
   const issues = result?.detectedIssues ?? result?.warnings ?? [];
-  const ingestSuccess = result?.chunkCount != null && Number(result.indexed) > 0;
+  const indexedCount = result?.postgresChunks ?? result?.indexed ?? result?.chunkCount ?? 0;
+  const ingestSuccess = result?.chunkCount != null && indexedCount > 0;
 
   return (
     <section className="pdf-upload-layout">
       <div className="panel primary-panel pdf-upload-form">
         <PanelTitle icon={<Upload size={20} />} title={t.title} />
+        <p className="panel-subtitle">{t.subtitle}</p>
+        <div className="document-info-card">
+          <strong>{t.beforeUploadTitle}</strong>
+          <ul>
+            {t.beforeUploadItems.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
         <input ref={inputRef} accept={acceptedExtensions.join(",")} onChange={(event) => applyFile(event.target.files?.[0] ?? null)} type="file" />
         <div className="dropzone" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
           {file ? (
@@ -2399,28 +2414,57 @@ function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; l
             </>
           )}
         </div>
-        <label className="field-label">{t.topic}<input disabled={isBusy} onChange={(event) => setTopic(event.target.value)} value={topic} /></label>
-        <label className="field-label">{t.court}<input disabled={isBusy} onChange={(event) => setCourt(event.target.value)} value={court} /></label>
         <div className="upload-actions">
-          <button className="secondary-button" disabled={!file || isBusy} onClick={() => runUpload("analyze")} type="button">{loading === "analyze" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}{t.analyze}</button>
-          <button disabled={!file || isBusy} onClick={() => runUpload("ingest")} type="button">{loading === "ingest" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}{t.ingest}</button>
+          <button disabled={!file || isBusy} onClick={runUpload} type="button">{loading === "document-upload" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}{t.ingest}</button>
         </div>
         {localError && <div className="inline-error"><AlertCircle size={18} /><span>{localError}</span></div>}
+        <div className="document-pipeline">
+          <div>
+            <strong>{t.pipelineTitle}</strong>
+            <p>{t.pipelineIntro}</p>
+          </div>
+          <ol>
+            {t.pipelineSteps.map((step, index) => (
+              <li key={step}>
+                <span>{index + 1}</span>
+                <p>{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
       <ResultPanel title={t.result}>
         {!result && !loading && <EmptyState text={t.empty} />}
         {loading && <div className="result-loading"><LoaderCircle className="spin" size={36} /><strong>{t.processing}</strong></div>}
         {result && !loading && (
           <div className="document-summary">
-            {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{t.indexedParts.replace("{count}", String(result.indexed))}</span></div>}
+            {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{t.pipelineCompleted} {t.indexedParts.replace("{count}", String(indexedCount))}</span></div>}
             <div className="result-stats">
+              {result.documentId != null && <div><span>{t.documentId}</span><strong>{result.documentId}</strong></div>}
               <div><span>{t.file}</span><strong>{result.filename}</strong></div>
-              <div><span>{t.type}</span><strong>{result.contentType}</strong></div>
-              <div><span>{t.size}</span><strong>{formatBytes(result.size)}</strong></div>
+              {result.contentType && <div><span>{t.type}</span><strong>{result.contentType}</strong></div>}
+              {result.size != null && <div><span>{t.size}</span><strong>{formatBytes(result.size)}</strong></div>}
               {result.extractedCharacters != null && <div><span>{t.extractedText}</span><strong>{result.extractedCharacters.toLocaleString(locale === "en" ? "en-US" : "tr-TR")} {t.characters}</strong></div>}
+              {result.chunkCount != null && <div><span>{locale === "en" ? "Chunks" : "Chunk"}</span><strong>{result.chunkCount}</strong></div>}
+              {result.postgresChunks != null && <div><span>{t.postgres}</span><strong>{result.postgresChunks}</strong></div>}
+              {result.opensearchIndexed != null && <div><span>OpenSearch</span><strong>{result.opensearchIndexed}</strong></div>}
+              {result.pgvectorEmbeddings != null && <div><span>pgvector</span><strong>{result.pgvectorEmbeddings}</strong></div>}
             </div>
-            <p>{result.message || result.summary}</p>
-            {result.textPreview && <pre>{result.textPreview}</pre>}
+            <p className="document-result-help">{t.resultHelp}</p>
+            {result.message && <p>{result.message}</p>}
+            {result.summary && (
+              <div className="document-content-summary">
+                <span>{t.contentSummary}</span>
+                <p>{result.summary}</p>
+              </div>
+            )}
+            {result.storedPath && <div className="stored-path"><span>{t.storedPath}</span><code>{result.storedPath}</code></div>}
+            {result.textPreview && (
+              <div className="document-text-preview">
+                <span>{t.textPreview}</span>
+                <pre>{result.textPreview}</pre>
+              </div>
+            )}
             {issues.length > 0 && <ul className="issue-list">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
             {ingestSuccess && <button className="chat-cta" onClick={onGoToChat} type="button"><Bot size={17} />{t.goChat}</button>}
           </div>

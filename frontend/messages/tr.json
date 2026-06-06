@@ -336,12 +336,29 @@
   },
   "document": {
     "title": "Dokuman yukle ve bilgi bankasina ekle",
+    "subtitle": "PDF dosyasi tek akista kaydedilir, metni cikarilir, chunklara bolunur ve arama sistemlerine yazilir.",
+    "pipelineTitle": "Islem sirasi",
+    "pipelineIntro": "Yukleme tamamlandiginda belge asagidaki hattin tamamindan gecmis olur.",
+    "pipelineSteps": [
+      "PDF dosyasi local diske kaydedilir.",
+      "Metin Python PDF servisi ile cikarilir.",
+      "Tam metin PostgreSQL legal_documents tablosuna yazilir.",
+      "Metin chunklara bolunur ve PostgreSQL'e kaydedilir.",
+      "Chunklar OpenSearch indeksine gonderilir.",
+      "Embeddingler pgvector alanina yazilir."
+    ],
+    "beforeUploadTitle": "Yuklemeden once",
+    "beforeUploadItems": [
+      "Sadece metin secilebilir PDF dosyalari kullanin.",
+      "Taranmis goruntu PDF'lerinde OCR olmadigi icin metin cikmayabilir.",
+      "Ayni dosyayi tekrar yuklerseniz sistem yeni bir belge kaydi olusturur."
+    ],
     "chooseFile": "Dosyanizi secin",
-    "fileHint": "PDF, Word, TXT - en fazla 25 MB",
+    "fileHint": "PDF - en fazla 25 MB",
     "topic": "Konu basligi",
     "court": "Mahkeme (opsiyonel)",
     "analyze": "On kontrol",
-    "ingest": "Bilgi bankasina ekle",
+    "ingest": "Yukle ve isle",
     "result": "Sonuc",
     "empty": "Dosya yukleyip islem baslatinca ozet burada gorunur.",
     "processing": "Isleniyor...",
@@ -350,12 +367,19 @@
     "size": "Boyut",
     "extractedText": "Cikarilan metin",
     "characters": "karakter",
-    "indexedParts": "{count} parca indekslendi",
+    "indexedParts": "{count} parca kaydedildi",
+    "documentId": "Belge ID",
+    "storedPath": "Kayit yolu",
+    "postgres": "PostgreSQL",
+    "pipelineCompleted": "Belge isleme hatti tamamlandi.",
+    "resultHelp": "Bu sayilar belgenin hangi sistemlere yazildigini gosterir. OpenSearch emsal arama icin, pgvector anlamsal arama icin kullanilir.",
+    "contentSummary": "Icerik ozeti",
+    "textPreview": "Metin onizlemesi",
     "goChat": "Sohbete git",
     "errors": {
       "noFile": "Dosya secilmedi.",
       "selectFirst": "Once bir dosya secin.",
-      "unsupported": "Sadece PDF, Word ve metin dosyalari desteklenir.",
+      "unsupported": "Belge isleme hatti su an sadece PDF dosyalarini destekler.",
       "tooLarge": "Dosya 25 MB sinirini asiyor.",
       "empty": "Dosya bos gorunuyor."
     }
