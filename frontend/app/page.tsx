@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ClipboardList,
   CreditCard,
+  Clock3,
   FileUp,
   FileSearch,
   FileText,
@@ -27,6 +28,8 @@ import {
   Send,
   Settings,
   ShieldAlert,
+  ShieldCheck,
+  Sparkles,
   ScrollText,
   Upload,
   UserRound,
@@ -1652,12 +1655,25 @@ export default function Home() {
 
         {activeTab === "chat" && (
           <section className="smart-notes-workspace law-chat-home">
+            <div className="law-chat-orb law-chat-orb-one" aria-hidden="true" />
+            <div className="law-chat-orb law-chat-orb-two" aria-hidden="true" />
             <header className="law-chat-hero">
               <div className="law-chat-mark">
-                <Scale size={70} strokeWidth={1.45} />
+                <div className="law-chat-mark-icon">
+                  <Scale size={70} strokeWidth={1.45} />
+                </div>
                 <strong>LawAI</strong>
               </div>
+              <p className="law-chat-kicker">
+                <Sparkles size={16} />
+                Belgeli, hizli ve izlenebilir hukuk analizi
+              </p>
               <h1>Hoş geldiniz, ne yapmak istersiniz?</h1>
+              <div className="law-chat-signals" aria-label="Asistan ozellikleri">
+                <span><ShieldCheck size={16} /> Gizli calisma modu</span>
+                <span><Clock3 size={16} /> Dakikalar icinde on analiz</span>
+                <span><FileSearch size={16} /> Belge destekli yanit</span>
+              </div>
             </header>
 
             {chatMessages.length ? (
@@ -1673,7 +1689,11 @@ export default function Home() {
                 {loading === "chat" ? (
                   <article className="law-chat-message assistant pending">
                     <span>LawAI</span>
-                    <p><LoaderCircle className="spin" size={18} /> Cevap hazirlaniyor...</p>
+                    <p>
+                      <LoaderCircle className="spin" size={18} />
+                      Cevap hazirlaniyor
+                      <i className="typing-dots" aria-hidden="true"><b></b><b></b><b></b></i>
+                    </p>
                   </article>
                 ) : null}
                 {chatResponse ? (
@@ -1683,7 +1703,25 @@ export default function Home() {
                   </button>
                 ) : null}
               </section>
-            ) : null}
+            ) : (
+              <section className="law-chat-prompts" aria-label="Ornek asistan kullanımlari">
+                <article>
+                  <FileText size={20} />
+                  <strong>Belgeyi ozetle</strong>
+                  <p>Dilekce, sozlesme veya tutanaktaki hukuki riskleri hizlica cikar.</p>
+                </article>
+                <article>
+                  <Scale size={20} />
+                  <strong>Dava stratejisi kur</strong>
+                  <p>Eksik delilleri, durusma notlarini ve sonraki adimlari planla.</p>
+                </article>
+                <article>
+                  <MessageSquareMore size={20} />
+                  <strong>Net soru sor</strong>
+                  <p>Kisa bir olay anlat, uygulanabilir cevap ve kontrol listesi al.</p>
+                </article>
+              </section>
+            )}
 
             <form className="law-chat-composer" onSubmit={submitChat}>
               <input
