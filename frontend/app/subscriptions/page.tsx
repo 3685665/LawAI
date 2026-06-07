@@ -3,17 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
-import { authLogout, authMe, listSubscriptions, type AuthUser, type SubscriptionPlan } from "@/lib/api";
+import { authLogout, authMe, cancelMySubscription, getMySubscription, listSubscriptions, subscribeToPlan, type AuthUser, type SubscriptionPlan, type UserSubscription } from "@/lib/api";
 
 type BillingCycle = "monthly" | "yearly";
+type SubscriptionTab = "plans" | "mine";
 
 export default function SubscriptionsPage() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState("");
   const [error, setError] = useState("");
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [activeTab, setActiveTab] = useState<SubscriptionTab>("plans");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
@@ -39,9 +43,12 @@ export default function SubscriptionsPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    listSubscriptions()
-      .then((items) => {
-        if (!cancelled) setPlans(items);
+    Promise.all([listSubscriptions(), getMySubscription()])
+      .then(([items, subscription]) => {
+        if (!cancelled) {
+          setPlans(items);
+          setCurrentSubscription(subscription);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Abonelik planlari yuklenemedi.");
@@ -61,6 +68,34 @@ export default function SubscriptionsPage() {
       await authLogout();
     } finally {
       window.location.href = "/";
+    }
+  }
+
+  async function selectPlan(plan: SubscriptionPlan) {
+    setActionLoading(plan.id);
+    setError("");
+    try {
+      const subscription = await subscribeToPlan({ planId: plan.id, billingCycle: cycle });
+      setCurrentSubscription(subscription);
+      setActiveTab("mine");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Abonelik kaydi olusturulamadi.");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function cancelSubscription() {
+    if (!window.confirm("Mevcut aboneliginizi iptal etmek istiyor musunuz?")) return;
+    setActionLoading("cancel");
+    setError("");
+    try {
+      const subscription = await cancelMySubscription();
+      setCurrentSubscription(subscription);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Abonelik iptal edilemedi.");
+    } finally {
+      setActionLoading("");
     }
   }
 
@@ -98,11 +133,36 @@ export default function SubscriptionsPage() {
 
         {error ? <div className="error">{error}</div> : null}
 
+        <div className="subscription-tabs panel">
+          <button className={activeTab === "plans" ? "active" : ""} type="button" onClick={() => setActiveTab("plans")}>Planlar</button>
+          <button className={activeTab === "mine" ? "active" : ""} type="button" onClick={() => setActiveTab("mine")}>Aboneligim</button>
+        </div>
+
         {loading ? (
           <div className="panel subscription-loading"><LoaderCircle className="spin" size={24} /> Planlar yukleniyor...</div>
-        ) : (
+        ) : activeTab === "plans" ? (
           <section className="pricing-grid">
-            {sortedPlans.map((plan) => <PlanCard key={plan.id} cycle={cycle} plan={plan} />)}
+            {sortedPlans.map((plan) => <PlanCard currentSubscription={currentSubscription} key={plan.id} loading={actionLoading === plan.id} cycle={cycle} onSelect={() => void selectPlan(plan)} plan={plan} />)}
+          </section>
+        ) : (
+          <section className="panel subscription-current-panel">
+            <div>
+              <span className="section-label">Mevcut abonelik</span>
+              <h2>{currentSubscription ? currentSubscription.planName : "Aktif abonelik yok"}</h2>
+              <p>{currentSubscription ? `${statusLabel(currentSubscription.status)} - ${cycleLabel(currentSubscription.billingCycle)} odeme` : "Bir plan sectiginizde abonelik kaydiniz burada tutulur."}</p>
+            </div>
+            {currentSubscription ? (
+              <div className="subscription-current-grid">
+                <div><span>Durum</span><strong>{statusLabel(currentSubscription.status)}</strong></div>
+                <div><span>Donem</span><strong>{cycleLabel(currentSubscription.billingCycle)}</strong></div>
+                <div><span>Baslangic</span><strong>{formatDate(currentSubscription.startsAt)}</strong></div>
+                <div><span>Bitis</span><strong>{formatDate(currentSubscription.endsAt)}</strong></div>
+              </div>
+            ) : null}
+            <div className="hero-actions">
+              <button className="secondary-button" type="button" onClick={() => setActiveTab("plans")}>Planlara don</button>
+              {currentSubscription?.status === "ACTIVE" ? <button className="danger-button" disabled={actionLoading === "cancel"} type="button" onClick={() => void cancelSubscription()}>{actionLoading === "cancel" ? <LoaderCircle className="spin" size={16} /> : null} Iptal et</button> : null}
+            </div>
           </section>
         )}
 
@@ -112,10 +172,11 @@ export default function SubscriptionsPage() {
   );
 }
 
-function PlanCard({ plan, cycle }: { plan: SubscriptionPlan; cycle: BillingCycle }) {
+function PlanCard({ plan, cycle, currentSubscription, loading, onSelect }: { plan: SubscriptionPlan; cycle: BillingCycle; currentSubscription: UserSubscription | null; loading: boolean; onSelect: () => void }) {
   const price = cycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
   const suffix = cycle === "yearly" ? "/ yil" : "/ ay";
   const isContact = price === 0 && plan.slug === "kurumsal";
+  const isCurrent = currentSubscription?.planId === plan.id && currentSubscription.status === "ACTIVE";
   return (
     <article className={`pricing-card ${plan.highlighted ? "featured" : ""}`}>
       {plan.badge ? <span className="plan-badge">{plan.badge}</span> : null}
@@ -142,7 +203,10 @@ function PlanCard({ plan, cycle }: { plan: SubscriptionPlan; cycle: BillingCycle
           ))}
         </div>
       ) : null}
-      <button className={plan.highlighted ? "" : "secondary-button"} type="button">{plan.ctaLabel || `${plan.name} sec`}</button>
+      <button className={plan.highlighted ? "" : "secondary-button"} disabled={loading || isCurrent} onClick={onSelect} type="button">
+        {loading ? <LoaderCircle className="spin" size={16} /> : null}
+        {isCurrent ? "Mevcut plan" : plan.ctaLabel || `${plan.name} sec`}
+      </button>
     </article>
   );
 }
@@ -186,6 +250,24 @@ function LoadingCard({ title, text }: { title: string; text: string }) {
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("tr-TR");
+}
+
+function cycleLabel(value: string) {
+  return value === "yearly" ? "Yillik" : "Aylik";
+}
+
+function statusLabel(value: string) {
+  const labels: Record<string, string> = {
+    ACTIVE: "Aktif",
+    PAUSED: "Duraklatildi",
+    CANCELLED: "Iptal edildi",
+    EXPIRED: "Suresi doldu"
+  };
+  return labels[value] ?? value;
 }
 
 

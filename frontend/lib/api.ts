@@ -111,6 +111,20 @@ export type SubscriptionPlan = {
   createdAt?: string | null;
   updatedAt?: string | null;
 };
+export type UserSubscription = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  planId: string;
+  planName: string;
+  billingCycle: "monthly" | "yearly";
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED";
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
 export type SubscriptionPlanPayload = {
   name: string;
   slug?: string;
@@ -295,8 +309,29 @@ export async function listSubscriptions(): Promise<SubscriptionPlan[]> {
   return getJson<SubscriptionPlan[]>("/subscriptions");
 }
 
+export async function getMySubscription(): Promise<UserSubscription | null> {
+  const response = await fetch(`${API_BASE}/subscriptions/me`, { cache: "no-store", credentials: "include" });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) as UserSubscription : null;
+}
+
+export async function subscribeToPlan(payload: { planId: string; billingCycle: "monthly" | "yearly" }): Promise<UserSubscription> {
+  return postJson<UserSubscription>("/subscriptions/me", payload);
+}
+
+export async function cancelMySubscription(): Promise<UserSubscription> {
+  return postJson<UserSubscription>("/subscriptions/me/cancel", {});
+}
+
 export async function listAdminSubscriptions(): Promise<SubscriptionPlan[]> {
   return getJson<SubscriptionPlan[]>("/subscriptions/admin");
+}
+
+export async function listAdminUserSubscriptions(): Promise<UserSubscription[]> {
+  return getJson<UserSubscription[]>("/subscriptions/admin/users");
 }
 
 export async function createSubscriptionPlan(payload: SubscriptionPlanPayload): Promise<SubscriptionPlan> {
@@ -309,6 +344,19 @@ export async function updateSubscriptionPlan(id: string, payload: SubscriptionPl
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function updateUserSubscriptionStatus(id: string, status: UserSubscription["status"]): Promise<UserSubscription> {
+  const response = await fetch(`${API_BASE}/subscriptions/admin/users/${id}/status`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
   });
   if (!response.ok) {
     throw new Error(await readError(response));

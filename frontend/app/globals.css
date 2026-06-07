@@ -4116,6 +4116,105 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   gap: 18px;
 }
 
+.subscription-tabs {
+  display: inline-grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  justify-self: start;
+  padding: 8px;
+}
+
+.subscription-tabs button {
+  background: #eef3f7;
+  border-radius: 8px;
+  color: var(--accent-strong);
+  box-shadow: none;
+}
+
+.subscription-tabs button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.subscription-current-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.subscription-current-panel h2 {
+  font-size: 28px;
+  margin: 4px 0 6px;
+}
+
+.subscription-current-panel p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.subscription-current-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.subscription-current-grid div {
+  background: #fafbfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+}
+
+.subscription-current-grid span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.user-subscription-admin-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.user-subscription-table {
+  display: grid;
+  gap: 8px;
+}
+
+.user-subscription-row {
+  align-items: center;
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.9fr) minmax(100px, 0.4fr) minmax(120px, 0.5fr) minmax(150px, 0.6fr);
+  padding: 12px;
+}
+
+.user-subscription-row.head {
+  background: #eef3f7;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.user-subscription-row strong,
+.user-subscription-row small {
+  display: block;
+}
+
+.user-subscription-row small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.user-subscription-row select {
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
 .subscription-hero {
   align-items: center;
   background:
@@ -4397,7 +4496,14 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 @media (max-width: 900px) {
   .pricing-grid,
   .admin-subscription-layout,
-  .subscription-admin-grid {
+  .subscription-admin-grid,
+  .subscription-current-grid,
+  .subscription-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .user-subscription-row,
+  .user-subscription-row.head {
     grid-template-columns: 1fr;
   }
 

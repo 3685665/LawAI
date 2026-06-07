@@ -3,6 +3,9 @@ package com.lawai.api.subscription;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.subscription.dto.SubscriptionPlanDto;
 import com.lawai.api.subscription.dto.SubscriptionPlanRequest;
+import com.lawai.api.subscription.dto.UserSubscriptionDto;
+import com.lawai.api.subscription.dto.UserSubscriptionRequest;
+import com.lawai.api.subscription.dto.UserSubscriptionStatusRequest;
 import com.lawai.auth.model.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,40 @@ public class SubscriptionPlanController {
   @GetMapping("/admin")
   public List<SubscriptionPlanDto> listAdmin(Authentication authentication) {
     return subscriptionPlanService.listAll(requireUser(authentication));
+  }
+
+  @GetMapping("/me")
+  public UserSubscriptionDto mySubscription(Authentication authentication) {
+    return subscriptionPlanService.mySubscription(requireUser(authentication));
+  }
+
+  @PostMapping("/me")
+  public UserSubscriptionDto subscribe(@Valid @RequestBody UserSubscriptionRequest request, Authentication authentication) {
+    AuthenticatedUser user = requireUser(authentication);
+    UserSubscriptionDto response = subscriptionPlanService.subscribe(user, request);
+    activityLogService.logBackend(user, "subscription-select", "Abonelik", "Abonelik secildi: " + response.planName(), "/api/subscriptions/me");
+    return response;
+  }
+
+  @PostMapping("/me/cancel")
+  public UserSubscriptionDto cancelMine(Authentication authentication) {
+    AuthenticatedUser user = requireUser(authentication);
+    UserSubscriptionDto response = subscriptionPlanService.cancelMine(user);
+    activityLogService.logBackend(user, "subscription-cancel", "Abonelik", "Abonelik iptal edildi: " + response.planName(), "/api/subscriptions/me/cancel");
+    return response;
+  }
+
+  @GetMapping("/admin/users")
+  public List<UserSubscriptionDto> listUserSubscriptions(Authentication authentication) {
+    return subscriptionPlanService.listUserSubscriptions(requireUser(authentication));
+  }
+
+  @PutMapping("/admin/users/{id}/status")
+  public UserSubscriptionDto updateUserSubscriptionStatus(@PathVariable String id, @Valid @RequestBody UserSubscriptionStatusRequest request, Authentication authentication) {
+    AuthenticatedUser user = requireUser(authentication);
+    UserSubscriptionDto response = subscriptionPlanService.updateUserSubscriptionStatus(user, id, request.status());
+    activityLogService.logBackend(user, "subscription-user-status", "Abonelik Yonetimi", "Kullanici aboneligi guncellendi: " + response.userEmail(), "/api/subscriptions/admin/users/" + id + "/status");
+    return response;
   }
 
   @PostMapping("/admin")

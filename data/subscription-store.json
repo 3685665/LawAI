@@ -113,5 +113,19 @@
     "ctaLabel" : "Irtibat kurun",
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
+  } ],
+  "userSubscriptions" : [ {
+    "id" : "49075a75-01df-4f4b-a407-00a84ac325c1",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "planId" : "super",
+    "planName" : "Super",
+    "billingCycle" : "monthly",
+    "status" : "ACTIVE",
+    "startsAt" : "2026-06-07T11:48:52.1009495Z",
+    "endsAt" : "2026-07-07T11:48:52.1009495Z",
+    "createdAt" : "2026-06-07T11:46:58.3338138Z",
+    "updatedAt" : "2026-06-07T11:48:52.1009495Z"
   } ]
 }
