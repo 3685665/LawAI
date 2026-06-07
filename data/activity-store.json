@@ -4499,5 +4499,53 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-07T13:14:52.7788677Z"
+  }, {
+    "id" : "ab285d37-13cd-4c91-9f74-0ed1fd3b0184",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T14:57:06.801168Z"
+  }, {
+    "id" : "d72f03ef-ed5f-428f-9a72-1e19bfc6b4ba",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T15:10:32.4054192Z"
+  }, {
+    "id" : "c6fd3511-fd15-4f99-8872-4b833ed1f07c",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T15:12:34.2005525Z"
+  }, {
+    "id" : "226bd7e4-f43f-41a9-9484-ca6ec3504162",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T15:14:58.3097496Z"
   } ]
 }

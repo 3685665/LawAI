@@ -2078,7 +2078,8 @@ body[data-theme="dark"] .law-chat-message .citations article {
 }
 
 body[data-theme="dark"] .law-chat-tool,
-body[data-theme="dark"] .law-chat-download {
+body[data-theme="dark"] .law-chat-download,
+body[data-theme="dark"] .law-chat-history-close {
   background: #172536;
   color: var(--accent-strong);
 }
@@ -2092,11 +2093,15 @@ body[data-theme="dark"] .law-chat-download {
 .law-chat-layout {
   align-items: stretch;
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
   min-height: calc(100vh - 160px);
   position: relative;
   z-index: 1;
+}
+
+.law-chat-layout.history-open {
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
 }
 
 .law-chat-main {
@@ -2106,24 +2111,72 @@ body[data-theme="dark"] .law-chat-download {
   min-width: 0;
 }
 
+.law-chat-history-toggle {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(31, 79, 122, 0.14);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-strong);
+  display: inline-flex;
+  gap: 8px;
+  left: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  position: absolute;
+  top: 0;
+  z-index: 3;
+}
+
+.law-chat-history-toggle:hover {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+.law-chat-history-toggle span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.law-chat-history-toggle strong {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 12px;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 6px;
+}
+
 .law-chat-history {
   align-content: start;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: var(--shadow-soft);
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-height: calc(100vh - 160px);
   overflow: hidden;
-  padding: 14px;
+  padding: 12px;
 }
 
 .law-chat-history-head {
-  align-items: center;
-  display: flex;
+  align-items: stretch;
+  display: grid;
   gap: 10px;
-  justify-content: space-between;
+  grid-template-columns: 1fr;
+}
+
+.law-chat-history-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
 }
 
 .law-chat-history-head span {
@@ -2137,7 +2190,7 @@ body[data-theme="dark"] .law-chat-download {
 
 .law-chat-history-head strong {
   display: block;
-  font-size: 18px;
+  font-size: 16px;
   margin-top: 3px;
 }
 
@@ -2145,13 +2198,31 @@ body[data-theme="dark"] .law-chat-download {
   background: var(--ink);
   border-radius: 999px;
   color: var(--panel);
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 36px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.law-chat-history-close {
+  background: #eef3f7;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--accent-strong);
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  width: 36px;
+}
+
+.law-chat-history-close:hover {
+  background: #e3ebf3;
+  color: var(--accent-strong);
 }
 
 .law-chat-history-list {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   overflow: auto;
   padding-right: 2px;
 }
@@ -2159,16 +2230,14 @@ body[data-theme="dark"] .law-chat-download {
 .law-chat-history-item {
   background: #f8fafc;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 12px;
   box-shadow: none;
   color: var(--ink);
-  display: grid;
-  gap: 4px;
-  justify-items: start;
+  display: flex;
+  gap: 6px;
   min-height: 0;
-  padding: 12px 42px 12px 12px;
-  position: relative;
-  text-align: left;
+  padding: 6px;
+  transition: background 0.16s ease, border-color 0.16s ease;
 }
 
 .law-chat-history-item:hover,
@@ -2178,7 +2247,27 @@ body[data-theme="dark"] .law-chat-download {
   color: var(--ink);
 }
 
-.law-chat-history-item span {
+.law-chat-history-select {
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: none;
+  color: inherit;
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  justify-items: start;
+  min-height: 0;
+  min-width: 0;
+  padding: 7px 6px;
+  text-align: left;
+}
+
+.law-chat-history-select:hover {
+  background: transparent;
+}
+
+.law-chat-history-select span {
   font-weight: 800;
   line-height: 1.25;
   max-width: 100%;
@@ -2187,28 +2276,38 @@ body[data-theme="dark"] .law-chat-download {
   white-space: nowrap;
 }
 
-.law-chat-history-item small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.law-chat-history-item i {
+.law-chat-history-select small {
   align-items: center;
-  border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  height: 26px;
-  justify-content: center;
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
+  gap: 4px;
+  font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.law-chat-history-item i:hover {
+.law-chat-history-delete {
+  align-items: center;
+  background: transparent;
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--muted);
+  display: inline-flex;
+  flex: 0 0 28px;
+  height: 28px;
+  justify-content: center;
+  min-height: 0;
+  opacity: 0.68;
+  padding: 0;
+  width: 28px;
+}
+
+.law-chat-history-delete:hover {
   background: rgba(164, 62, 54, 0.11);
   color: var(--danger);
+  opacity: 1;
 }
 
 .law-chat-history-empty,
@@ -2503,6 +2602,7 @@ body[data-theme="dark"] .law-chat-mark-icon,
 body[data-theme="dark"] .law-chat-kicker,
 body[data-theme="dark"] .law-chat-signals span,
 body[data-theme="dark"] .law-chat-prompts article,
+body[data-theme="dark"] .law-chat-history-toggle,
 body[data-theme="dark"] .law-chat-composer,
 body[data-theme="dark"] .law-chat-thread,
 body[data-theme="dark"] .law-chat-message.assistant pre,
@@ -4065,7 +4165,28 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   }
 
   .law-chat-history {
-    max-height: 280px;
+    max-height: none;
+  }
+
+  .law-chat-history-head {
+    align-items: center;
+    grid-template-columns: 1fr auto;
+  }
+
+  .law-chat-new {
+    width: auto;
+  }
+
+  .law-chat-history-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 4px;
+  }
+
+  .law-chat-history-item {
+    flex: 0 0 min(260px, 82vw);
   }
 
   .law-chat-composer {

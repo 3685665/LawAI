@@ -375,6 +375,7 @@ export default function Home() {
   const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>(null);
   const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
   const [chatHistoryError, setChatHistoryError] = useState("");
+  const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
   const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [chatAttachmentLoading, setChatAttachmentLoading] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
@@ -987,6 +988,7 @@ export default function Home() {
         disclaimer: lastAssistant.disclaimer ?? "",
         sessionId: session.id
       } : null);
+      setChatHistoryOpen(false);
     } catch (error) {
       setChatHistoryError(error instanceof Error ? error.message : "Sohbet acilamadi.");
     }
@@ -999,6 +1001,7 @@ export default function Home() {
     setSmartNoteDraft("");
     setChatAttachment(null);
     setChatHistoryError("");
+    setChatHistoryOpen(false);
   }
 
   async function deleteChatSession(sessionId: string, event?: SyntheticEvent) {
@@ -1794,17 +1797,31 @@ export default function Home() {
           <section className="smart-notes-workspace law-chat-home">
             <div className="law-chat-orb law-chat-orb-one" aria-hidden="true" />
             <div className="law-chat-orb law-chat-orb-two" aria-hidden="true" />
-            <div className="law-chat-layout">
+            <div className={`law-chat-layout ${chatHistoryOpen ? "history-open" : ""}`}>
+              {!chatHistoryOpen ? (
+                <button className="law-chat-history-toggle" type="button" onClick={() => setChatHistoryOpen(true)}>
+                  <ScrollText size={16} />
+                  <span>Sohbet gecmisi</span>
+                  <strong>{chatSessions.length}</strong>
+                </button>
+              ) : null}
+
+              {chatHistoryOpen ? (
               <aside className="law-chat-history" aria-label="Sohbet gecmisi">
                 <div className="law-chat-history-head">
                   <div>
                     <span>Sohbet gecmisi</span>
                     <strong>{chatSessions.length} sohbet</strong>
                   </div>
-                  <button className="law-chat-new" type="button" onClick={startNewChat}>
-                    <MessageSquareMore size={16} />
-                    Yeni
-                  </button>
+                  <div className="law-chat-history-actions">
+                    <button className="law-chat-new" type="button" onClick={startNewChat}>
+                      <MessageSquareMore size={16} />
+                      Yeni
+                    </button>
+                    <button className="law-chat-history-close" type="button" onClick={() => setChatHistoryOpen(false)} aria-label="Sohbet gecmisini kapat">
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
                 {chatHistoryError ? <p className="law-chat-history-error">{chatHistoryError}</p> : null}
                 {chatHistoryLoading ? (
@@ -1812,34 +1829,34 @@ export default function Home() {
                 ) : chatSessions.length ? (
                   <div className="law-chat-history-list">
                     {chatSessions.map((session) => (
-                      <button
+                      <article
                         key={session.id}
                         className={`law-chat-history-item ${activeChatSessionId === session.id ? "active" : ""}`}
-                        onClick={() => void openChatSession(session.id)}
-                        type="button"
                       >
-                        <span>{session.title}</span>
-                        <small>{formatDateTime(session.updatedAt, locale, "-")}</small>
-                        <i
+                        <button
+                          className="law-chat-history-select"
+                          onClick={() => void openChatSession(session.id)}
+                          type="button"
+                        >
+                          <span>{session.title}</span>
+                          <small><Clock3 size={12} /> {formatDateTime(session.updatedAt, locale, "-")}</small>
+                        </button>
+                        <button
                           aria-label="Sohbeti sil"
+                          className="law-chat-history-delete"
                           onClick={(event) => void deleteChatSession(session.id, event)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              void deleteChatSession(session.id, event);
-                            }
-                          }}
+                          type="button"
                         >
                           <X size={14} />
-                        </i>
-                      </button>
+                        </button>
+                      </article>
                     ))}
                   </div>
                 ) : (
                   <p className="law-chat-history-empty">Henuz kayitli sohbet yok.</p>
                 )}
               </aside>
+              ) : null}
 
               <div className="law-chat-main">
                 <header className="law-chat-hero">
