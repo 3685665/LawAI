@@ -3,6 +3,7 @@ package com.lawai.auth;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
+import com.lawai.auth.dto.AuthGoogleRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
 import com.lawai.auth.dto.AuthPasswordResetResponse;
 import com.lawai.auth.dto.AuthProfileUpdateRequest;
@@ -61,6 +62,16 @@ public class AuthController {
     AuthUserDto user = authService.currentUser(token);
     activityLogService.logBackend(toAuthenticatedUser(user), "auth-login", "Oturum", "Kullanici giris yapti.", "/api/auth/login");
     return new AuthSessionResponse(user);
+  }
+
+  @PostMapping("/google")
+  public AuthSessionResponse google(@Valid @RequestBody AuthGoogleRequest request, HttpServletResponse response) {
+    AuthUserDto user = authService.loginWithGoogle(request.credential());
+    String token = authService.issueSessionTokenForUser(user.id(), true);
+    setSessionCookie(response, token, true);
+    AuthUserDto currentUser = authService.currentUser(token);
+    activityLogService.logBackend(toAuthenticatedUser(currentUser), "auth-google", "Oturum", "Google hesabi ile oturum acildi.", "/api/auth/google");
+    return new AuthSessionResponse(currentUser);
   }
 
   @PostMapping("/logout")

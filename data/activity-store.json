@@ -4103,5 +4103,77 @@
     "detail" : "Kullanici cikis yapti.",
     "path" : "/api/auth/logout",
     "createdAt" : "2026-06-07T11:06:01.2096811Z"
+  }, {
+    "id" : "48bb3c5f-b446-4f2b-9d4e-5f19da063e00",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "auth-login",
+    "screen" : "Oturum",
+    "detail" : "Kullanici giris yapti.",
+    "path" : "/api/auth/login",
+    "createdAt" : "2026-06-07T11:10:28.1735528Z"
+  }, {
+    "id" : "f4a60535-3ede-4360-803b-9324fa2efeb5",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T11:10:28.9901718Z"
+  }, {
+    "id" : "042c7cba-f42e-4081-80b0-8c9b2b9fd642",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T11:11:04.2332Z"
+  }, {
+    "id" : "36bab5bd-4cf2-40d8-a4a1-ec745db661c0",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T11:11:50.0555878Z"
+  }, {
+    "id" : "2875866a-ad27-4acf-819c-c089662e31d0",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-07T11:18:28.4479272Z"
+  }, {
+    "id" : "588f8347-d1a7-435d-91eb-86f88d1eedd4",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-07T11:18:29.7201818Z"
   } ]
 }

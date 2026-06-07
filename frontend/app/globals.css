@@ -989,6 +989,39 @@ button[aria-expanded="false"] .sidebar-submenu-chevron {
   min-height: 46px;
 }
 
+.google-auth-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.google-auth-button {
+  display: grid;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.google-auth-button iframe {
+  max-width: 100%;
+}
+
+.auth-divider {
+  align-items: center;
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 12px;
+  grid-template-columns: 1fr auto 1fr;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  background: var(--line);
+  content: "";
+  height: 1px;
+}
+
 .auth-fields {
   display: grid;
   gap: 13px;

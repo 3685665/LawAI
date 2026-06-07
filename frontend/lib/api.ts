@@ -214,6 +214,10 @@ export async function authRegister(payload: { name: string; email: string; passw
   return postJson<AuthSessionResponse>("/auth/register", payload);
 }
 
+export async function authGoogle(payload: { credential: string }): Promise<AuthSessionResponse> {
+  return postJson<AuthSessionResponse>("/auth/google", payload);
+}
+
 export async function authMe(): Promise<AuthUser> {
   return getJson<AuthUser>("/auth/me");
 }

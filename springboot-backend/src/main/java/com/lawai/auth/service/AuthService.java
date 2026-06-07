@@ -1,6 +1,7 @@
 package com.lawai.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
@@ -21,6 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.net.URLEncoder;
@@ -40,21 +45,25 @@ public class AuthService {
   private final ObjectMapper objectMapper;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
   private final Path storagePath;
+  private final HttpClient httpClient = HttpClient.newHttpClient();
   private final boolean previewResetToken;
   private final String resetPasswordUrlBase;
   private final String bootstrapEmail;
+  private final String googleClientId;
 
   public AuthService(
       ObjectMapper objectMapper,
       @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken,
       @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase,
-      @Value("${app.auth.bootstrap-email:admin@lawai.local}") String bootstrapEmail
+      @Value("${app.auth.bootstrap-email:admin@lawai.local}") String bootstrapEmail,
+      @Value("${app.auth.google-client-id:}") String googleClientId
   ) {
     this.objectMapper = objectMapper;
     this.storagePath = Path.of(System.getProperty("user.dir"), "data", "auth-store.json");
     this.previewResetToken = previewResetToken;
     this.resetPasswordUrlBase = resetPasswordUrlBase;
     this.bootstrapEmail = normalizeEmail(bootstrapEmail);
+    this.googleClientId = googleClientId == null ? "" : googleClientId.trim();
   }
 
   public AuthSessionResponse register(AuthRegisterRequest request) {
@@ -99,6 +108,19 @@ public class AuthService {
     UserRecord updatedUser = user.withLastLoginAt(now);
     replaceUser(updatedUser);
     return new AuthSessionResponse(toDto(updatedUser));
+  }
+
+  public AuthUserDto loginWithGoogle(String credential) {
+    GoogleTokenPayload googleUser = verifyGoogleCredential(credential);
+    Optional<UserRecord> existingUser = findUserByEmail(googleUser.email());
+    if (existingUser.isPresent()) {
+      UserRecord updatedUser = existingUser.get().withLastLoginAt(OffsetDateTime.now(ZoneOffset.UTC));
+      replaceUser(updatedUser);
+      return toDto(updatedUser);
+    }
+    UserRecord createdUser = createGoogleUser(googleUser);
+    addUser(createdUser);
+    return toDto(createdUser);
   }
 
   public void logout(String sessionToken) {
@@ -228,6 +250,21 @@ public class AuthService {
     return token;
   }
 
+  public String issueSessionTokenForUser(String userId, boolean rememberMe) {
+    UserRecord user = requireUser(userId);
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    String token = generateToken();
+    SessionRecord session = new SessionRecord(
+        hash(token),
+        user.id(),
+        now.plusDays(rememberMe ? 30 : 7),
+        now
+    );
+    replaceUser(user.withLastLoginAt(now));
+    addSession(session);
+    return token;
+  }
+
   public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
@@ -314,6 +351,13 @@ public class AuthService {
     save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets())));
   }
 
+  private void addUser(UserRecord user) {
+    AuthStorePayload payload = load();
+    List<UserRecord> users = new ArrayList<>(safeList(payload.users()));
+    users.add(user);
+    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets())));
+  }
+
   private void addSession(SessionRecord session) {
     AuthStorePayload payload = load();
     List<SessionRecord> sessions = new ArrayList<>(safeList(payload.sessions()));
@@ -341,6 +385,57 @@ public class AuthService {
     return safeList(load().users()).stream()
         .filter(item -> item.email().equalsIgnoreCase(email))
         .findFirst();
+  }
+
+  private UserRecord createGoogleUser(GoogleTokenPayload googleUser) {
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    return new UserRecord(
+        UUID.randomUUID().toString(),
+        StringUtils.hasText(googleUser.name()) ? googleUser.name().trim() : googleUser.email(),
+        googleUser.email(),
+        passwordEncoder.encode(generateToken()),
+        "USER",
+        now,
+        now
+    );
+  }
+
+  private GoogleTokenPayload verifyGoogleCredential(String credential) {
+    if (!StringUtils.hasText(googleClientId)) {
+      throw new IllegalStateException("Google girisi icin GOOGLE_CLIENT_ID ayarlanmadi.");
+    }
+    if (!StringUtils.hasText(credential)) {
+      throw new IllegalArgumentException("Google kimlik bilgisi gerekli.");
+    }
+    try {
+      String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + URLEncoder.encode(credential, StandardCharsets.UTF_8);
+      HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().build();
+      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() < 200 || response.statusCode() >= 300) {
+        throw new BadCredentialsException("Google oturumu dogrulanamadi.");
+      }
+      JsonNode body = objectMapper.readTree(response.body());
+      String audience = textValue(body, "aud");
+      String email = normalizeEmail(textValue(body, "email"));
+      boolean emailVerified = "true".equalsIgnoreCase(textValue(body, "email_verified"));
+      if (!googleClientId.equals(audience)) {
+        throw new BadCredentialsException("Google istemci bilgisi gecersiz.");
+      }
+      if (!emailVerified || !StringUtils.hasText(email)) {
+        throw new BadCredentialsException("Google e-posta adresi dogrulanmadi.");
+      }
+      return new GoogleTokenPayload(email, textValue(body, "name"));
+    } catch (IOException exception) {
+      throw new IllegalStateException("Google oturumu okunamadi: " + exception.getMessage(), exception);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Google oturumu kesintiye ugradi.", exception);
+    }
+  }
+
+  private String textValue(JsonNode node, String fieldName) {
+    JsonNode value = node == null ? null : node.get(fieldName);
+    return value == null || value.isNull() ? "" : value.asText("");
   }
 
   private String effectiveRole(UserRecord user) {
@@ -402,6 +497,9 @@ public class AuthService {
     return StringUtils.hasText(user.role()) && role.equals(user.role().trim().toUpperCase())
         ? user
         : user.withRole(role);
+  }
+
+  private record GoogleTokenPayload(String email, String name) {
   }
 }
 

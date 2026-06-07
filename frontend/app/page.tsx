@@ -41,6 +41,7 @@ import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 import {
   authChangePassword,
   authForgotPassword,
+  authGoogle,
   authLogin,
   authLogout,
   authMe,
@@ -72,6 +73,20 @@ import {
 
 type Tab = "chat" | "search" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
+type GoogleCredentialResponse = { credential?: string };
+type GoogleAccountsId = {
+  initialize: (options: { client_id: string; callback: (response: GoogleCredentialResponse) => void }) => void;
+  renderButton: (parent: HTMLElement, options: Record<string, string | number | boolean>) => void;
+};
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    };
+  }
+}
 type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
 type ChatMessage = {
   id: string;
@@ -318,6 +333,7 @@ export default function Home() {
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [googleAuthError, setGoogleAuthError] = useState("");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authPreview, setAuthPreview] = useState<AuthPasswordResetResponse | null>(null);
   const [authForm, setAuthForm] = useState({
@@ -344,6 +360,8 @@ export default function Home() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSuccess, setProfileSuccess] = useState("");
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
   const t = useMemo(() => getMessages(locale), [locale]);
 
@@ -542,6 +560,52 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!authReady || authUser || authMode === "forgot" || !googleClientId || !googleButtonRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    const renderGoogleButton = () => {
+      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) {
+        return;
+      }
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => void handleGoogleCredential(response)
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        type: "standard",
+        shape: "rectangular",
+        text: "continue_with",
+        width: 320
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+    } else {
+      const existingScript = document.querySelector<HTMLScriptElement>("script[src='https://accounts.google.com/gsi/client']");
+      if (existingScript) {
+        existingScript.addEventListener("load", renderGoogleButton, { once: true });
+      } else {
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.addEventListener("load", renderGoogleButton, { once: true });
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, authUser, authMode, googleClientId]);
 
   useEffect(() => {
     if (!authUser) {
@@ -1256,9 +1320,30 @@ export default function Home() {
     void loadFeedbackHistory();
   }
 
+  async function handleGoogleCredential(response: GoogleCredentialResponse) {
+    setGoogleAuthError("");
+    setAuthError("");
+    if (!response.credential) {
+      setGoogleAuthError("Google oturumu baslatilamadi.");
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const session = await authGoogle({ credential: response.credential });
+      setAuthUser(session.user);
+      setAuthPreview(null);
+      setActiveTab("chat");
+    } catch (error) {
+      setGoogleAuthError(error instanceof Error ? error.message : "Google ile giris basarisiz.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   async function submitAuth(event: FormEvent) {
     event.preventDefault();
     setAuthError("");
+    setGoogleAuthError("");
     setAuthLoading(true);
     try {
       if (authMode === "login") {
@@ -1435,6 +1520,18 @@ export default function Home() {
               <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Hesap ac</button>
               <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Sifremi unuttum</button>
             </div>
+
+            {authMode !== "forgot" ? (
+              <div className="google-auth-panel">
+                {googleClientId ? (
+                  <div className="google-auth-button" ref={googleButtonRef} />
+                ) : (
+                  <p className="auth-note auth-note-compact">Google ile kayit icin NEXT_PUBLIC_GOOGLE_CLIENT_ID ayarlayin.</p>
+                )}
+                {googleAuthError ? <div className="inline-error">{googleAuthError}</div> : null}
+                <div className="auth-divider"><span>veya</span></div>
+              </div>
+            ) : null}
 
             <div className="auth-fields">
               {authMode === "register" && (
