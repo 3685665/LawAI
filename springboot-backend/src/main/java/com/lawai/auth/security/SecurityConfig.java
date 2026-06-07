@@ -20,7 +20,7 @@ public class SecurityConfig {
         .cors(Customizer.withDefaults())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/health", "/api/auth/**", "/api/upload", "/api/search").permitAll()
+            .requestMatchers("/api/health", "/api/auth/**", "/api/billing/stripe/webhook", "/api/upload", "/api/search").permitAll()
             .anyRequest().authenticated()
         )
         .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {

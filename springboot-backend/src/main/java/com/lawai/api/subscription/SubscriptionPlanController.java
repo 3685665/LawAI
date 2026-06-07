@@ -51,10 +51,7 @@ public class SubscriptionPlanController {
 
   @PostMapping("/me")
   public UserSubscriptionDto subscribe(@Valid @RequestBody UserSubscriptionRequest request, Authentication authentication) {
-    AuthenticatedUser user = requireUser(authentication);
-    UserSubscriptionDto response = subscriptionPlanService.subscribe(user, request);
-    activityLogService.logBackend(user, "subscription-select", "Abonelik", "Abonelik secildi: " + response.planName(), "/api/subscriptions/me");
-    return response;
+    throw new IllegalArgumentException("Abonelik baslatmak icin odeme checkout akisini kullanin.");
   }
 
   @PostMapping("/me/cancel")

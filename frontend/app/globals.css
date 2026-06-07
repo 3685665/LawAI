@@ -4154,7 +4154,7 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 .subscription-current-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .subscription-current-grid div {

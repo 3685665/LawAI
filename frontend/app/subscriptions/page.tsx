@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
-import { authLogout, authMe, cancelMySubscription, getMySubscription, listSubscriptions, subscribeToPlan, type AuthUser, type SubscriptionPlan, type UserSubscription } from "@/lib/api";
+import { authLogout, authMe, cancelMySubscription, createBillingCheckout, getMySubscription, listSubscriptions, type AuthUser, type SubscriptionPlan, type UserSubscription } from "@/lib/api";
 
 type BillingCycle = "monthly" | "yearly";
 type SubscriptionTab = "plans" | "mine";
@@ -75,11 +75,11 @@ export default function SubscriptionsPage() {
     setActionLoading(plan.id);
     setError("");
     try {
-      const subscription = await subscribeToPlan({ planId: plan.id, billingCycle: cycle });
-      setCurrentSubscription(subscription);
-      setActiveTab("mine");
+      const checkout = await createBillingCheckout({ planId: plan.id, billingCycle: cycle });
+      setCurrentSubscription(checkout.subscription);
+      window.location.href = checkout.checkoutUrl;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Abonelik kaydi olusturulamadi.");
+      setError(err instanceof Error ? err.message : "Odeme oturumu olusturulamadi.");
     } finally {
       setActionLoading("");
     }
@@ -149,12 +149,13 @@ export default function SubscriptionsPage() {
             <div>
               <span className="section-label">Mevcut abonelik</span>
               <h2>{currentSubscription ? currentSubscription.planName : "Aktif abonelik yok"}</h2>
-              <p>{currentSubscription ? `${statusLabel(currentSubscription.status)} - ${cycleLabel(currentSubscription.billingCycle)} odeme` : "Bir plan sectiginizde abonelik kaydiniz burada tutulur."}</p>
+              <p>{currentSubscription ? `${statusLabel(currentSubscription.status)} - ${cycleLabel(currentSubscription.billingCycle)} odeme` : "Bir plan sectiginizde Stripe odeme sureci baslar ve abonelik kaydiniz burada tutulur."}</p>
             </div>
             {currentSubscription ? (
               <div className="subscription-current-grid">
                 <div><span>Durum</span><strong>{statusLabel(currentSubscription.status)}</strong></div>
                 <div><span>Donem</span><strong>{cycleLabel(currentSubscription.billingCycle)}</strong></div>
+                <div><span>Odeme</span><strong>{currentSubscription.lastPaymentStatus || currentSubscription.provider || "-"}</strong></div>
                 <div><span>Baslangic</span><strong>{formatDate(currentSubscription.startsAt)}</strong></div>
                 <div><span>Bitis</span><strong>{formatDate(currentSubscription.endsAt)}</strong></div>
               </div>
@@ -264,6 +265,8 @@ function statusLabel(value: string) {
   const labels: Record<string, string> = {
     ACTIVE: "Aktif",
     PAUSED: "Duraklatildi",
+    PENDING_PAYMENT: "Odeme bekliyor",
+    PAST_DUE: "Odeme gecikti",
     CANCELLED: "Iptal edildi",
     EXPIRED: "Suresi doldu"
   };

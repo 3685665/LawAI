@@ -4295,5 +4295,17 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-07T11:49:10.4246715Z"
+  }, {
+    "id" : "d94c7e3d-5431-4827-a99a-4119f9c59844",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "subscription-cancel",
+    "screen" : "Abonelik",
+    "detail" : "Abonelik iptal edildi: Super",
+    "path" : "/api/subscriptions/me/cancel",
+    "createdAt" : "2026-06-07T12:29:43.0769727Z"
   } ]
 }

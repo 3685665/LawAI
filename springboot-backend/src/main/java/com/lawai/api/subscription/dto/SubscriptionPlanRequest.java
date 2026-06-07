@@ -20,6 +20,9 @@ public record SubscriptionPlanRequest(
     int sortOrder,
     @NotNull List<String> features,
     List<String> lockedFeatures,
-    String ctaLabel
+    String ctaLabel,
+    String stripeProductId,
+    String stripeMonthlyPriceId,
+    String stripeYearlyPriceId
 ) {
 }

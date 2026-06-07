@@ -108,6 +108,9 @@ export type SubscriptionPlan = {
   features: string[];
   lockedFeatures: string[];
   ctaLabel?: string | null;
+  stripeProductId?: string | null;
+  stripeMonthlyPriceId?: string | null;
+  stripeYearlyPriceId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -119,7 +122,14 @@ export type UserSubscription = {
   planId: string;
   planName: string;
   billingCycle: "monthly" | "yearly";
-  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED";
+  status: "PENDING_PAYMENT" | "ACTIVE" | "PAUSED" | "PAST_DUE" | "CANCELLED" | "EXPIRED";
+  provider?: string | null;
+  providerCustomerId?: string | null;
+  providerSubscriptionId?: string | null;
+  providerCheckoutSessionId?: string | null;
+  providerPriceId?: string | null;
+  lastPaymentStatus?: string | null;
+  cancelAtPeriodEnd?: boolean;
   startsAt: string;
   endsAt: string;
   createdAt: string;
@@ -141,6 +151,14 @@ export type SubscriptionPlanPayload = {
   features: string[];
   lockedFeatures: string[];
   ctaLabel?: string;
+  stripeProductId?: string;
+  stripeMonthlyPriceId?: string;
+  stripeYearlyPriceId?: string;
+};
+export type BillingCheckoutResponse = {
+  checkoutUrl: string;
+  checkoutSessionId: string;
+  subscription: UserSubscription;
 };
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
@@ -320,6 +338,10 @@ export async function getMySubscription(): Promise<UserSubscription | null> {
 
 export async function subscribeToPlan(payload: { planId: string; billingCycle: "monthly" | "yearly" }): Promise<UserSubscription> {
   return postJson<UserSubscription>("/subscriptions/me", payload);
+}
+
+export async function createBillingCheckout(payload: { planId: string; billingCycle: "monthly" | "yearly" }): Promise<BillingCheckoutResponse> {
+  return postJson<BillingCheckoutResponse>("/billing/checkout", payload);
 }
 
 export async function cancelMySubscription(): Promise<UserSubscription> {

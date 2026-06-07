@@ -16,6 +16,9 @@
     "features" : [ "Gelismis dilekce olusturma", "Dokuman analiz destegi", "Hukuki soru-cevap", "Karar arama araci", "Kisisel avukat profili" ],
     "lockedFeatures" : [ "UYAP uyumlu cikti", "Hesaplama araclari", "Derin arastirma modu" ],
     "ctaLabel" : "Ucretsiz basla",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   }, {
@@ -35,6 +38,9 @@
     "features" : [ "Ucretsiz paketteki her sey", "Gunluk yenilenen 20 kullanim hakki", "UYAP uyumlu cikti" ],
     "lockedFeatures" : [ "Infaz hesaplama", "Isci alacaklari hesaplama", "Sozlesme analiz modulu" ],
     "ctaLabel" : "Baslangic'i sec",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   }, {
@@ -54,6 +60,9 @@
     "features" : [ "Baslangic paketindeki her sey", "Derin arastirma modu", "Sozlesme yazma araci", "Arac deger kaybi hesaplama", "Miras hukuku hesaplama", "Faiz hesaplama", "Dava harc ve masraf" ],
     "lockedFeatures" : [ "Sozlesme analiz modulu", "Dava dosyalarim modulu" ],
     "ctaLabel" : "Profesyonel'i sec",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   }, {
@@ -73,6 +82,9 @@
     "features" : [ "Profesyonel paketindeki her sey", "Sozlesme analiz modulu", "Dava dosyalarim modulu", "Infaz hesaplama", "Isci alacaklari hesaplama", "Tum hesaplama araclari", "Derin arastirma modu" ],
     "lockedFeatures" : [ ],
     "ctaLabel" : "Super'i sec",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   }, {
@@ -92,6 +104,9 @@
     "features" : [ "Super paketindeki her sey", "Sinirsiz kullanim hakki", "7/24 Teknik destek", "Tum moduller ve araclar", "Limitsiz analiz ve dilekce" ],
     "lockedFeatures" : [ ],
     "ctaLabel" : "Sinirsiz'i sec",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   }, {
@@ -111,6 +126,9 @@
     "features" : [ "Coklu kullanici yonetimi", "Kuruma ozel dilekce ve sozlesme sablonlari", "Kuruma ozel analiz ciktilari", "Talebe yonelik ozel cozumler", "Oncelikli destek" ],
     "lockedFeatures" : [ ],
     "ctaLabel" : "Irtibat kurun",
+    "stripeProductId" : null,
+    "stripeMonthlyPriceId" : null,
+    "stripeYearlyPriceId" : null,
     "createdAt" : "2026-06-05T08:13:26.2521342Z",
     "updatedAt" : "2026-06-05T08:13:26.2521342Z"
   } ],
@@ -122,10 +140,18 @@
     "planId" : "super",
     "planName" : "Super",
     "billingCycle" : "monthly",
-    "status" : "ACTIVE",
+    "status" : "CANCELLED",
+    "provider" : null,
+    "providerCustomerId" : null,
+    "providerSubscriptionId" : null,
+    "providerCheckoutSessionId" : null,
+    "providerPriceId" : null,
+    "lastPaymentStatus" : null,
+    "cancelAtPeriodEnd" : false,
     "startsAt" : "2026-06-07T11:48:52.1009495Z",
     "endsAt" : "2026-07-07T11:48:52.1009495Z",
     "createdAt" : "2026-06-07T11:46:58.3338138Z",
-    "updatedAt" : "2026-06-07T11:48:52.1009495Z"
-  } ]
+    "updatedAt" : "2026-06-07T12:29:43.0573931Z"
+  } ],
+  "billingEvents" : [ ]
 }

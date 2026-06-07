@@ -4,6 +4,7 @@ import java.util.List;
 
 public record SubscriptionStorePayload(
     List<SubscriptionPlanRecord> plans,
-    List<UserSubscriptionRecord> userSubscriptions
+    List<UserSubscriptionRecord> userSubscriptions,
+    List<BillingEventRecord> billingEvents
 ) {
 }
