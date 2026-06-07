@@ -3,9 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, Bot, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, MessageSquareMore, Plus, Save, Scale, ScrollText, ShieldAlert, Trash2, UserRound } from "lucide-react";
-import { authLogout, authMe, createSubscriptionPlan, deleteSubscriptionPlan, listAdminSubscriptions, listAdminUserSubscriptions, updateSubscriptionPlan, updateUserSubscriptionStatus, type AuthUser, type SubscriptionPlan, type SubscriptionPlanPayload, type UserSubscription } from "@/lib/api";
+import { authLogout, authMe, createSubscriptionPlan, deleteSubscriptionPlan, listAdminSubscriptions, updateSubscriptionPlan, type AuthUser, type SubscriptionPlan, type SubscriptionPlanPayload } from "@/lib/api";
 
-type AdminSubscriptionTab = "plans" | "users";
 type PlanForm = {
   name: string;
   slug: string;
@@ -52,14 +51,11 @@ export default function AdminSubscriptionsPage() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [items, setItems] = useState<SubscriptionPlan[]>([]);
-  const [userSubscriptions, setUserSubscriptions] = useState<UserSubscription[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<PlanForm>(emptyForm);
   const [loading, setLoading] = useState(false);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<AdminSubscriptionTab>("plans");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(true);
 
@@ -83,7 +79,6 @@ export default function AdminSubscriptionsPage() {
   useEffect(() => {
     if (!authUser || authUser.role !== "ADMIN") return;
     void loadPlans();
-    void loadUserSubscriptions();
   }, [authUser]);
 
   const sortedItems = useMemo(() => [...items].sort((left, right) => left.sortOrder - right.sortOrder), [items]);
@@ -102,19 +97,6 @@ export default function AdminSubscriptionsPage() {
       setError(err instanceof Error ? err.message : "Abonelik planlari yuklenemedi.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function loadUserSubscriptions() {
-    setLoadingUsers(true);
-    setError("");
-    try {
-      const subscriptions = await listAdminUserSubscriptions();
-      setUserSubscriptions(subscriptions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Kullanici abonelikleri yuklenemedi.");
-    } finally {
-      setLoadingUsers(false);
     }
   }
 
@@ -180,19 +162,6 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
-  async function changeUserSubscriptionStatus(id: string, status: UserSubscription["status"]) {
-    setSaving(true);
-    setError("");
-    try {
-      const updated = await updateUserSubscriptionStatus(id, status);
-      setUserSubscriptions((current) => current.map((item) => item.id === id ? updated : item));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Kullanici aboneligi guncellenemedi.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function handleLogout() {
     try {
       await authLogout();
@@ -231,12 +200,7 @@ export default function AdminSubscriptionsPage() {
 
         {error ? <div className="error">{error}</div> : null}
 
-        <div className="subscription-tabs panel">
-          <button className={activeTab === "plans" ? "active" : ""} type="button" onClick={() => setActiveTab("plans")}>Planlar</button>
-          <button className={activeTab === "users" ? "active" : ""} type="button" onClick={() => setActiveTab("users")}>Kullanici Abonelikleri</button>
-        </div>
-
-        {activeTab === "plans" ? <section className="admin-subscription-layout">
+        <section className="admin-subscription-layout">
           <aside className="panel subscription-admin-list">
             <div className="section-head">
               <div><span className="section-label">Planlar</span><h3>{items.length} kayit</h3></div>
@@ -287,35 +251,7 @@ export default function AdminSubscriptionsPage() {
               <label><input checked={form.highlighted} onChange={(event) => setForm((current) => ({ ...current, highlighted: event.target.checked }))} type="checkbox" /> One cikan plan</label>
             </div>
           </form>
-        </section> : (
-          <section className="panel user-subscription-admin-panel">
-            <div className="section-head">
-              <div><span className="section-label">Kullanici abonelikleri</span><h3>{userSubscriptions.length} kayit</h3></div>
-              <button className="secondary-button" type="button" onClick={() => void loadUserSubscriptions()}>{loadingUsers ? <LoaderCircle className="spin" size={16} /> : null} Yenile</button>
-            </div>
-            {loadingUsers ? <p className="empty">Kullanici abonelikleri yukleniyor...</p> : null}
-            <div className="user-subscription-table">
-              <div className="user-subscription-row head"><span>Kullanici</span><span>Plan</span><span>Donem</span><span>Bitis</span><span>Durum</span></div>
-              {userSubscriptions.map((item) => (
-                <div className="user-subscription-row" key={item.id}>
-                  <div><strong>{item.userName}</strong><small>{item.userEmail}</small></div>
-                  <div><strong>{item.planName}</strong><small>{item.planId}</small></div>
-                  <span>{cycleLabel(item.billingCycle)}</span>
-                  <span>{formatDate(item.endsAt)}</span>
-                  <select disabled={saving} value={item.status} onChange={(event) => void changeUserSubscriptionStatus(item.id, event.target.value as UserSubscription["status"])}>
-                    <option value="ACTIVE">Aktif</option>
-                    <option value="PENDING_PAYMENT">Odeme bekliyor</option>
-                    <option value="PAST_DUE">Odeme gecikti</option>
-                    <option value="PAUSED">Duraklatildi</option>
-                    <option value="CANCELLED">Iptal</option>
-                    <option value="EXPIRED">Suresi doldu</option>
-                  </select>
-                </div>
-              ))}
-              {!loadingUsers && !userSubscriptions.length ? <p className="empty">Henuz kullanici aboneligi yok.</p> : null}
-            </div>
-          </section>
-        )}
+        </section>
       </section>
     </main>
   );
@@ -372,7 +308,7 @@ function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onTogg
         {base.map((item) => { const Icon = item.icon; return <Link href={item.href} key={item.label} title={item.label}><Icon size={18} /><span>{item.label}</span></Link>; })}
         <div className="sidebar-menu-group">
           <button aria-expanded={adminMenuOpen} className="active" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-          {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link className="active" href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
+          {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link className="active" href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Planlari</span></Link><Link href="/admin/user-subscriptions"><CreditCard size={15} /><span>Kullanici Abonelikleri</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
         </div>
       </nav>
       <div className="sidebar-user"><div className="sidebar-user-avatar">{authUser.name.slice(0, 1).toUpperCase()}</div><div><strong>{authUser.name}</strong><span>{authUser.email}</span><span className="sidebar-user-role">Yonetici</span></div><div className="sidebar-user-actions"><button className="secondary-button" onClick={onLogout} type="button">Cikis</button></div></div>
@@ -386,14 +322,6 @@ function GateCard({ title, text, linkText }: { title: string; text: string; link
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value) + " TL";
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("tr-TR");
-}
-
-function cycleLabel(value: string) {
-  return value === "yearly" ? "Yillik" : "Aylik";
 }
 
 

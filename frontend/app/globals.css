@@ -4215,6 +4215,16 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   padding: 8px 10px;
 }
 
+.mui-grid-select {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  min-height: 38px;
+  padding: 7px 10px;
+  width: 100%;
+}
+
 .subscription-hero {
   align-items: center;
   background:

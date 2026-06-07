@@ -4307,5 +4307,65 @@
     "detail" : "Abonelik iptal edildi: Super",
     "path" : "/api/subscriptions/me/cancel",
     "createdAt" : "2026-06-07T12:29:43.0769727Z"
+  }, {
+    "id" : "9523a797-aa7b-4f4c-b8d0-0d48b2e69566",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T12:39:29.0771279Z"
+  }, {
+    "id" : "065c8728-ccc6-443d-9d53-b677be3a40e4",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T12:41:20.4423894Z"
+  }, {
+    "id" : "e73b7a5c-c908-4365-8d83-89f1f6a6a734",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T12:41:57.1658966Z"
+  }, {
+    "id" : "8b563f75-ec0e-4031-a07d-b14765cfe0bc",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Islem Loglari",
+    "detail" : "Yonetici islem loglari ekrani goruntulendi.",
+    "path" : "/admin/activity-logs",
+    "createdAt" : "2026-06-07T12:42:50.5493172Z"
+  }, {
+    "id" : "5a9eeff2-4585-454e-b156-aac989d69e0d",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-07T12:51:01.2894624Z"
   } ]
 }

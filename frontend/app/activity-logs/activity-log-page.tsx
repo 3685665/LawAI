@@ -413,7 +413,8 @@ function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
       children: [
         { id: "admin-feedback", label: locale === "en" ? "Feedback Management" : "Sikayet Yonetimi", icon: MessageSquareMore, href: "/feedback-management" },
         { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UsersRound, href: "/" },
-        { id: "admin-subscriptions", label: locale === "en" ? "Subscription Management" : "Abonelik Yonetimi", icon: CreditCard, href: "/admin/subscriptions" },
+        { id: "admin-subscriptions", label: locale === "en" ? "Subscription Plans" : "Abonelik Planlari", icon: CreditCard, href: "/admin/subscriptions" },
+        { id: "admin-user-subscriptions", label: locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri", icon: CreditCard, href: "/admin/user-subscriptions" },
         { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: ClipboardList, href: "/admin/activity-logs" }
       ]
     });

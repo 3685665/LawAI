@@ -395,9 +395,13 @@ export default function FeedbackManagementPage() {
                       <UserRound size={15} />
                       <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
                     </Link>
-                    <Link href="/admin/subscriptions" title={locale === "en" ? "Subscription Management" : "Abonelik Yonetimi"}>
+                    <Link href="/admin/subscriptions" title={locale === "en" ? "Subscription Plans" : "Abonelik Planlari"}>
                       <CreditCard size={15} />
-                      <span>{locale === "en" ? "Subscription Management" : "Abonelik Yonetimi"}</span>
+                      <span>{locale === "en" ? "Subscription Plans" : "Abonelik Planlari"}</span>
+                    </Link>
+                    <Link href="/admin/user-subscriptions" title={locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri"}>
+                      <CreditCard size={15} />
+                      <span>{locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri"}</span>
                     </Link>
                     <Link href="/admin/activity-logs" title={locale === "en" ? "Activity Logs" : "Islem Loglari"}>
                       <ClipboardList size={15} />

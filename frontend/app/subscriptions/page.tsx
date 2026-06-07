@@ -236,7 +236,7 @@ function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onTogg
         {authUser.role === "ADMIN" ? (
           <div className="sidebar-menu-group">
             <button aria-expanded={adminMenuOpen} className="" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-        {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Yonetimi</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
+        {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Planlari</span></Link><Link href="/admin/user-subscriptions"><CreditCard size={15} /><span>Kullanici Abonelikleri</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
           </div>
         ) : null}
       </nav>
