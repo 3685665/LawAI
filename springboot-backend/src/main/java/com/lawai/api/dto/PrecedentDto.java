@@ -1,6 +1,7 @@
 package com.lawai.api.dto;
 
 public record PrecedentDto(
+    String sourceId,
     String court,
     String chamber,
     String docketNo,

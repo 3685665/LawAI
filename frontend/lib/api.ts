@@ -1,6 +1,7 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080/api";
 
 export type Precedent = {
+  sourceId?: string | null;
   court: string;
   chamber?: string | null;
   docketNo?: string | null;

@@ -119,6 +119,13 @@ public class LawaiController {
     return new PrecedentSearchResponse(request.query(), results);
   }
 
+  @GetMapping("/precedents/yargitay/{documentId}")
+  public PrecedentDto getYargitayPrecedent(@PathVariable String documentId, Authentication authentication) {
+    PrecedentDto result = yargitayPrecedentService.getDocument(documentId);
+    activityLogService.logBackend(requireUser(authentication), "case-law-detail", "Ictihat Arama", "Yargitay karar detayi goruntulendi.", "/api/precedents/yargitay/" + documentId);
+    return result;
+  }
+
   @PostMapping("/petitions")
   public PetitionResponse petitions(@Valid @RequestBody PetitionRequest request, Authentication authentication) {
     PetitionResponse response = aiServiceClient.generatePetition(request);
@@ -169,6 +176,7 @@ public class LawaiController {
 
   private PrecedentDto toPrecedent(DocumentSearchResult result) {
     return new PrecedentDto(
+        null,
         "Yuklenen belge",
         "OpenSearch",
         "DOC-" + result.documentId(),

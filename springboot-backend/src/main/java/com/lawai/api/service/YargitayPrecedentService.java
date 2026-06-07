@@ -13,8 +13,10 @@ import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -46,12 +48,31 @@ public class YargitayPrecedentService {
       List<YargitayRow> rows = searchRows(client, query, limit);
       List<PrecedentDto> results = new ArrayList<>();
       for (YargitayRow row : rows) {
-        String content = getDocumentText(client, row.id());
-        results.add(toPrecedent(row, content));
+        results.add(toListPrecedent(row));
       }
       return results;
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Yargitay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public PrecedentDto getDocument(String documentId) {
+    String normalizedId = normalizeDocumentId(documentId);
+    BasicCookieStore cookieStore = new BasicCookieStore();
+    try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
+      sendGet(client, BASE_URL);
+      String content = getDocumentText(client, normalizedId);
+      YargitayHeader header = parseHeader(content);
+      return toDetailPrecedent(new YargitayRow(
+          normalizedId,
+          header.chamber(),
+          header.docketNo(),
+          header.decisionNo(),
+          "",
+          ""
+      ), content);
+    } catch (IOException | ParseException exception) {
+      throw new IllegalStateException("Yargitay karar detayi alinamadi: " + exception.getMessage(), exception);
     }
   }
 
@@ -87,22 +108,35 @@ public class YargitayPrecedentService {
     return results;
   }
 
-  private String getDocumentText(CloseableHttpClient client, String documentId) {
-    try {
-      String url = BASE_URL + "/getDokuman?id=" + URLEncoder.encode(documentId, StandardCharsets.UTF_8);
-      String json = sendGet(client, url);
-      String html = objectMapper.readTree(json).path("data").asText("");
-      return htmlToText(html);
-    } catch (IOException | ParseException exception) {
-      return "Karar metni alinamadi: " + exception.getMessage();
-    }
+  private String getDocumentText(CloseableHttpClient client, String documentId) throws IOException, ParseException {
+    String url = BASE_URL + "/getDokuman?id=" + URLEncoder.encode(documentId, StandardCharsets.UTF_8);
+    String json = sendGet(client, url);
+    String html = objectMapper.readTree(json).path("data").asText("");
+    return htmlToText(html);
   }
 
-  private PrecedentDto toPrecedent(YargitayRow row, String content) {
+  private PrecedentDto toListPrecedent(YargitayRow row) {
+    String chamber = row.chamber().isBlank() ? "Yargitay" : row.chamber();
+    String title = chamber + " - " + docketLabel(row.docketNo(), "E.") + " / " + docketLabel(row.decisionNo(), "K.");
+    return new PrecedentDto(
+        row.id(),
+        "Yargitay",
+        chamber,
+        docketLabel(row.docketNo(), "E."),
+        docketLabel(row.decisionNo(), "K."),
+        row.date().isBlank() ? null : row.date(),
+        title,
+        "Karar metnini gormek icin listeden bu karara tiklayin.",
+        null
+    );
+  }
+
+  private PrecedentDto toDetailPrecedent(YargitayRow row, String content) {
     String chamber = row.chamber().isBlank() ? "Yargitay" : row.chamber();
     String title = chamber + " - " + docketLabel(row.docketNo(), "E.") + " / " + docketLabel(row.decisionNo(), "K.");
     String normalizedContent = content.isBlank() ? title : content;
     return new PrecedentDto(
+        row.id(),
         "Yargitay",
         chamber,
         docketLabel(row.docketNo(), "E."),
@@ -142,6 +176,12 @@ public class YargitayPrecedentService {
         ? ""
         : EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
     if (response.getCode() >= 400) {
+      if (response.getCode() == 429) {
+        throw new ResponseStatusException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "Yargitay erisim siniri asildi. Biraz bekleyip tekrar deneyin; karar detaylari tek tek acildiginda cekilir."
+        );
+      }
       throw new IllegalStateException("Yargitay servisi " + response.getCode() + " dondu: " + preview(body, 300));
     }
     return body;
@@ -162,6 +202,14 @@ public class YargitayPrecedentService {
     return Math.min(limit, MAX_LIMIT);
   }
 
+  private String normalizeDocumentId(String documentId) {
+    String normalized = documentId == null ? "" : documentId.trim();
+    if (!normalized.matches("\\d{3,20}")) {
+      throw new IllegalArgumentException("Gecersiz Yargitay karar ID.");
+    }
+    return normalized;
+  }
+
   private String htmlToText(String html) {
     if (html == null || html.isBlank()) {
       return "";
@@ -178,7 +226,7 @@ public class YargitayPrecedentService {
     text = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
     text = text.replaceAll("\\n\\s+", "\n");
     text = text.replaceAll("\\n{3,}", "\n\n");
-    return text.trim();
+    return repairMojibake(text.trim());
   }
 
   private String docketLabel(String value, String suffix) {
@@ -196,7 +244,34 @@ public class YargitayPrecedentService {
   }
 
   private String text(JsonNode node, String field) {
-    return node.path(field).asText("").trim();
+    return repairMojibake(node.path(field).asText("").trim());
+  }
+
+  private String repairMojibake(String value) {
+    if (value == null || value.isBlank()) {
+      return value;
+    }
+    if (value.indexOf('\u00c3') < 0 && value.indexOf('\u00c4') < 0 && value.indexOf('\u00c5') < 0) {
+      return value;
+    }
+    return new String(value.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+  }
+
+  private YargitayHeader parseHeader(String content) {
+    if (content == null || content.isBlank()) {
+      return new YargitayHeader("Yargitay", null, null);
+    }
+    String firstLine = content.lines().findFirst().orElse("").trim();
+    java.util.regex.Matcher matcher = java.util.regex.Pattern
+        .compile("^(.*?)\\s+(\\d{4}/\\d+)\\s+E\\.\\s*,\\s*(\\d{4}/\\d+)\\s+K\\.")
+        .matcher(firstLine);
+    if (matcher.find()) {
+      return new YargitayHeader(matcher.group(1).trim(), matcher.group(2), matcher.group(3));
+    }
+    return new YargitayHeader(firstLine.isBlank() ? "Yargitay" : firstLine, null, null);
+  }
+
+  private record YargitayHeader(String chamber, String docketNo, String decisionNo) {
   }
 
   private record YargitayRow(

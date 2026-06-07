@@ -157,6 +157,10 @@ type FeedbackGridRow = FeedbackRecord & {
   createdAtLabel: string;
   messagePreview: string;
 };
+type CaseLawGridRow = Precedent & {
+  id: string;
+  rowIndex: number;
+};
 type AdminSection = "feedback" | "users";
 type AdminUserView = "list" | "detail";
 type ThemeMode = "original" | "light" | "dark";
@@ -763,6 +767,64 @@ export default function Home() {
     return precedents[index] ?? precedents[0];
   }, [precedents, selectedPrecedentIndex]);
 
+  const caseLawRows = useMemo<CaseLawGridRow[]>(() => precedents.map((item, index) => ({
+    ...item,
+    id: item.sourceId ?? `${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`,
+    rowIndex: index
+  })), [precedents]);
+
+  const caseLawColumns = useMemo<GridColDef<CaseLawGridRow>[]>(() => [
+    {
+      field: "chamber",
+      headerName: locale === "en" ? "Chamber" : "Daire",
+      flex: 1.2,
+      minWidth: 190,
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{params.row.chamber ?? "-"}</strong>
+          <span>{params.row.court}</span>
+        </div>
+      )
+    },
+    {
+      field: "docketNo",
+      headerName: locale === "en" ? "Docket No" : "Esas No",
+      minWidth: 150,
+      flex: 0.8,
+      renderCell: (params) => <span className="feedback-owner">{params.row.docketNo ?? "-"}</span>
+    },
+    {
+      field: "decisionNo",
+      headerName: locale === "en" ? "Decision No" : "Karar No",
+      minWidth: 150,
+      flex: 0.8,
+      renderCell: (params) => <span className="feedback-owner">{params.row.decisionNo ?? "-"}</span>
+    },
+    {
+      field: "date",
+      headerName: locale === "en" ? "Date" : "Tarih",
+      minWidth: 130,
+      flex: 0.65,
+      renderCell: (params) => <span>{params.row.date ?? "-"}</span>
+    },
+    {
+      field: "actions",
+      headerName: locale === "en" ? "Detail" : "Detay",
+      width: 130,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <button className="secondary-button" onClick={(event) => {
+          event.stopPropagation();
+          selectPrecedent(params.row.rowIndex);
+        }} type="button">
+          {loading === "precedent-detail" && selectedPrecedentIndex === params.row.rowIndex ? <LoaderCircle className="spin" size={15} /> : null}
+          {locale === "en" ? "Detail" : "Detay"}
+        </button>
+      )
+    }
+  ], [loading, locale, selectedPrecedentIndex]);
+
   const precedentSources = useMemo(() => [
     ...(activeTab === "caseLaw"
       ? [{ key: "yargitay" as const, label: "Yargitay", court: "Yargitay" }]
@@ -1248,6 +1310,24 @@ export default function Home() {
   function runExampleSearch(example: string) {
     setSearchQuery(example);
     executePrecedentSearch(example, searchCourt, precedentSource);
+  }
+
+  function selectPrecedent(index: number) {
+    setSelectedPrecedentIndex(index);
+    const item = precedents[index];
+    if (activeTab !== "caseLaw" || !item?.sourceId || item.content) {
+      return;
+    }
+    run("precedent-detail", async () => {
+      const detail = await getJson<Precedent>(`/precedents/yargitay/${encodeURIComponent(item.sourceId ?? "")}`);
+      setPrecedents((current) => current.map((entry, entryIndex) => entryIndex === index ? {
+        ...entry,
+        ...detail,
+        docketNo: detail.docketNo ?? entry.docketNo,
+        decisionNo: detail.decisionNo ?? entry.decisionNo,
+        date: detail.date ?? entry.date
+      } : entry));
+    });
   }
 
   function summarizePrecedents() {
@@ -2035,14 +2115,42 @@ export default function Home() {
                   </div>
                   <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
                 </div>
-                {precedents.length ? (
+                {activeTab === "caseLaw" && precedents.length ? (
+                  <div className="feedback-datagrid-wrap precedent-datagrid-wrap">
+                    <DataGrid
+                      autoHeight
+                      rows={caseLawRows}
+                      columns={caseLawColumns}
+                      disableRowSelectionOnClick
+                      onRowClick={(params) => selectPrecedent(params.row.rowIndex)}
+                      initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                      pageSizeOptions={[10, 20, 50]}
+                      sx={{
+                        border: 0,
+                        "& .MuiDataGrid-columnHeaders": {
+                          borderBottom: "1px solid var(--line)",
+                          backgroundColor: "#f7f9fb"
+                        },
+                        "& .MuiDataGrid-cell": {
+                          borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                        },
+                        "& .MuiDataGrid-row:hover": {
+                          backgroundColor: "#f7fafc"
+                        },
+                        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                          outline: "none"
+                        }
+                      }}
+                    />
+                  </div>
+                ) : precedents.length ? (
                   <div className="precedent-result-list">
                     {precedents.map((item, index) => (
                       <button
                         key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
                         className={`precedent-result-card ${selectedPrecedent === item ? "active" : ""}`}
                         type="button"
-                        onClick={() => setSelectedPrecedentIndex(index)}
+                        onClick={() => selectPrecedent(index)}
                       >
                         <span>{item.court}{item.chamber ? ` / ${item.chamber}` : ""}</span>
                         <strong>{item.topic}</strong>
@@ -2070,7 +2178,7 @@ export default function Home() {
                       <div><dt>{t.tools.researchDocket}</dt><dd>{[selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-"}</dd></div>
                       <div><dt>{t.feedback.date}</dt><dd>{selectedPrecedent.date ?? "-"}</dd></div>
                     </dl>
-                    <pre>{selectedPrecedent.content || selectedPrecedent.summary}</pre>
+                    <pre>{loading === "precedent-detail" && activeTab === "caseLaw" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
                   </section>
                 ) : <EmptyState text={t.tools.searchEmpty} />}
 
