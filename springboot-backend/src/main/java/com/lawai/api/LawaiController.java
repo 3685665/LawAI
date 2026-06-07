@@ -2,6 +2,7 @@ package com.lawai.api;
 
 import com.lawai.api.dto.ChatRequest;
 import com.lawai.api.dto.ChatResponse;
+import com.lawai.api.dto.ChatSessionDto;
 import com.lawai.api.dto.DocumentAnalysisResponse;
 import com.lawai.api.dto.DocumentIngestResponse;
 import com.lawai.api.dto.KnowledgeIngestRequest;
@@ -13,6 +14,7 @@ import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
 import com.lawai.api.service.AiServiceClient;
 import com.lawai.api.service.ActivityLogService;
+import com.lawai.api.service.ChatHistoryService;
 import com.lawai.api.service.DocumentService;
 import com.lawai.auth.model.AuthenticatedUser;
 import com.lawai.document.dto.DocumentSearchResult;
@@ -23,6 +25,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,17 +41,20 @@ import java.util.List;
 public class LawaiController {
 
   private final AiServiceClient aiServiceClient;
+  private final ChatHistoryService chatHistoryService;
   private final DocumentService documentService;
   private final DocumentProcessingService documentProcessingService;
   private final ActivityLogService activityLogService;
 
   public LawaiController(
       AiServiceClient aiServiceClient,
+      ChatHistoryService chatHistoryService,
       DocumentService documentService,
       DocumentProcessingService documentProcessingService,
       ActivityLogService activityLogService
   ) {
     this.aiServiceClient = aiServiceClient;
+    this.chatHistoryService = chatHistoryService;
     this.documentService = documentService;
     this.documentProcessingService = documentProcessingService;
     this.activityLogService = activityLogService;
@@ -60,9 +67,29 @@ public class LawaiController {
 
   @PostMapping("/chat")
   public ChatResponse chat(@Valid @RequestBody ChatRequest request, Authentication authentication) {
+    AuthenticatedUser user = requireUser(authentication);
     ChatResponse response = aiServiceClient.chat(request);
-    activityLogService.logBackend(requireUser(authentication), "chat", "Asistan", "AI sohbet analizi yapildi.", "/api/chat");
-    return response;
+    String displayQuestion = request.displayQuestion() == null || request.displayQuestion().isBlank()
+        ? request.question()
+        : request.displayQuestion();
+    ChatSessionDto session = chatHistoryService.saveExchange(user, request.sessionId(), displayQuestion, response);
+    activityLogService.logBackend(user, "chat", "Asistan", "AI sohbet analizi yapildi.", "/api/chat");
+    return new ChatResponse(response.answer(), response.citations(), response.nextSteps(), response.disclaimer(), session.id());
+  }
+
+  @GetMapping("/chat/sessions")
+  public List<ChatSessionDto> listChatSessions(Authentication authentication) {
+    return chatHistoryService.listForUser(requireUser(authentication));
+  }
+
+  @GetMapping("/chat/sessions/{sessionId}")
+  public ChatSessionDto getChatSession(@PathVariable String sessionId, Authentication authentication) {
+    return chatHistoryService.getForUser(requireUser(authentication), sessionId);
+  }
+
+  @DeleteMapping("/chat/sessions/{sessionId}")
+  public List<ChatSessionDto> deleteChatSession(@PathVariable String sessionId, Authentication authentication) {
+    return chatHistoryService.deleteForUser(requireUser(authentication), sessionId);
   }
 
   @PostMapping("/precedents/search")

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -44,7 +45,11 @@ public class AiServiceClient {
   }
 
   public ChatResponse chat(ChatRequest request) {
-    String response = send(post("/chat", toJson(request)));
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("question", request.question());
+    payload.put("mode", request.mode());
+    payload.put("privateMode", request.privateMode());
+    String response = send(post("/chat", toJson(payload)));
     return fromJson(response, ChatResponse.class);
   }
 

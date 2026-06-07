@@ -91,6 +91,21 @@ export type ActivityLogRecord = {
   path: string;
   createdAt: string;
 };
+export type ChatHistoryMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  citations?: Precedent[];
+  disclaimer?: string | null;
+  createdAt: string;
+};
+export type ChatHistorySession = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatHistoryMessage[];
+};
 export type SubscriptionPlan = {
   id: string;
   name: string;

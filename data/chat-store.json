@@ -1,0 +1,60 @@
+{
+  "sessions" : [ {
+    "id" : "5299a94b-1d9e-4ceb-b2d4-1e3109baf57e",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "title" : "yağma",
+    "createdAt" : "2026-06-07T13:14:16.6492215Z",
+    "updatedAt" : "2026-06-07T13:14:16.6492215Z",
+    "messages" : [ {
+      "id" : "e7080b59-19d2-4bcd-b35a-b0183ce27889",
+      "role" : "user",
+      "text" : "yağma",
+      "citations" : [ ],
+      "disclaimer" : null,
+      "createdAt" : "2026-06-07T13:14:16.6492215Z"
+    }, {
+      "id" : "ca9a22bf-f0db-4988-979d-fe6f358e896f",
+      "role" : "assistant",
+      "text" : "Kullanıcının talebinizi hukuk asistanı gibi yanıtlayabilirim. İlk olarak, belge içeriğini dikkate almak önemlidir. Belgede yağma konusunda iki farklı kaynak bulunmaktadır.\n\n1. **Hukuk Genel Kurulu 2021-1592 (bolum 13/18)**: Bu kaynak, sözleşmelerde uygulanması gereken 44 maddesi uyarınca belirtilmiştir. Bu madde, kiralayanın aynı koşullarla yeniden kiraya vermek konusunda gerekli çabayı göstermesi ve böylece zararın artmasına sebep olmamasını gerektiği belirtmektedir.\n\n2. **6. Ceza Dairesi 2025-1217 (bolum 1/7)**: Bu kaynak, yağma konusunda Hukuki Kavramlar bölümünde ele alınmıştır. Kaynak, paraların geri alınması amacıyla cebir ve tehdit kullanarak cep telefonu alındığında hukuki ilişkiye dayanan alacağın tahsiline dayanır.\n\nBu iki kaynaktaki bilgiyi birleştirerek, belirtiyorsunuz ki, yağma durumu sözleşmelerde 44 maddeden ve Hukuki Kavramlar bölümünden gelir. Belgede belirtildiği gibi, kiralayanın aynı koşullarla yeniden kiraya vermek konusunda gerekli çabayı göstermesi ve böylece zararın artmasına sebep olmaması gerekmektedir.\n\nBu bilgileri kullanarak, kullanıcı talebinizi şu şekilde yanıtlayabilirim:\n\n**Yanıt:**\nKullanıcı talebinizde yağma konusunda iki farklı kaynak bulunmaktadır. İlk kaynak (Hukuk Genel Kurulu 2021-1592) belirtti ki, sözleşmelerde uygulanması gereken 44 maddeden ve ikinci kaynak (6. Ceza Dairesi 2025-1217) belirtti ki, paraların geri alınması amacıyla cebir ve tehdit kullanarak cep telefonu alındığında hukuki ilişkiye dayanan alacağın tahsiline dayanır.\n\nBu iki kaynaktaki bilgiyi birleştirerek, belirtiyorsunuz ki, yağma durumu sözleşmelerde 44 maddeden ve Hukuki Kavramlar bölümünden gelir. Belgede belirtildiği gibi, kiralayanın aynı koşullarla yeniden kiraya vermek konusunda gerekli çabayı göstermesi ve böylece zararın artmasına sebep olmaması gerekmektedir.\n\nBu bilgileri kullanarak, kullanıcı talebinizi yanıtladım. Belgeden emin olmadığınız noktaları açıkça belirtiyorsunuz.\n\nGizli mod acik: Bu MVP, soruyu kaydetmez; kalici sohbet gecmisi eklenirse ayrica sifreleme uygulanmali.",
+      "citations" : [ {
+        "court" : "Yuklenen kaynak",
+        "chamber" : null,
+        "docketNo" : null,
+        "decisionNo" : null,
+        "date" : null,
+        "topic" : "Hukuk Genel Kurulu 2021-1592 (bolum 13/18)",
+        "summary" : "e Dair Yönerge\" uyarınca anonimleştirilmiştir.\r\n4/6\r\nsüresinin bitiminden önce kiralananı tahliye etmesi sözleşmeye aykırı davranış (haksız fesih) sayılır;\r\nböylesi bir durumda kiracı, kiralayanın bu yüzden uğradığı zararı tazminle sorumludur. Ne var ki, 818\r\nsayılı Borçlar Kanunu’nun (BK) 98. maddesi yollamasıyla sözleşmelerde de uygulanması gereken 44.\r\nmaddesi uyarınca, kiralayan da, kiralananı aynı koşullarla yeniden kiraya vermek konusunda gereken\r\nçabayı göstermeli ve böylece zararın artmasına sebebiyet vermemelidir. Aksi takdirde, artmasına sebep\r\nolduğu zarar tutarını kiracıdan isteyemez.\r\n18. Kiralananın tahliye edildiğinin (kiracının kiralananı iade borcunu yerine getirdiğinin) kab...",
+        "content" : "e Dair Yönerge\" uyarınca anonimleştirilmiştir.\r\n4/6\r\nsüresinin bitiminden önce kiralananı tahliye etmesi sözleşmeye aykırı davranış (haksız fesih) sayılır;\r\nböylesi bir durumda kiracı, kiralayanın bu yüzden uğradığı zararı tazminle sorumludur. Ne var ki, 818\r\nsayılı Borçlar Kanunu’nun (BK) 98. maddesi yollamasıyla sözleşmelerde de uygulanması gereken 44.\r\nmaddesi uyarınca, kiralayan da, kiralananı aynı koşullarla yeniden kiraya vermek konusunda gereken\r\nçabayı göstermeli ve böylece zararın artmasına sebebiyet vermemelidir. Aksi takdirde, artmasına sebep\r\nolduğu zarar tutarını kiracıdan isteyemez.\r\n18. Kiralananın tahliye edildiğinin (kiracının kiralananı iade borcunu yerine getirdiğinin) kabul\r\nedilebilmesi için, kiralananın fiilen boşaltılması yeterli değildir; anahtarın da kiralayana teslim edilmesi\r\ngerekir. Kiracının bildirdiği tahliye tarihinin, kiralayan tarafından kabul edilmemesi; başka bir ifadeyle,\r\ntahliye tarihinin taraflar arasında çekişmeli olması hâlinde, kiralananın fiilen boşaltıldığını ve anahtarın\r\nteslim edildiğini, böylece kira ilişkisinin kendisince ileri sürülen tarihte hukuken sona erdirildiğini\r\nkanıtlama yükümlülüğü, kiracıya aittir. Kiracı, kiralananı ken"
+      }, {
+        "court" : "Yuklenen kaynak",
+        "chamber" : null,
+        "docketNo" : null,
+        "decisionNo" : null,
+        "date" : null,
+        "topic" : "Hukuk Genel Kurulu 2021-1592 (bolum 13/18)",
+        "summary" : "e Dair Yönerge\" uyarınca anonimleştirilmiştir.\r\n4/6\r\nsüresinin bitiminden önce kiralananı tahliye etmesi sözleşmeye aykırı davranış (haksız fesih) sayılır;\r\nböylesi bir durumda kiracı, kiralayanın bu yüzden uğradığı zararı tazminle sorumludur. Ne var ki, 818\r\nsayılı Borçlar Kanunu’nun (BK) 98. maddesi yollamasıyla sözleşmelerde de uygulanması gereken 44.\r\nmaddesi uyarınca, kiralayan da, kiralananı aynı koşullarla yeniden kiraya vermek konusunda gereken\r\nçabayı göstermeli ve böylece zararın artmasına sebebiyet vermemelidir. Aksi takdirde, artmasına sebep\r\nolduğu zarar tutarını kiracıdan isteyemez.\r\n18. Kiralananın tahliye edildiğinin (kiracının kiralananı iade borcunu yerine getirdiğinin) kab...",
+        "content" : "e Dair Yönerge\" uyarınca anonimleştirilmiştir.\r\n4/6\r\nsüresinin bitiminden önce kiralananı tahliye etmesi sözleşmeye aykırı davranış (haksız fesih) sayılır;\r\nböylesi bir durumda kiracı, kiralayanın bu yüzden uğradığı zararı tazminle sorumludur. Ne var ki, 818\r\nsayılı Borçlar Kanunu’nun (BK) 98. maddesi yollamasıyla sözleşmelerde de uygulanması gereken 44.\r\nmaddesi uyarınca, kiralayan da, kiralananı aynı koşullarla yeniden kiraya vermek konusunda gereken\r\nçabayı göstermeli ve böylece zararın artmasına sebebiyet vermemelidir. Aksi takdirde, artmasına sebep\r\nolduğu zarar tutarını kiracıdan isteyemez.\r\n18. Kiralananın tahliye edildiğinin (kiracının kiralananı iade borcunu yerine getirdiğinin) kabul\r\nedilebilmesi için, kiralananın fiilen boşaltılması yeterli değildir; anahtarın da kiralayana teslim edilmesi\r\ngerekir. Kiracının bildirdiği tahliye tarihinin, kiralayan tarafından kabul edilmemesi; başka bir ifadeyle,\r\ntahliye tarihinin taraflar arasında çekişmeli olması hâlinde, kiralananın fiilen boşaltıldığını ve anahtarın\r\nteslim edildiğini, böylece kira ilişkisinin kendisince ileri sürülen tarihte hukuken sona erdirildiğini\r\nkanıtlama yükümlülüğü, kiracıya aittir. Kiracı, kiralananı ken"
+      }, {
+        "court" : "Yuklenen kaynak",
+        "chamber" : null,
+        "docketNo" : null,
+        "decisionNo" : null,
+        "date" : null,
+        "topic" : "6. Ceza Dairesi 2025-1217 (bolum 1/7)",
+        "summary" : "HUKUKİ KAVRAMLAR\r\nYağma\r\n \r\nHUKUKİ KONULAR\r\nTevil Yollu İkrar, Delillerin Takdirinde Yanılgı, Birden Fazla Kişi Tarafından Birlikte Yağma, Bir Hukuki\r\nİlişkiye Dayanan Alacağın Tahsili Amacıyla Cebir, Bir Hukuki İlişkiye Dayanan Alacağın Tahsili\r\nAmacıyla Tehdit\r\n \r\nANAHTAR KELİMELER\r\nPara, Cep Telefonu\r\n \r\nÖZET\r\nSanıkların mağdurlar tarafından dolandırıldıklarını düşünerek paralarını geri almak amacıyla cebir ve\r\ntehdit kullanarak mağdurların cep telefonunu aldıkları olayda eylemlerinin hukuki ilişkiye dayanan\r\nalacağın tahsili amacıyla cebir veya tehdit suçunu oluşturduğu gözetilmelidir.\r\n \r\nKARAR\r\nEsas No  : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n  \r\n¸\r\n \r\nT. C.\r...",
+        "content" : "HUKUKİ KAVRAMLAR\r\nYağma\r\n \r\nHUKUKİ KONULAR\r\nTevil Yollu İkrar, Delillerin Takdirinde Yanılgı, Birden Fazla Kişi Tarafından Birlikte Yağma, Bir Hukuki\r\nİlişkiye Dayanan Alacağın Tahsili Amacıyla Cebir, Bir Hukuki İlişkiye Dayanan Alacağın Tahsili\r\nAmacıyla Tehdit\r\n \r\nANAHTAR KELİMELER\r\nPara, Cep Telefonu\r\n \r\nÖZET\r\nSanıkların mağdurlar tarafından dolandırıldıklarını düşünerek paralarını geri almak amacıyla cebir ve\r\ntehdit kullanarak mağdurların cep telefonunu aldıkları olayda eylemlerinin hukuki ilişkiye dayanan\r\nalacağın tahsili amacıyla cebir veya tehdit suçunu oluşturduğu gözetilmelidir.\r\n \r\nKARAR\r\nEsas No  : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n  \r\n¸\r\n \r\nT. C.\r\nY A R G I T A Y\r\n6.  C E Z A  D A İ R E S İ\r\n \r\nT Ü R K  M İ L L E T İ  A D I N A\r\nY A R G I T A Y  İ L Â M I\r\n \r\nİ S T İ N A F  S O N R A S I  T E M Y İ Z \r\n \r\nEsas No : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n \r\nİNCELENEN KARARIN  \r\nMAHKEMESİ : Diyarbakır Bölge Adliye Mahkemesi 11. Ceza Dairesi\r\nCEYLAN AVCİ kullanıcısı tarafından 2026-05-30 23:14:37 tarihinde oluşturuldu.\r\nYargıtay İçtihat Merkezinde yayımlanan kararlardaki kişisel veriler \"Yargıtay İçtihat Merkezi Ka"
+      }, {
+        "court" : "Yuklenen kaynak",
+        "chamber" : null,
+        "docketNo" : null,
+        "decisionNo" : null,
+        "date" : null,
+        "topic" : "6. Ceza Dairesi 2025-1217 (bolum 1/7)",
+        "summary" : "HUKUKİ KAVRAMLAR\r\nYağma\r\n \r\nHUKUKİ KONULAR\r\nTevil Yollu İkrar, Delillerin Takdirinde Yanılgı, Birden Fazla Kişi Tarafından Birlikte Yağma, Bir Hukuki\r\nİlişkiye Dayanan Alacağın Tahsili Amacıyla Cebir, Bir Hukuki İlişkiye Dayanan Alacağın Tahsili\r\nAmacıyla Tehdit\r\n \r\nANAHTAR KELİMELER\r\nPara, Cep Telefonu\r\n \r\nÖZET\r\nSanıkların mağdurlar tarafından dolandırıldıklarını düşünerek paralarını geri almak amacıyla cebir ve\r\ntehdit kullanarak mağdurların cep telefonunu aldıkları olayda eylemlerinin hukuki ilişkiye dayanan\r\nalacağın tahsili amacıyla cebir veya tehdit suçunu oluşturduğu gözetilmelidir.\r\n \r\nKARAR\r\nEsas No  : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n  \r\n¸\r\n \r\nT. C.\r...",
+        "content" : "HUKUKİ KAVRAMLAR\r\nYağma\r\n \r\nHUKUKİ KONULAR\r\nTevil Yollu İkrar, Delillerin Takdirinde Yanılgı, Birden Fazla Kişi Tarafından Birlikte Yağma, Bir Hukuki\r\nİlişkiye Dayanan Alacağın Tahsili Amacıyla Cebir, Bir Hukuki İlişkiye Dayanan Alacağın Tahsili\r\nAmacıyla Tehdit\r\n \r\nANAHTAR KELİMELER\r\nPara, Cep Telefonu\r\n \r\nÖZET\r\nSanıkların mağdurlar tarafından dolandırıldıklarını düşünerek paralarını geri almak amacıyla cebir ve\r\ntehdit kullanarak mağdurların cep telefonunu aldıkları olayda eylemlerinin hukuki ilişkiye dayanan\r\nalacağın tahsili amacıyla cebir veya tehdit suçunu oluşturduğu gözetilmelidir.\r\n \r\nKARAR\r\nEsas No  : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n  \r\n¸\r\n \r\nT. C.\r\nY A R G I T A Y\r\n6.  C E Z A  D A İ R E S İ\r\n \r\nT Ü R K  M İ L L E T İ  A D I N A\r\nY A R G I T A Y  İ L Â M I\r\n \r\nİ S T İ N A F  S O N R A S I  T E M Y İ Z \r\n \r\nEsas No : 2023/15243\r\nKarar No : 2025/1217\r\nTebliğname No : 6 - 2023/2150\r\n \r\nİNCELENEN KARARIN  \r\nMAHKEMESİ : Diyarbakır Bölge Adliye Mahkemesi 11. Ceza Dairesi\r\nCEYLAN AVCİ kullanıcısı tarafından 2026-05-30 23:14:37 tarihinde oluşturuldu.\r\nYargıtay İçtihat Merkezinde yayımlanan kararlardaki kişisel veriler \"Yargıtay İçtihat Merkezi Ka"
+      } ],
+      "disclaimer" : "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir.",
+      "createdAt" : "2026-06-07T13:14:16.6492215Z"
+    } ]
+  } ]
+}

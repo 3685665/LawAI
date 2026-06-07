@@ -55,6 +55,7 @@ import {
   type AuthPasswordResetResponse,
   type AuthSessionResponse,
   type AuthUser,
+  type ChatHistorySession,
   checkHealth,
   deleteJson,
   getJson,
@@ -87,7 +88,7 @@ declare global {
     };
   }
 }
-type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string };
+type ChatResponse = { answer: string; citations: Precedent[]; disclaimer: string; sessionId?: string | null };
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -370,6 +371,10 @@ export default function Home() {
   const [smartNotes, setSmartNotes] = useState<SmartNote[]>([]);
   const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatSessions, setChatSessions] = useState<ChatHistorySession[]>([]);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>(null);
+  const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
+  const [chatHistoryError, setChatHistoryError] = useState("");
   const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [chatAttachmentLoading, setChatAttachmentLoading] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
@@ -628,6 +633,17 @@ export default function Home() {
     }
     void loadFeedbackHistory();
   }, [activeTab, authUser, feedbackLoaded, feedbackLoading]);
+
+  useEffect(() => {
+    if (!authUser) {
+      setChatSessions([]);
+      setActiveChatSessionId(null);
+      setChatMessages([]);
+      setChatResponse(null);
+      return;
+    }
+    void loadChatSessions();
+  }, [authUser]);
 
   useEffect(() => {
     if (!authUser || authUser.role !== "ADMIN" || activeTab !== "admin" || adminSection !== "users" || adminUsers.length || adminUsersLoading) {
@@ -914,8 +930,17 @@ export default function Home() {
     setSmartNoteDraft("");
     setChatAttachment(null);
     run("chat", async () => {
-      const response = await postJson<ChatResponse>("/chat", { question: buildSmartNotesPrompt(notesForPrompt, attachmentForPrompt), mode: "smart-notes", privateMode });
+      const response = await postJson<ChatResponse>("/chat", {
+        question: buildSmartNotesPrompt(notesForPrompt, attachmentForPrompt),
+        displayQuestion: userMessage,
+        mode: "smart-notes",
+        privateMode,
+        sessionId: activeChatSessionId
+      });
       setChatResponse(response);
+      if (response.sessionId) {
+        setActiveChatSessionId(response.sessionId);
+      }
       setChatMessages((current) => [
         ...current,
         {
@@ -926,7 +951,68 @@ export default function Home() {
           disclaimer: response.disclaimer
         }
       ]);
+      await loadChatSessions();
     });
+  }
+
+  async function loadChatSessions() {
+    setChatHistoryLoading(true);
+    setChatHistoryError("");
+    try {
+      const sessions = await getJson<ChatHistorySession[]>("/chat/sessions");
+      setChatSessions(sessions);
+    } catch (error) {
+      setChatHistoryError(error instanceof Error ? error.message : "Sohbet gecmisi yuklenemedi.");
+    } finally {
+      setChatHistoryLoading(false);
+    }
+  }
+
+  async function openChatSession(sessionId: string) {
+    setChatHistoryError("");
+    try {
+      const session = await getJson<ChatHistorySession>(`/chat/sessions/${sessionId}`);
+      setActiveChatSessionId(session.id);
+      setChatMessages(session.messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        text: message.text,
+        citations: message.citations ?? [],
+        disclaimer: message.disclaimer ?? undefined
+      })));
+      const lastAssistant = [...session.messages].reverse().find((message) => message.role === "assistant");
+      setChatResponse(lastAssistant ? {
+        answer: lastAssistant.text,
+        citations: lastAssistant.citations ?? [],
+        disclaimer: lastAssistant.disclaimer ?? "",
+        sessionId: session.id
+      } : null);
+    } catch (error) {
+      setChatHistoryError(error instanceof Error ? error.message : "Sohbet acilamadi.");
+    }
+  }
+
+  function startNewChat() {
+    setActiveChatSessionId(null);
+    setChatMessages([]);
+    setChatResponse(null);
+    setSmartNoteDraft("");
+    setChatAttachment(null);
+    setChatHistoryError("");
+  }
+
+  async function deleteChatSession(sessionId: string, event?: SyntheticEvent) {
+    event?.stopPropagation();
+    setChatHistoryError("");
+    try {
+      const sessions = await deleteJson<ChatHistorySession[]>(`/chat/sessions/${sessionId}`);
+      setChatSessions(sessions);
+      if (activeChatSessionId === sessionId) {
+        startNewChat();
+      }
+    } catch (error) {
+      setChatHistoryError(error instanceof Error ? error.message : "Sohbet silinemedi.");
+    }
   }
 
   async function attachChatDocument(file: File | null) {
@@ -1391,6 +1477,9 @@ export default function Home() {
       setAuthMode("login");
       setChatResponse(null);
       setChatMessages([]);
+      setChatSessions([]);
+      setActiveChatSessionId(null);
+      setChatHistoryError("");
       setPrecedents([]);
       setPetitionResult(null);
       setFeedbackItems([]);
@@ -1705,116 +1794,165 @@ export default function Home() {
           <section className="smart-notes-workspace law-chat-home">
             <div className="law-chat-orb law-chat-orb-one" aria-hidden="true" />
             <div className="law-chat-orb law-chat-orb-two" aria-hidden="true" />
-            <header className="law-chat-hero">
-              <div className="law-chat-mark">
-                <div className="law-chat-mark-icon">
-                  <Scale size={70} strokeWidth={1.45} />
+            <div className="law-chat-layout">
+              <aside className="law-chat-history" aria-label="Sohbet gecmisi">
+                <div className="law-chat-history-head">
+                  <div>
+                    <span>Sohbet gecmisi</span>
+                    <strong>{chatSessions.length} sohbet</strong>
+                  </div>
+                  <button className="law-chat-new" type="button" onClick={startNewChat}>
+                    <MessageSquareMore size={16} />
+                    Yeni
+                  </button>
                 </div>
-                <strong>LawAI</strong>
-              </div>
-              <p className="law-chat-kicker">
-                <Sparkles size={16} />
-                Belgeli, hizli ve izlenebilir hukuk analizi
-              </p>
-              <h1>Hoş geldiniz, ne yapmak istersiniz?</h1>
-              <div className="law-chat-signals" aria-label="Asistan ozellikleri">
-                <span><ShieldCheck size={16} /> Gizli calisma modu</span>
-                <span><Clock3 size={16} /> Dakikalar icinde on analiz</span>
-                <span><FileSearch size={16} /> Belge destekli yanit</span>
-              </div>
-            </header>
+                {chatHistoryError ? <p className="law-chat-history-error">{chatHistoryError}</p> : null}
+                {chatHistoryLoading ? (
+                  <p className="law-chat-history-empty"><LoaderCircle className="spin" size={16} /> Yukleniyor</p>
+                ) : chatSessions.length ? (
+                  <div className="law-chat-history-list">
+                    {chatSessions.map((session) => (
+                      <button
+                        key={session.id}
+                        className={`law-chat-history-item ${activeChatSessionId === session.id ? "active" : ""}`}
+                        onClick={() => void openChatSession(session.id)}
+                        type="button"
+                      >
+                        <span>{session.title}</span>
+                        <small>{formatDateTime(session.updatedAt, locale, "-")}</small>
+                        <i
+                          aria-label="Sohbeti sil"
+                          onClick={(event) => void deleteChatSession(session.id, event)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              void deleteChatSession(session.id, event);
+                            }
+                          }}
+                        >
+                          <X size={14} />
+                        </i>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="law-chat-history-empty">Henuz kayitli sohbet yok.</p>
+                )}
+              </aside>
 
-            {chatMessages.length ? (
-              <section className="law-chat-thread" aria-live="polite">
-                {chatMessages.map((message) => (
-                  <article key={message.id} className={`law-chat-message ${message.role}`}>
-                    <span>{message.role === "user" ? "Siz" : "LawAI"}</span>
-                    <pre>{message.text}</pre>
-                    {message.citations ? <CitationList citations={message.citations} /> : null}
-                    {message.disclaimer ? <small>{message.disclaimer}</small> : null}
-                  </article>
-                ))}
-                {loading === "chat" ? (
-                  <article className="law-chat-message assistant pending">
-                    <span>LawAI</span>
-                    <p>
-                      <LoaderCircle className="spin" size={18} />
-                      Cevap hazirlaniyor
-                      <i className="typing-dots" aria-hidden="true"><b></b><b></b><b></b></i>
-                    </p>
-                  </article>
-                ) : null}
-                {chatResponse ? (
-                  <button className="law-chat-download" type="button" onClick={downloadSmartNotesPdf}>
-                    <FileText size={17} />
-                    {t.tools.smartNotesDownload}
-                  </button>
-                ) : null}
-              </section>
-            ) : (
-              <section className="law-chat-prompts" aria-label="Ornek asistan kullanımlari">
-                <article>
-                  <FileText size={20} />
-                  <strong>Belgeyi ozetle</strong>
-                  <p>Dilekce, sozlesme veya tutanaktaki hukuki riskleri hizlica cikar.</p>
-                </article>
-                <article>
-                  <Scale size={20} />
-                  <strong>Dava stratejisi kur</strong>
-                  <p>Eksik delilleri, durusma notlarini ve sonraki adimlari planla.</p>
-                </article>
-                <article>
-                  <MessageSquareMore size={20} />
-                  <strong>Net soru sor</strong>
-                  <p>Kisa bir olay anlat, uygulanabilir cevap ve kontrol listesi al.</p>
-                </article>
-              </section>
-            )}
+              <div className="law-chat-main">
+                <header className="law-chat-hero">
+                  <div className="law-chat-mark">
+                    <div className="law-chat-mark-icon">
+                      <Scale size={70} strokeWidth={1.45} />
+                    </div>
+                    <strong>LawAI</strong>
+                  </div>
+                  <p className="law-chat-kicker">
+                    <Sparkles size={16} />
+                    Belgeli, hizli ve izlenebilir hukuk analizi
+                  </p>
+                  <h1>Hos geldiniz, ne yapmak istersiniz?</h1>
+                  <div className="law-chat-signals" aria-label="Asistan ozellikleri">
+                    <span><ShieldCheck size={16} /> Gizli calisma modu</span>
+                    <span><Clock3 size={16} /> Dakikalar icinde on analiz</span>
+                    <span><FileSearch size={16} /> Belge destekli yanit</span>
+                  </div>
+                </header>
 
-            <form className="law-chat-composer" onSubmit={submitChat}>
-              <input
-                ref={chatFileInputRef}
-                accept={acceptedExtensions.join(",")}
-                className="law-chat-file-input"
-                onChange={(event) => void attachChatDocument(event.target.files?.[0] ?? null)}
-                type="file"
-              />
-              <textarea
-                value={smartNoteDraft}
-                onChange={(event) => setSmartNoteDraft(event.target.value)}
-                placeholder="Bana bir soru sor..."
-                rows={4}
-              />
-              {chatAttachment ? (
-                <div className="law-chat-attachment">
-                  <FileText size={17} />
-                  <span>{chatAttachment.filename}</span>
-                  <small>{formatBytes(chatAttachment.size)}</small>
-                  <button type="button" onClick={() => setChatAttachment(null)} aria-label="Belgeyi kaldir">
-                    <X size={15} />
-                  </button>
-                </div>
-              ) : null}
-              <div className="law-chat-composer-tools">
-                <div>
-                  <button className="law-chat-tool" type="button" onClick={() => chatFileInputRef.current?.click()} disabled={chatAttachmentLoading} title="Belge ekle">
-                    {chatAttachmentLoading ? <LoaderCircle className="spin" size={18} /> : <Upload size={18} />}
-                    <span>Belge ekle</span>
-                  </button>
-                  <button className={`law-chat-tool ${voiceListening ? "active" : ""}`} type="button" onClick={() => void startVoiceInput()} title="Sesli ara">
-                    <Mic size={18} />
-                    <span>{voiceListening ? "Dinleniyor" : "Sesli ara"}</span>
-                  </button>
-                </div>
-                <button className="law-chat-send" disabled={loading === "chat" || chatAttachmentLoading || (!smartNoteDraft.trim() && !chatAttachment)} type="submit">
-                  {loading === "chat" ? <LoaderCircle className="spin" size={22} /> : <Send size={22} />}
-                </button>
+                {chatMessages.length ? (
+                  <section className="law-chat-thread" aria-live="polite">
+                    {chatMessages.map((message) => (
+                      <article key={message.id} className={`law-chat-message ${message.role}`}>
+                        <span>{message.role === "user" ? "Siz" : "LawAI"}</span>
+                        <pre>{message.text}</pre>
+                        {message.citations ? <CitationList citations={message.citations} /> : null}
+                        {message.disclaimer ? <small>{message.disclaimer}</small> : null}
+                      </article>
+                    ))}
+                    {loading === "chat" ? (
+                      <article className="law-chat-message assistant pending">
+                        <span>LawAI</span>
+                        <p>
+                          <LoaderCircle className="spin" size={18} />
+                          Cevap hazirlaniyor
+                          <i className="typing-dots" aria-hidden="true"><b></b><b></b><b></b></i>
+                        </p>
+                      </article>
+                    ) : null}
+                    {chatResponse ? (
+                      <button className="law-chat-download" type="button" onClick={downloadSmartNotesPdf}>
+                        <FileText size={17} />
+                        {t.tools.smartNotesDownload}
+                      </button>
+                    ) : null}
+                  </section>
+                ) : (
+                  <section className="law-chat-prompts" aria-label="Ornek asistan kullanimlari">
+                    <article>
+                      <FileText size={20} />
+                      <strong>Belgeyi ozetle</strong>
+                      <p>Dilekce, sozlesme veya tutanaktaki hukuki riskleri hizlica cikar.</p>
+                    </article>
+                    <article>
+                      <Scale size={20} />
+                      <strong>Dava stratejisi kur</strong>
+                      <p>Eksik delilleri, durusma notlarini ve sonraki adimlari planla.</p>
+                    </article>
+                    <article>
+                      <MessageSquareMore size={20} />
+                      <strong>Net soru sor</strong>
+                      <p>Kisa bir olay anlat, uygulanabilir cevap ve kontrol listesi al.</p>
+                    </article>
+                  </section>
+                )}
+
+                <form className="law-chat-composer" onSubmit={submitChat}>
+                  <input
+                    ref={chatFileInputRef}
+                    accept={acceptedExtensions.join(",")}
+                    className="law-chat-file-input"
+                    onChange={(event) => void attachChatDocument(event.target.files?.[0] ?? null)}
+                    type="file"
+                  />
+                  <textarea
+                    value={smartNoteDraft}
+                    onChange={(event) => setSmartNoteDraft(event.target.value)}
+                    placeholder="Bana bir soru sor..."
+                    rows={4}
+                  />
+                  {chatAttachment ? (
+                    <div className="law-chat-attachment">
+                      <FileText size={17} />
+                      <span>{chatAttachment.filename}</span>
+                      <small>{formatBytes(chatAttachment.size)}</small>
+                      <button type="button" onClick={() => setChatAttachment(null)} aria-label="Belgeyi kaldir">
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ) : null}
+                  <div className="law-chat-composer-tools">
+                    <div>
+                      <button className="law-chat-tool" type="button" onClick={() => chatFileInputRef.current?.click()} disabled={chatAttachmentLoading} title="Belge ekle">
+                        {chatAttachmentLoading ? <LoaderCircle className="spin" size={18} /> : <Upload size={18} />}
+                        <span>Belge ekle</span>
+                      </button>
+                      <button className={`law-chat-tool ${voiceListening ? "active" : ""}`} type="button" onClick={() => void startVoiceInput()} title="Sesli ara">
+                        <Mic size={18} />
+                        <span>{voiceListening ? "Dinleniyor" : "Sesli ara"}</span>
+                      </button>
+                    </div>
+                    <button className="law-chat-send" disabled={loading === "chat" || chatAttachmentLoading || (!smartNoteDraft.trim() && !chatAttachment)} type="submit">
+                      {loading === "chat" ? <LoaderCircle className="spin" size={22} /> : <Send size={22} />}
+                    </button>
+                  </div>
+                  {voiceNotice ? <p className="law-chat-voice-notice">{voiceNotice}</p> : null}
+                </form>
               </div>
-              {voiceNotice ? <p className="law-chat-voice-notice">{voiceNotice}</p> : null}
-            </form>
+            </div>
           </section>
         )}
-
         {activeTab === "search" && (
           <section className="precedent-research-workspace">
             <form className="precedent-search-hero" onSubmit={submitSearch}>
