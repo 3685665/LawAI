@@ -6,7 +6,15 @@
     "passwordHash" : "$2a$10$8jBnxrT3MQ5lBRolF45ZK.Fgs6JfOjjKfyBNrFMRti9JIU94XqdEK",
     "role" : "ADMIN",
     "createdAt" : "2026-06-02T22:49:20.4135034Z",
-    "lastLoginAt" : "2026-06-06T21:11:19.8093717Z"
+    "lastLoginAt" : "2026-06-07T11:03:04.8954844Z"
+  }, {
+    "id" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "name" : "Ceylan Avci",
+    "email" : "uluveyuceceylanavci@gmail.com",
+    "passwordHash" : "$2a$10$S6mL5RJPI7J5bk85dqFwt.o5APr421WL1b3SteBlXMXdPcT5JlL7K",
+    "role" : "USER",
+    "createdAt" : "2026-06-07T11:00:07.6304953Z",
+    "lastLoginAt" : "2026-06-07T11:02:02.3067553Z"
   } ],
   "sessions" : [ {
     "tokenHash" : "$2a$10$DYiPqL8AZ7kbdacCumXz.O2zWbBdhi2LhXaDlrCs4eV7VROdU7KBq",
@@ -23,11 +31,12 @@
     "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
     "expiresAt" : "2026-07-06T12:01:00.2227133Z",
     "createdAt" : "2026-06-06T12:01:00.2227133Z"
-  }, {
-    "tokenHash" : "$2a$10$5lqQPCd0EaW1q0ZNamnKVObZLt4bEDKomTLBiVebuFv.ko9oQRrGC",
-    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
-    "expiresAt" : "2026-07-06T21:11:19.8093717Z",
-    "createdAt" : "2026-06-06T21:11:19.8093717Z"
   } ],
-  "passwordResets" : [ ]
+  "passwordResets" : [ {
+    "tokenHash" : "$2a$10$kxOByD02W5VTsrRjl79YtewYryPLsXDreI3kn1kn6wql1G8hsJ6Vi",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "expiresAt" : "2026-06-07T13:01:11.2685427Z",
+    "used" : true,
+    "createdAt" : "2026-06-07T11:01:11.2685427Z"
+  } ]
 }

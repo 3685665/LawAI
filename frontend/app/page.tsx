@@ -345,11 +345,6 @@ export default function Home() {
   const [profileError, setProfileError] = useState("");
   const [profileSuccess, setProfileSuccess] = useState("");
 
-  const demoCredentials = {
-    email: "admin@lawai.local",
-    password: "ChangeMe123!"
-  };
-
   const t = useMemo(() => getMessages(locale), [locale]);
 
   const [smartNoteCaseTitle, setSmartNoteCaseTitle] = useState("Genel analiz");
@@ -1261,17 +1256,6 @@ export default function Home() {
     void loadFeedbackHistory();
   }
 
-  function fillDemoCredentials() {
-    setAuthError("");
-    setAuthMode("login");
-    setAuthForm((current) => ({
-      ...current,
-      email: demoCredentials.email,
-      password: demoCredentials.password,
-      rememberMe: true
-    }));
-  }
-
   async function submitAuth(event: FormEvent) {
     event.preventDefault();
     setAuthError("");
@@ -1430,55 +1414,21 @@ export default function Home() {
   if (!authUser) {
     return (
       <main className="auth-shell">
-        <section className="auth-card panel auth-card-split">
-          <div className="auth-hero">
-            <div className="auth-hero-head">
-              <span className="eyebrow">Kurumsal erisim</span>
-              <h1>Avukat ofisi icin guvenli oturum.</h1>
-              <p>Oturumlar HttpOnly cookie ile korunur. Hesap yonetimi, sifre kurtarma ve ilk kullanim akisi tek bir resmi panelde sunulur.</p>
+        <section className="auth-card auth-card-split">
+          <div className="auth-hero" aria-hidden="true">
+            <div className="auth-brand-mark">
+              <Scale size={30} />
+              <span>LawAI</span>
             </div>
-
-            <div className="auth-points">
-              <div>
-                <strong>HttpOnly cookie</strong>
-                <span>Parola tarayicida tutulmaz, oturum sunucu tarafinda dogrulanir.</span>
-              </div>
-              <div>
-                <strong>Resmi akis</strong>
-                <span>Giris, hesap acma ve sifre kurtarma adimlari tek duzende ilerler.</span>
-              </div>
-              <div>
-                <strong>Yetkili erisim</strong>
-                <span>Dogrulama olmadan hicbir uygulama ekrani acilmaz.</span>
-              </div>
-            </div>
-
-            <div className="auth-credentials panel">
-              <div className="auth-credentials-head">
-                <strong>Ilk kullanim hesabi</strong>
-                <span>Gelistirme ortami icin hazirlandi.</span>
-              </div>
-              <div className="auth-credentials-grid">
-                <div>
-                  <small>E-posta</small>
-                  <strong>{demoCredentials.email}</strong>
-                </div>
-                <div>
-                  <small>Sifre</small>
-                  <strong>{demoCredentials.password}</strong>
-                </div>
-              </div>
-              <button type="button" className="secondary-button auth-secondary" onClick={fillDemoCredentials}>
-                Ornek hesabi doldur
-              </button>
-            </div>
+            <h1>Hukuk calismaniza giris yapin.</h1>
+            <p>Dosyalar, dilekceler ve emsal arama icin tek calisma alani.</p>
           </div>
 
           <form className="auth-form" onSubmit={submitAuth}>
             <div className="auth-form-head">
-              <span className="eyebrow">Oturum</span>
+              <span className="eyebrow">LawAI Studio</span>
               <h2>{authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : "Sifremi unuttum"}</h2>
-              <p>{authMode === "login" ? "Kurum hesabiniza guvenli sekilde giris yapin." : authMode === "register" ? "Yeni kullanici hesabi olusturun." : "Sifirlama baglantisi e-posta ile iletilir."}</p>
+              <p>{authMode === "login" ? "Devam etmek icin hesabinizla oturum acin." : authMode === "register" ? "Yeni kullanici bilgilerini girin." : "Sifre yenileme baglantisi isteyin."}</p>
             </div>
             <div className="auth-switch">
               <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giris</button>
@@ -1538,7 +1488,7 @@ export default function Home() {
             </div>
 
             <p className="auth-note">
-              {authMode === "forgot" ? "E-posta adresiniz eslesirse sifirlama baglantisi iletilir." : "Hesaplar cookie tabanli oturum ile korunur."}
+              {authMode === "forgot" ? "E-posta adresiniz eslesirse baglanti gonderilir." : "Bilgilerinizi girerek devam edin."}
             </p>
           </form>
         </section>
