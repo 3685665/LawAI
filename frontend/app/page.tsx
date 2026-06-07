@@ -72,7 +72,7 @@ import {
   uploadMultipart
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
+type Tab = "chat" | "search" | "caseLaw" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type GoogleCredentialResponse = { credential?: string };
 type GoogleAccountsId = {
@@ -311,6 +311,7 @@ function getTabLabel(tab: Tab, locale: Locale) {
   const labels: Record<Tab, { tr: string; en: string }> = {
     chat: { tr: "Asistan", en: "Assistant" },
     search: { tr: "Emsal Arama", en: "Precedent Search" },
+    caseLaw: { tr: "Ictihat Arama", en: "Case-Law Search" },
     petition: { tr: "Dilekce Taslak", en: "Petition Draft" },
     cases: { tr: "Davalar", en: "Cases" },
     document: { tr: "Belge Isleme", en: "Document Processing" },
@@ -435,6 +436,7 @@ export default function Home() {
     const groups: NavigationGroup[] = [
       { id: "assistant", label: t.tabs.chat, icon: Bot, tab: "chat" },
       { id: "precedents", label: t.tabs.search, icon: FileSearch, tab: "search" },
+      { id: "case-law", label: t.tabs.caseLaw, icon: Scale, tab: "caseLaw" },
       { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" },
       { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness, tab: "cases" },
       { id: "document", label: t.tabs.document, icon: FileUp, tab: "document" },
@@ -762,12 +764,16 @@ export default function Home() {
   }, [precedents, selectedPrecedentIndex]);
 
   const precedentSources = useMemo(() => [
-    { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
-    { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
-    { key: "danistay" as const, label: "Danistay", court: "Danistay" },
-    { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" },
-    { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
-  ], [locale]);
+    ...(activeTab === "caseLaw"
+      ? [{ key: "yargitay" as const, label: "Yargitay", court: "Yargitay" }]
+      : [
+          { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
+          { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
+          { key: "danistay" as const, label: "Danistay", court: "Danistay" },
+          { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" },
+          { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
+        ])
+  ], [activeTab, locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
     "Determining child living standard and parent income in child support amount",
@@ -1214,13 +1220,15 @@ export default function Home() {
       setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
       return;
     }
-    const sourceHint = precedentSources.find((item) => item.key === sourceKey);
-    const effectiveCourt = court || sourceHint?.court || "";
+    const effectiveSourceKey = activeTab === "caseLaw" ? "yargitay" : sourceKey;
+    const sourceHint = precedentSources.find((item) => item.key === effectiveSourceKey);
+    const effectiveCourt = activeTab === "caseLaw" ? "Yargitay" : (court || sourceHint?.court || "");
     run("search", async () => {
-      const data = await postJson<{ results: Precedent[] }>("/precedents/search", {
-        query: buildPrecedentQuery(normalizedQuery, sourceKey),
+      const endpoint = activeTab === "caseLaw" ? "/precedents/yargitay/search" : "/precedents/search";
+      const data = await postJson<{ results: Precedent[] }>(endpoint, {
+        query: buildPrecedentQuery(normalizedQuery, effectiveSourceKey),
         court: effectiveCourt || undefined,
-        limit: 50
+        limit: activeTab === "caseLaw" ? 20 : 50
       });
       setPrecedents(data.results);
       setSelectedPrecedentIndex(data.results.length ? 0 : null);
@@ -1970,7 +1978,7 @@ export default function Home() {
             </div>
           </section>
         )}
-        {activeTab === "search" && (
+        {(activeTab === "search" || activeTab === "caseLaw") && (
           <section className="precedent-research-workspace">
             <form className="precedent-search-hero" onSubmit={submitSearch}>
               <div className="precedent-brand-mark" aria-hidden="true">
@@ -1978,9 +1986,9 @@ export default function Home() {
                 <span>LawAI Studio</span>
               </div>
               <div className="precedent-hero-copy">
-                <span className="eyebrow">{locale === "en" ? "Precedent search" : "Emsal arama"}</span>
-                <h1>{locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama"}</h1>
-                <p>{locale === "en" ? "Select a source, enter the legal issue, and review the most relevant decisions." : "Kaynak secin, hukuki konuyu yazin ve en ilgili emsal kararları inceleyin."}</p>
+                <span className="eyebrow">{activeTab === "caseLaw" ? (locale === "en" ? "Court of Cassation case-law" : "Yargitay ictihat arama") : (locale === "en" ? "Precedent search" : "Emsal arama")}</span>
+                <h1>{activeTab === "caseLaw" ? (locale === "en" ? "Case-Law Search" : "Ictihat Arama") : (locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama")}</h1>
+                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation decisions, and open the details to read the decision text." : "Aramaniza gore Yargitay kararlarini getirir; listeden bir karara basinca karar metnini detayda gosterir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
               </div>
               <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
                 {precedentSources.map((source) => (
