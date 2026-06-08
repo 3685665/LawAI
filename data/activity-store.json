@@ -5819,5 +5819,77 @@
     "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
     "path" : "/api/auth/register",
     "createdAt" : "2026-06-08T21:10:03.6969741Z"
+  }, {
+    "id" : "f0df77dd-05be-4089-acfe-d64ac11f83c1",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T21:21:19.5934102Z"
+  }, {
+    "id" : "eec9caf9-8274-4ab5-96a4-a47861dfec0c",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T21:26:09.7334131Z"
+  }, {
+    "id" : "6b4f441d-b0df-4ba4-a276-ccc72cc2e111",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T21:34:26.4142271Z"
+  }, {
+    "id" : "3fdf1a54-5bb5-41f0-9d90-fbec054e2a90",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-verify",
+    "screen" : "Oturum",
+    "detail" : "E-posta dogrulamasi gerceklesti.",
+    "path" : "/api/auth/verify",
+    "createdAt" : "2026-06-08T21:35:12.0158531Z"
+  }, {
+    "id" : "2d239167-87bc-4294-9660-5078ea725d7d",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-login",
+    "screen" : "Oturum",
+    "detail" : "Kullanici giris yapti.",
+    "path" : "/api/auth/login",
+    "createdAt" : "2026-06-08T21:36:09.122022Z"
+  }, {
+    "id" : "fcfcbd21-9dda-441c-9d9d-179f52d9eb57",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T21:36:09.9560583Z"
   } ]
 }

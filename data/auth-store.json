@@ -10,15 +10,15 @@
     "verified" : false,
     "verifiedAt" : null
   }, {
-    "id" : "75c751a7-adc6-4a62-addd-dc17c8fb9b33",
+    "id" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
     "name" : "Ceylan Avci",
     "email" : "ceylan__avci@hotmail.com",
-    "passwordHash" : "$2a$10$59kgiA5JYQf.uDDiELOYtuFr3f55VdMUlQr4hPXL3Gkh52dM9UYzW",
+    "passwordHash" : "$2a$10$U7Td/S/isS3jursB4kBkYO3jNpjHbC/2WSqLZQ.MoLtCJoowfrxrW",
     "role" : "USER",
-    "createdAt" : "2026-06-08T21:10:01.6577324Z",
-    "lastLoginAt" : "2026-06-08T21:10:01.6577324Z",
-    "verified" : false,
-    "verifiedAt" : null
+    "createdAt" : "2026-06-08T21:34:24.0566826Z",
+    "lastLoginAt" : "2026-06-08T21:36:07.9221139Z",
+    "verified" : true,
+    "verifiedAt" : "2026-06-08T21:35:11.9888545Z"
   } ],
   "sessions" : [ {
     "tokenHash" : "$2a$10$DYiPqL8AZ7kbdacCumXz.O2zWbBdhi2LhXaDlrCs4eV7VROdU7KBq",
@@ -50,6 +50,11 @@
     "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
     "expiresAt" : "2026-07-08T06:54:48.2714381Z",
     "createdAt" : "2026-06-08T06:54:48.2714381Z"
+  }, {
+    "tokenHash" : "$2a$10$/cIgj79IJYb50VybrMgyAeTkzfyhqIMH1txgAISxVIOvmziwY6hlO",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "expiresAt" : "2026-07-08T21:36:07.9221139Z",
+    "createdAt" : "2026-06-08T21:36:07.9221139Z"
   } ],
   "passwordResets" : [ ],
   "verifications" : [ {
@@ -64,5 +69,29 @@
     "expiresAt" : "2026-06-10T21:10:01.6577324Z",
     "used" : false,
     "createdAt" : "2026-06-08T21:10:01.6577324Z"
+  }, {
+    "tokenHash" : "$2a$10$lO7bvlQ8o4C6FbGyBJklyOwBe5rNgyFp2HxXt1VFTJ15/pa34CMbm",
+    "userId" : "35e6141d-91b8-4f7a-bedb-29924efea247",
+    "expiresAt" : "2026-06-10T21:18:16.3115785Z",
+    "used" : false,
+    "createdAt" : "2026-06-08T21:18:16.3115785Z"
+  }, {
+    "tokenHash" : "$2a$10$H9yy/HxQjVoAfW9DvkxUJunIWLrMbY1rdvpC/IafV8JedKjEYl2tK",
+    "userId" : "e8fcfc87-29c3-4dce-b17d-acc29e748e77",
+    "expiresAt" : "2026-06-10T21:21:16.8317363Z",
+    "used" : false,
+    "createdAt" : "2026-06-08T21:21:16.8317363Z"
+  }, {
+    "tokenHash" : "$2a$10$0SQByXbZwKWwkI5T2HDXReUfzLiI66RNvGpECyNLXHOoqzrVIjHc2",
+    "userId" : "cc29bc4a-2819-4e0b-8c81-cc95711a8308",
+    "expiresAt" : "2026-06-10T21:26:07.7078534Z",
+    "used" : false,
+    "createdAt" : "2026-06-08T21:26:07.7078534Z"
+  }, {
+    "tokenHash" : "$2a$10$afpansnACi/3f0Q14Wrute9dLWH0UY6VurA18i6rw3BtlP7UYRXOq",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "expiresAt" : "2026-06-10T21:34:24.0566826Z",
+    "used" : true,
+    "createdAt" : "2026-06-08T21:34:24.0566826Z"
   } ]
 }
