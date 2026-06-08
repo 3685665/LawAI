@@ -3083,6 +3083,10 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   grid-template-columns: minmax(360px, 0.85fr) minmax(420px, 1.15fr);
 }
 
+.precedent-research-layout-wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .precedent-results-panel,
 .precedent-detail-panel {
   align-content: start;
@@ -3144,10 +3148,77 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   padding: 12px;
 }
 
+.precedent-detail-table {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.precedent-detail-table .MuiPaper-root {
+  background: transparent;
+}
+
+.precedent-detail-table .MuiTable-root {
+  background: #fff;
+}
+
+.precedent-detail-table .MuiTableCell-root {
+  border-bottom-color: var(--line);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.precedent-detail-table .MuiTableHead-root .MuiTableCell-root {
+  background: rgba(22, 56, 88, 0.04);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.precedent-detail-table .MuiTableBody-root .MuiTableCell-root:first-of-type {
+  color: var(--muted);
+  font-weight: 600;
+  width: 42%;
+}
+
 .precedent-use-box p {
   color: var(--muted);
   line-height: 1.55;
   margin: 0;
+}
+
+.precedent-reporting-panel {
+  width: 100%;
+}
+
+.precedent-detail-drawer {
+  background:
+    radial-gradient(circle at top right, rgba(31, 79, 122, 0.08), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
+  box-sizing: border-box;
+  width: min(56vw, 720px);
+}
+
+.precedent-detail-drawer-inner {
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  max-height: 100vh;
+  overflow: auto;
+  padding: 24px;
+  width: min(56vw, 720px);
+}
+
+.precedent-detail-drawer-head {
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .precedent-detail-drawer,
+  .precedent-detail-drawer-inner {
+    width: min(100vw, 100vw);
+  }
 }
 
 .precedent-result-list {

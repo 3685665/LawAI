@@ -2,6 +2,7 @@
 
 import { FormEvent, SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Drawer, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import { DataGrid, type GridColDef, type GridRowParams } from "@mui/x-data-grid";
 import {
   AlertCircle,
@@ -160,6 +161,10 @@ type FeedbackGridRow = FeedbackRecord & {
 type CaseLawGridRow = Precedent & {
   id: string;
   rowIndex: number;
+};
+type PrecedentDetailRow = {
+  label: string;
+  value: string;
 };
 type AdminSection = "feedback" | "users";
 type AdminUserView = "list" | "detail";
@@ -394,6 +399,7 @@ export default function Home() {
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
   const [precedentSummary, setPrecedentSummary] = useState("");
   const [selectedPrecedentIndex, setSelectedPrecedentIndex] = useState<number | null>(null);
+  const [precedentDetailOpen, setPrecedentDetailOpen] = useState(false);
   const [petition, setPetition] = useState({
     petitionType: "Alacak",
     court: "Istanbul Nobetci Asliye Hukuk Mahkemesi",
@@ -767,6 +773,16 @@ export default function Home() {
     return precedents[index] ?? precedents[0];
   }, [precedents, selectedPrecedentIndex]);
 
+  const selectedPrecedentDetailRows = useMemo<PrecedentDetailRow[]>(() => {
+    if (!selectedPrecedent) return [];
+    return [
+      { label: t.tools.researchCourt, value: selectedPrecedent.court },
+      { label: t.tools.researchChamber, value: selectedPrecedent.chamber ?? "-" },
+      { label: t.tools.researchDocket, value: [selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-" },
+      { label: t.feedback.date, value: selectedPrecedent.date ?? "-" }
+    ];
+  }, [selectedPrecedent, t.feedback.date, t.tools.researchChamber, t.tools.researchCourt, t.tools.researchDocket]);
+
   const caseLawRows = useMemo<CaseLawGridRow[]>(() => precedents.map((item, index) => ({
     ...item,
     id: item.sourceId ?? `${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`,
@@ -809,21 +825,21 @@ export default function Home() {
     },
     {
       field: "actions",
-      headerName: locale === "en" ? "Detail" : "Detay",
+      headerName: locale === "en" ? "Open" : "Ac",
       width: 130,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
         <button className="secondary-button" onClick={(event) => {
           event.stopPropagation();
-          selectPrecedent(params.row.rowIndex);
+          openPrecedent(params.row.rowIndex);
         }} type="button">
-          {loading === "precedent-detail" && selectedPrecedentIndex === params.row.rowIndex ? <LoaderCircle className="spin" size={15} /> : null}
-          {locale === "en" ? "Detail" : "Detay"}
+          {loading === "precedent-detail" && precedentDetailOpen && selectedPrecedentIndex === params.row.rowIndex ? <LoaderCircle className="spin" size={15} /> : null}
+          {locale === "en" ? "Open" : "Ac"}
         </button>
       )
     }
-  ], [loading, locale, selectedPrecedentIndex]);
+  ], [loading, locale, precedentDetailOpen, selectedPrecedentIndex]);
 
   const precedentSources = useMemo(() => [
     ...(activeTab === "caseLaw"
@@ -1277,6 +1293,7 @@ export default function Home() {
     const normalizedQuery = query.trim();
     setPrecedents([]);
     setSelectedPrecedentIndex(null);
+    setPrecedentDetailOpen(false);
     setPrecedentSummary("");
     if (!normalizedQuery) {
       setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
@@ -1312,8 +1329,9 @@ export default function Home() {
     executePrecedentSearch(example, searchCourt, precedentSource);
   }
 
-  function selectPrecedent(index: number) {
+  function openPrecedent(index: number) {
     setSelectedPrecedentIndex(index);
+    setPrecedentDetailOpen(true);
     const item = precedents[index];
     if (activeTab !== "caseLaw" || !item?.sourceId || item.content) {
       return;
@@ -1328,6 +1346,10 @@ export default function Home() {
         date: detail.date ?? entry.date
       } : entry));
     });
+  }
+
+  function closePrecedentDetail() {
+    setPrecedentDetailOpen(false);
   }
 
   function summarizePrecedents() {
@@ -2106,83 +2128,48 @@ export default function Home() {
               </section>
             </form>
 
-            <section className="precedent-research-layout">
-              <section className="panel precedent-results-panel">
-                <div className="section-head precedent-results-head">
-                  <div>
-                    <span className="section-label">{t.tools.researchMaxResults}</span>
-                    <h3>{t.tools.searchResults}</h3>
+            {activeTab === "caseLaw" ? (
+              <section className="precedent-research-layout precedent-research-layout-wide">
+                <section className="panel precedent-results-panel">
+                  <div className="section-head precedent-results-head">
+                    <div>
+                      <span className="section-label">{t.tools.researchMaxResults}</span>
+                      <h3>{t.tools.searchResults}</h3>
+                    </div>
+                    <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
                   </div>
-                  <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
-                </div>
-                {activeTab === "caseLaw" && precedents.length ? (
-                  <div className="feedback-datagrid-wrap precedent-datagrid-wrap">
-                    <DataGrid
-                      autoHeight
-                      rows={caseLawRows}
-                      columns={caseLawColumns}
-                      disableRowSelectionOnClick
-                      onRowClick={(params) => selectPrecedent(params.row.rowIndex)}
-                      initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
-                      pageSizeOptions={[10, 20, 50]}
-                      sx={{
-                        border: 0,
-                        "& .MuiDataGrid-columnHeaders": {
-                          borderBottom: "1px solid var(--line)",
-                          backgroundColor: "#f7f9fb"
-                        },
-                        "& .MuiDataGrid-cell": {
-                          borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
-                        },
-                        "& .MuiDataGrid-row:hover": {
-                          backgroundColor: "#f7fafc"
-                        },
-                        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
-                          outline: "none"
-                        }
-                      }}
-                    />
-                  </div>
-                ) : precedents.length ? (
-                  <div className="precedent-result-list">
-                    {precedents.map((item, index) => (
-                      <button
-                        key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
-                        className={`precedent-result-card ${selectedPrecedent === item ? "active" : ""}`}
-                        type="button"
-                        onClick={() => selectPrecedent(index)}
-                      >
-                        <span>{item.court}{item.chamber ? ` / ${item.chamber}` : ""}</span>
-                        <strong>{item.topic}</strong>
-                        <small>{[item.docketNo, item.decisionNo, item.date].filter(Boolean).join(" - ") || "-"}</small>
-                        <p>{item.summary}</p>
-                      </button>
-                    ))}
-                  </div>
-                ) : <EmptyState text={t.tools.searchEmpty} />}
-              </section>
+                  {precedents.length ? (
+                    <div className="feedback-datagrid-wrap precedent-datagrid-wrap">
+                      <DataGrid
+                        autoHeight
+                        rows={caseLawRows}
+                        columns={caseLawColumns}
+                        disableRowSelectionOnClick
+                        onRowClick={(params) => setSelectedPrecedentIndex(params.row.rowIndex)}
+                        initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                        pageSizeOptions={[10, 20, 50]}
+                        sx={{
+                          border: 0,
+                          "& .MuiDataGrid-columnHeaders": {
+                            borderBottom: "1px solid var(--line)",
+                            backgroundColor: "#f7f9fb"
+                          },
+                          "& .MuiDataGrid-cell": {
+                            borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                          },
+                          "& .MuiDataGrid-row:hover": {
+                            backgroundColor: "#f7fafc"
+                          },
+                          "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                            outline: "none"
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : <EmptyState text={t.tools.searchEmpty} />}
+                </section>
 
-              <aside className="panel precedent-detail-panel">
-                <div className="section-head">
-                  <div>
-                    <span className="section-label">{t.tools.researchDetails}</span>
-                    <h3>{selectedPrecedent?.topic ?? t.tools.researchDetails}</h3>
-                  </div>
-                </div>
-
-                {selectedPrecedent ? (
-                  <section className="precedent-detail-box">
-                    <dl>
-                      <div><dt>{t.tools.researchCourt}</dt><dd>{selectedPrecedent.court}</dd></div>
-                      <div><dt>{t.tools.researchChamber}</dt><dd>{selectedPrecedent.chamber ?? "-"}</dd></div>
-                      <div><dt>{t.tools.researchDocket}</dt><dd>{[selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-"}</dd></div>
-                      <div><dt>{t.feedback.date}</dt><dd>{selectedPrecedent.date ?? "-"}</dd></div>
-                    </dl>
-                    <pre>{loading === "precedent-detail" && activeTab === "caseLaw" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
-                  </section>
-                ) : <EmptyState text={t.tools.searchEmpty} />}
-
-                <section className="precedent-summary-box">
+                <section className="precedent-summary-box precedent-reporting-panel">
                   <div className="section-head">
                     <div>
                       <span className="section-label">{t.tools.researchAiSummary}</span>
@@ -2196,7 +2183,7 @@ export default function Home() {
                   {precedentSummary ? <pre>{precedentSummary}</pre> : <p>{t.tools.researchSummaryEmpty}</p>}
                 </section>
 
-                <section className="precedent-use-box">
+                <section className="precedent-use-box precedent-reporting-panel">
                   <span className="section-label">{t.tools.researchUse}</span>
                   <p>{t.tools.researchUseText}</p>
                   <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
@@ -2204,8 +2191,93 @@ export default function Home() {
                     {t.tools.petitionContext}
                   </button>
                 </section>
-              </aside>
-            </section>
+              </section>
+            ) : (
+              <section className="precedent-research-layout">
+                <section className="panel precedent-results-panel">
+                  <div className="section-head precedent-results-head">
+                    <div>
+                      <span className="section-label">{t.tools.researchMaxResults}</span>
+                      <h3>{t.tools.searchResults}</h3>
+                    </div>
+                    <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
+                  </div>
+                  {precedents.length ? (
+                    <div className="precedent-result-list">
+                      {precedents.map((item, index) => (
+                        <button
+                          key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
+                          className={`precedent-result-card ${selectedPrecedent === item ? "active" : ""}`}
+                          type="button"
+                          onClick={() => openPrecedent(index)}
+                        >
+                          <span>{item.court}{item.chamber ? ` / ${item.chamber}` : ""}</span>
+                          <strong>{item.topic}</strong>
+                          <small>{[item.docketNo, item.decisionNo, item.date].filter(Boolean).join(" - ") || "-"}</small>
+                          <p>{item.summary}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <EmptyState text={t.tools.searchEmpty} />}
+                </section>
+
+                <aside className="panel precedent-detail-panel">
+                  <div className="section-head">
+                    <div>
+                      <span className="section-label">{t.tools.researchDetails}</span>
+                      <h3>{selectedPrecedent?.topic ?? t.tools.researchDetails}</h3>
+                    </div>
+                  </div>
+
+                  {selectedPrecedent ? (
+                    <section className="precedent-detail-box">
+                      <TableContainer component={Paper} className="precedent-detail-table" elevation={0}>
+                        <Table size="small" aria-label={t.tools.researchDetails}>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>{locale === "en" ? "Field" : "Alan"}</TableCell>
+                              <TableCell>{locale === "en" ? "Value" : "Deger"}</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {selectedPrecedentDetailRows.map((row) => (
+                              <TableRow key={row.label} hover>
+                                <TableCell component="th" scope="row">{row.label}</TableCell>
+                                <TableCell>{row.value}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
+                    </section>
+                  ) : <EmptyState text={t.tools.searchEmpty} />}
+
+                  <section className="precedent-summary-box">
+                    <div className="section-head">
+                      <div>
+                        <span className="section-label">{t.tools.researchAiSummary}</span>
+                        <h3>{t.tools.researchSummarize}</h3>
+                      </div>
+                    </div>
+                    <button className="secondary-button" disabled={!precedents.length || loading === "precedent-summary"} type="button" onClick={summarizePrecedents}>
+                      {loading === "precedent-summary" ? <LoaderCircle className="spin" size={17} /> : <Bot size={17} />}
+                      {t.tools.researchSummarize}
+                    </button>
+                    {precedentSummary ? <pre>{precedentSummary}</pre> : <p>{t.tools.researchSummaryEmpty}</p>}
+                  </section>
+
+                  <section className="precedent-use-box">
+                    <span className="section-label">{t.tools.researchUse}</span>
+                    <p>{t.tools.researchUseText}</p>
+                    <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
+                      <FileText size={17} />
+                      {t.tools.petitionContext}
+                    </button>
+                  </section>
+                </aside>
+              </section>
+            )}
           </section>
         )}
 
@@ -2275,6 +2347,50 @@ export default function Home() {
             </section>
           </section>
         )}
+
+        <Drawer
+          anchor="right"
+          onClose={closePrecedentDetail}
+          open={activeTab === "caseLaw" && precedentDetailOpen && Boolean(selectedPrecedent)}
+          slotProps={{ paper: { className: "precedent-detail-drawer" } }}
+        >
+          <div className="precedent-detail-drawer-inner">
+            <div className="section-head precedent-detail-drawer-head">
+              <div>
+                <span className="section-label">{t.tools.researchDetails}</span>
+                <h3>{selectedPrecedent?.topic ?? t.tools.researchDetails}</h3>
+              </div>
+              <button className="secondary-button" type="button" onClick={closePrecedentDetail}>
+                <X size={16} />
+                {locale === "en" ? "Close" : "Kapat"}
+              </button>
+            </div>
+
+            {selectedPrecedent ? (
+              <section className="precedent-detail-box">
+                <TableContainer component={Paper} className="precedent-detail-table" elevation={0}>
+                  <Table size="small" aria-label={t.tools.researchDetails}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{locale === "en" ? "Field" : "Alan"}</TableCell>
+                        <TableCell>{locale === "en" ? "Value" : "Deger"}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedPrecedentDetailRows.map((row) => (
+                        <TableRow key={row.label} hover>
+                          <TableCell component="th" scope="row">{row.label}</TableCell>
+                          <TableCell>{row.value}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
+              </section>
+            ) : <EmptyState text={t.tools.searchEmpty} />}
+          </div>
+        </Drawer>
 
         {activeTab === "cases" && <CasesPanel locale={locale} onGoToDocuments={() => setActiveTab("document")} />}
 

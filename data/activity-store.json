@@ -5015,5 +5015,113 @@
     "detail" : "Yargitay ictihat aramasi yapildi.",
     "path" : "/api/precedents/yargitay/search",
     "createdAt" : "2026-06-07T21:26:28.6742093Z"
+  }, {
+    "id" : "720f8497-409e-47b3-ad3c-d944ed1fde8b",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:16:27.1680818Z"
+  }, {
+    "id" : "68f38e7a-fa5c-4ee8-ad9a-ffe705bdf538",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Ictihat Arama",
+    "detail" : "Ictihat Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:16:31.2616969Z"
+  }, {
+    "id" : "33cf5786-eedf-4cd2-b8c3-7318c618e320",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-search",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay ictihat aramasi yapildi.",
+    "path" : "/api/precedents/yargitay/search",
+    "createdAt" : "2026-06-08T06:16:41.332294Z"
+  }, {
+    "id" : "bebeeb92-78b3-4a56-a96d-87838a922308",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:19:43.7119705Z"
+  }, {
+    "id" : "3a4cac1d-439d-4fb4-82ad-5d0c166cf6c0",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:22:52.9473499Z"
+  }, {
+    "id" : "0b3c5c67-4100-47b3-81e9-3424b6480a69",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Ictihat Arama",
+    "detail" : "Ictihat Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:22:54.8777409Z"
+  }, {
+    "id" : "84c0999c-cb76-4c68-8343-798f86bcba52",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-search",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay ictihat aramasi yapildi.",
+    "path" : "/api/precedents/yargitay/search",
+    "createdAt" : "2026-06-08T06:23:18.4113286Z"
+  }, {
+    "id" : "18e9d4de-3c38-42c2-9498-68bbe46fdff5",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay karar detayi goruntulendi.",
+    "path" : "/api/precedents/yargitay/526758500",
+    "createdAt" : "2026-06-08T06:23:28.5741247Z"
+  }, {
+    "id" : "45c04b4d-a008-4308-998d-8b12cf7ec978",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay karar detayi goruntulendi.",
+    "path" : "/api/precedents/yargitay/1158411000",
+    "createdAt" : "2026-06-08T06:24:02.6826848Z"
   } ]
 }
