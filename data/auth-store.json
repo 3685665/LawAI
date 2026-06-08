@@ -13,10 +13,10 @@
     "id" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
     "name" : "Ceylan Avci",
     "email" : "ceylan__avci@hotmail.com",
-    "passwordHash" : "$2a$10$U7Td/S/isS3jursB4kBkYO3jNpjHbC/2WSqLZQ.MoLtCJoowfrxrW",
+    "passwordHash" : "$2a$10$5DRF9JIGL7nfwUnKC804uuKWJSY5mXDiG87iQduqbN1baWTIXcsyu",
     "role" : "USER",
     "createdAt" : "2026-06-08T21:34:24.0566826Z",
-    "lastLoginAt" : "2026-06-08T21:36:07.9221139Z",
+    "lastLoginAt" : "2026-06-08T21:46:01.654376Z",
     "verified" : true,
     "verifiedAt" : "2026-06-08T21:35:11.9888545Z"
   } ],
@@ -50,13 +50,14 @@
     "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
     "expiresAt" : "2026-07-08T06:54:48.2714381Z",
     "createdAt" : "2026-06-08T06:54:48.2714381Z"
-  }, {
-    "tokenHash" : "$2a$10$/cIgj79IJYb50VybrMgyAeTkzfyhqIMH1txgAISxVIOvmziwY6hlO",
-    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
-    "expiresAt" : "2026-07-08T21:36:07.9221139Z",
-    "createdAt" : "2026-06-08T21:36:07.9221139Z"
   } ],
-  "passwordResets" : [ ],
+  "passwordResets" : [ {
+    "tokenHash" : "$2a$10$KJYXTRdM79Oq6kWzQsB3E.RDBABpaglDiMspuWoEQZzIAidrGYB9y",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "expiresAt" : "2026-06-08T23:44:30.4012956Z",
+    "used" : true,
+    "createdAt" : "2026-06-08T21:44:30.4012956Z"
+  } ],
   "verifications" : [ {
     "tokenHash" : "$2a$10$kFQsozXzcND5OGeVC.3Fuuy3.HYcMEId3f.rQ6qU8PNmiUoPTT5k6",
     "userId" : "1f5ec6ee-91a2-477d-a273-3d753e7e3c11",

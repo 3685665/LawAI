@@ -1875,13 +1875,18 @@ export default function Home() {
               )}
             </div>
 
-            {authPreview?.resetLinkPreview ? (
+            {authPreview ? (
               <div className="auth-recovery-card">
-                <strong>Sifirlama baglantisi hazir</strong>
-                <span>
-                  E-posta ile iletilen baglanti:{" "}
-                  <a href={authPreview.resetLinkPreview}>{authPreview.resetLinkPreview}</a>
-                </span>
+                <strong>Sifirlama istegi alindi</strong>
+                <span>{authPreview.message}</span>
+                {authPreview.resetLinkPreview ? (
+                  <span>
+                    Gelistirme onizlemesi:{" "}
+                    <a href={authPreview.resetLinkPreview}>{authPreview.resetLinkPreview}</a>
+                  </span>
+                ) : (
+                  <span>E-posta kutunuzu kontrol edin. Baglanti birkaç dakika icinde ulasir.</span>
+                )}
               </div>
             ) : null}
             {registerResult ? (

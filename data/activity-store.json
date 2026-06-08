@@ -5891,5 +5891,89 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-08T21:36:09.9560583Z"
+  }, {
+    "id" : "3b24166d-caa7-4d78-90d3-44272732b2a7",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T21:37:24.2599645Z"
+  }, {
+    "id" : "c3860924-96fc-464e-81db-4342f50bfcbd",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "password-reset",
+    "screen" : "Oturum",
+    "detail" : "Sifre sifirlandi.",
+    "path" : "/api/auth/password/reset",
+    "createdAt" : "2026-06-08T21:45:31.248688Z"
+  }, {
+    "id" : "999ccd00-e396-4571-bbe4-6c95e99136d9",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T21:45:34.4670044Z"
+  }, {
+    "id" : "e143f104-3424-4bd9-926f-44d573a93d1b",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T21:45:45.7500121Z"
+  }, {
+    "id" : "e9462f6c-4b28-4b2a-9fb6-392cab5b9856",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-login",
+    "screen" : "Oturum",
+    "detail" : "Kullanici giris yapti.",
+    "path" : "/api/auth/login",
+    "createdAt" : "2026-06-08T21:46:02.7488443Z"
+  }, {
+    "id" : "2f1db831-c138-439a-b802-85c03b14970e",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T21:46:03.5820891Z"
+  }, {
+    "id" : "919351b7-ada9-4076-89d9-5d1f9791f237",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T21:46:09.1987092Z"
   } ]
 }

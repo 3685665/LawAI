@@ -201,11 +201,14 @@ public class AuthService {
     return toDto(updatedUser);
   }
 
+  private static final String PASSWORD_RESET_ACK_MESSAGE =
+      "E-posta adresi sistemde bulunuyorsa sifirlama baglantisi gonderildi.";
+
   public AuthPasswordResetResponse requestPasswordReset(AuthForgotPasswordRequest request) {
     String email = normalizeEmail(request.email());
     Optional<UserRecord> userOptional = findUserByEmail(email);
     if (userOptional.isEmpty()) {
-      return new AuthPasswordResetResponse("E-posta adresi sistemde bulunuyorsa sifirlama baglantisi olusturuldu.", null, null, null);
+      return new AuthPasswordResetResponse(PASSWORD_RESET_ACK_MESSAGE, null, null, null);
     }
 
     UserRecord user = userOptional.get();
@@ -225,10 +228,15 @@ public class AuthService {
     resets.add(resetRecord);
     save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets, safeList(payload.verifications())));
     String resetLink = buildResetLink(resetToken);
+    try {
+      emailService.sendPasswordResetEmail(user.email(), resetLink);
+    } catch (Exception ex) {
+      System.out.println("[AuthService] Sifre sifirlama e-postasi gonderilemedi: " + ex.getMessage());
+    }
     return new AuthPasswordResetResponse(
-        "Sifre sifirlama baglantisi olusturuldu. Baglanti e-posta ile iletilir.",
+        PASSWORD_RESET_ACK_MESSAGE,
         previewResetToken ? resetToken : null,
-        resetRecord.expiresAt(),
+        previewResetToken ? resetRecord.expiresAt() : null,
         previewResetToken ? resetLink : null
     );
   }
