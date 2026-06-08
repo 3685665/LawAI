@@ -1,4 +1,35 @@
 
+# Example SMTP configuration for Docker Compose (commented out).
+# If you want docker-compose to manage the Spring Boot backend, uncomment and extend this service block.
+#
+# springboot-backend:
+#   build: ./springboot-backend
+#   environment:
+#     - SMTP_HOST=${SMTP_HOST}
+#     - SMTP_PORT=${SMTP_PORT}
+#     - SMTP_USERNAME=${SMTP_USERNAME}
+#     - SMTP_PASSWORD=${SMTP_PASSWORD}
+#     - SMTP_FROM=${SMTP_FROM}
+#   env_file:
+#     - ./springboot-backend/.env.smtp.example
+#
+# If you prefer Docker secrets (recommended for production), add the following at the end of the compose file:
+# secrets:
+#   smtp_username:
+#     file: ./secrets/smtp_username.txt
+#   smtp_password:
+#     file: ./secrets/smtp_password.txt
+#
+# And in the service definition:
+#    environment:
+#      - SMTP_HOST=smtp.example.com
+#      - SMTP_PORT=587
+#      - SMTP_USERNAME_FILE=/run/secrets/smtp_username
+#      - SMTP_PASSWORD_FILE=/run/secrets/smtp_password
+#    secrets:
+#      - smtp_username
+#      - smtp_password
+
 services:
   postgres:
     image: pgvector/pgvector:pg17

@@ -5723,5 +5723,41 @@
     "detail" : "Asistan ekrani goruntulendi.",
     "path" : "/",
     "createdAt" : "2026-06-08T11:08:03.3651382Z"
+  }, {
+    "id" : "79169aad-eacb-40ea-b8cc-bbb96e21807b",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T13:53:44.3947666Z"
+  }, {
+    "id" : "3dfbd2c2-f9dd-40ee-85bf-41ebd0327462",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T13:53:48.3571012Z"
+  }, {
+    "id" : "d0e883ba-602a-4f52-8b69-98c1afba5038",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T14:02:17.5245958Z"
   } ]
 }

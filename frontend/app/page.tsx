@@ -349,6 +349,7 @@ export default function Home() {
   const [googleAuthError, setGoogleAuthError] = useState("");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authPreview, setAuthPreview] = useState<AuthPasswordResetResponse | null>(null);
+  const [registerResult, setRegisterResult] = useState<import("@/lib/api").AuthRegisterResponse | null>(null);
   const [authForm, setAuthForm] = useState({
     name: "",
     email: "",
@@ -1631,14 +1632,16 @@ export default function Home() {
       } else if (authMode === "register") {
         if (!authForm.name.trim()) throw new Error("Ad soyad gerekli.");
         if (authForm.password !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
-        const session = await authRegister({
+        // Enforce same password policy as backend: minimum 10 characters
+        if (!authForm.password || authForm.password.length < 10) throw new Error("Sifre en az 10 karakter olmali.");
+        const result = await authRegister({
           name: authForm.name,
           email: authForm.email,
           password: authForm.password
         });
-        setAuthUser(session.user);
+        setRegisterResult(result);
         setAuthPreview(null);
-        setActiveTab("chat");
+        // stay on auth screen and show verification instructions
       } else if (authMode === "forgot") {
         if (!authForm.email) throw new Error("E-posta gerekli.");
         const response = await authForgotPassword({ email: authForm.email });
@@ -1780,8 +1783,20 @@ export default function Home() {
               <Scale size={30} />
               <span>LawAI</span>
             </div>
-            <h1>Hukuk calismaniza giris yapin.</h1>
-            <p>Dosyalar, dilekceler ve emsal arama icin tek calisma alani.</p>
+            <h1>
+              {authMode === "register"
+                ? "LawAI ile hemen kaydolun."
+                : authMode === "forgot"
+                ? "Şifrenizi sıfırlayın."
+                : "Hukuk çalışmanıza giriş yapın."}
+            </h1>
+            <p>
+              {authMode === "register"
+                ? "Kurum e-posta adresinizle güvenli bir hesap oluşturun ve hukuki analizlere hızlıca erişin."
+                : authMode === "forgot"
+                ? "E-posta adresinizi girin, size bir sıfırlama bağlantısı gönderelim."
+                : "Dosyalar, dilekçeler ve emsal arama için tek çalışma alanı."}
+            </p>
           </div>
 
           <form className="auth-form" onSubmit={submitAuth}>
@@ -1791,10 +1806,27 @@ export default function Home() {
               <p>{authMode === "login" ? "Devam etmek icin hesabinizla oturum acin." : authMode === "register" ? "Yeni kullanici bilgilerini girin." : "Sifre yenileme baglantisi isteyin."}</p>
             </div>
             <div className="auth-switch">
-              <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giris</button>
-              <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Hesap ac</button>
-              <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Sifremi unuttum</button>
+              <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giriş</button>
+              <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Kaydol</button>
+              <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Şifremi unuttum</button>
             </div>
+
+            {authMode === "register" ? (
+              <div className="auth-register-flow">
+                <div className="auth-flow-step">
+                  <strong>1. Bilgilerinizi girin</strong>
+                  <span>Kurum adınızı, e-postanızı ve güvenli parolanızı belirleyin.</span>
+                </div>
+                <div className="auth-flow-step">
+                  <strong>2. Hesabınızı doğrulayın</strong>
+                  <span>Gelen kutunuza gönderilen bağlantı ile kaydınızı onaylayın.</span>
+                </div>
+                <div className="auth-flow-step">
+                  <strong>3. LawAI ile çalışmaya başlayın</strong>
+                  <span>Emsal arama, dilekçe taslakları ve dosya yönetimine erişin.</span>
+                </div>
+              </div>
+            ) : null}
 
             {authMode !== "forgot" ? (
               <div className="google-auth-panel">
@@ -1818,13 +1850,13 @@ export default function Home() {
               {(authMode === "login" || authMode === "register" || authMode === "forgot") && (
                 <label className="field-label">
                   E-posta
-                  <input autoComplete="email" type="email" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} />
+                  <input autoComplete="email" type="email" placeholder="ornek@firma.com" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} />
                 </label>
               )}
               {(authMode === "login" || authMode === "register") && (
                 <label className="field-label">
                   Sifre
-                  <input autoComplete={authMode === "login" ? "current-password" : "new-password"} type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
+                  <input autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="En az 10 karakter" type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
                 </label>
               )}
               {authMode === "register" && (
@@ -1850,6 +1882,22 @@ export default function Home() {
                 </span>
               </div>
             ) : null}
+            {registerResult ? (
+              <div className="auth-recovery-card">
+                <strong>Kaydınız alındı</strong>
+                <span>{registerResult.message}</span>
+                {registerResult.verificationLinkPreview ? (
+                  <span>
+                    Doğrulama bağlantısı: <a href={registerResult.verificationLinkPreview}>{registerResult.verificationLinkPreview}</a>
+                  </span>
+                ) : registerResult.verificationTokenPreview ? (
+                  <span>
+                    Doğrulama token (geliştirme): {registerResult.verificationTokenPreview} — <a href={`/verify?token=${encodeURIComponent(registerResult.verificationTokenPreview)}`}>Doğrula</a>
+                  </span>
+                ) : null}
+                <p>Kayıt tamamlanması için e-posta kutunuzu kontrol edin.</p>
+              </div>
+            ) : null}
             {authError ? <div className="error">{authError}</div> : null}
 
             <div className="auth-actions">
@@ -1860,7 +1908,11 @@ export default function Home() {
             </div>
 
             <p className="auth-note">
-              {authMode === "forgot" ? "E-posta adresiniz eslesirse baglanti gonderilir." : "Bilgilerinizi girerek devam edin."}
+              {authMode === "forgot"
+                ? "E-posta adresiniz eşleşirse bir sıfırlama bağlantısı gönderilir."
+                : authMode === "register"
+                ? "Kaydolarak kullanım koşullarını ve gizlilik politikasını kabul etmiş olursunuz."
+                : "Bilgilerinizi girerek güvenli şekilde devam edin."}
             </p>
           </form>
         </section>

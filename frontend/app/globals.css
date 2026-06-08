@@ -980,6 +980,31 @@ button[aria-expanded="false"] .sidebar-submenu-chevron {
   color: #fff;
 }
 
+.auth-register-flow {
+  display: grid;
+  gap: 12px;
+  padding: 16px 0 8px;
+}
+
+.auth-flow-step {
+  background: #f7fbff;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.auth-flow-step strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.auth-flow-step span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .auth-form .field-label {
   gap: 8px;
 }

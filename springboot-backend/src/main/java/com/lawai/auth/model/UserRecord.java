@@ -9,21 +9,27 @@ public record UserRecord(
     String passwordHash,
     String role,
     OffsetDateTime createdAt,
-    OffsetDateTime lastLoginAt
+    OffsetDateTime lastLoginAt,
+    Boolean verified,
+    OffsetDateTime verifiedAt
 ) {
   public UserRecord withLastLoginAt(OffsetDateTime value) {
-    return new UserRecord(id, name, email, passwordHash, role, createdAt, value);
+    return new UserRecord(id, name, email, passwordHash, role, createdAt, value, verified, verifiedAt);
   }
 
   public UserRecord withPasswordHash(String value) {
-    return new UserRecord(id, name, email, value, role, createdAt, lastLoginAt);
+    return new UserRecord(id, name, email, value, role, createdAt, lastLoginAt, verified, verifiedAt);
   }
 
   public UserRecord withRole(String value) {
-    return new UserRecord(id, name, email, passwordHash, value, createdAt, lastLoginAt);
+    return new UserRecord(id, name, email, passwordHash, value, createdAt, lastLoginAt, verified, verifiedAt);
   }
 
   public UserRecord withProfile(String name, String email) {
-    return new UserRecord(id, name, email, passwordHash, role, createdAt, lastLoginAt);
+    return new UserRecord(id, name, email, passwordHash, role, createdAt, lastLoginAt, verified, verifiedAt);
+  }
+
+  public UserRecord withVerified(Boolean value, OffsetDateTime at) {
+    return new UserRecord(id, name, email, passwordHash, role, createdAt, lastLoginAt, value, at);
   }
 }

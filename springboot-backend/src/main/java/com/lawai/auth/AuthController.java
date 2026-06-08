@@ -45,13 +45,26 @@ public class AuthController {
   }
 
   @PostMapping("/register")
-  public AuthSessionResponse register(@Valid @RequestBody AuthRegisterRequest request, HttpServletResponse response) {
-    authService.register(request);
-    String token = authService.issueSessionToken(new AuthLoginRequest(request.email(), request.password(), true));
-    setSessionCookie(response, token, true);
-    AuthUserDto user = authService.currentUser(token);
-    activityLogService.logBackend(toAuthenticatedUser(user), "auth-register", "Oturum", "Yeni kullanici kaydi yapildi.", "/api/auth/register");
-    return new AuthSessionResponse(user);
+  public com.lawai.auth.dto.AuthRegisterResponse register(@Valid @RequestBody AuthRegisterRequest request, HttpServletResponse response) {
+    com.lawai.auth.dto.AuthRegisterResponse result = authService.register(request);
+    // Do not auto-login. Require email verification first.
+    activityLogService.logBackend(new AuthenticatedUser("", request.name(), request.email(), "USER"), "auth-register", "Oturum", "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).", "/api/auth/register");
+    return result;
+  }
+
+  @GetMapping("/verify")
+  public AuthUserDto verify(HttpServletRequest req) {
+    String token = req.getParameter("token");
+    AuthUserDto user = authService.verifyEmail(token);
+    activityLogService.logBackend(toAuthenticatedUser(user), "auth-verify", "Oturum", "E-posta dogrulamasi gerceklesti.", "/api/auth/verify");
+    return user;
+  }
+
+  @PostMapping("/verify/resend")
+  public com.lawai.auth.dto.AuthRegisterResponse resendVerification(@Valid @RequestBody com.lawai.auth.dto.AuthForgotPasswordRequest request) {
+    com.lawai.auth.dto.AuthRegisterResponse result = authService.resendVerification(request.email());
+    activityLogService.logBackend(new AuthenticatedUser("", "", request.email(), "USER"), "auth-verify-resend", "Oturum", "Dogrulama baglantisi yeniden istendi.", "/api/auth/verify/resend");
+    return result;
   }
 
   @PostMapping("/login")

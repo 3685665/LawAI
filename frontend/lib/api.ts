@@ -59,6 +59,7 @@ export type AuthUser = {
 };
 
 export type AuthSessionResponse = { user: AuthUser };
+export type AuthRegisterResponse = { message: string; verificationTokenPreview?: string | null; expiresAt?: string | null; verificationLinkPreview?: string | null };
 export type AuthPasswordResetResponse = { message: string; resetTokenPreview?: string | null; expiresAt?: string | null; resetLinkPreview?: string | null };
 export type FeedbackRecord = {
   id: string;
@@ -258,8 +259,8 @@ export async function authLogin(payload: { email: string; password: string; reme
   return postJson<AuthSessionResponse>("/auth/login", payload);
 }
 
-export async function authRegister(payload: { name: string; email: string; password: string }): Promise<AuthSessionResponse> {
-  return postJson<AuthSessionResponse>("/auth/register", payload);
+export async function authRegister(payload: { name: string; email: string; password: string }): Promise<AuthRegisterResponse> {
+  return postJson<AuthRegisterResponse>("/auth/register", payload);
 }
 
 export async function authGoogle(payload: { credential: string }): Promise<AuthSessionResponse> {
@@ -289,6 +290,10 @@ export async function authLogout(): Promise<{ message: string }> {
 
 export async function authForgotPassword(payload: { email: string }): Promise<AuthPasswordResetResponse> {
   return postJson<AuthPasswordResetResponse>("/auth/password/forgot", payload);
+}
+
+export async function authVerify(token: string): Promise<{ message: string }> {
+  return getJson<{ message: string }>(`/auth/verify?token=${encodeURIComponent(token)}`);
 }
 
 export async function authResetPassword(payload: { token: string; newPassword: string }): Promise<AuthSessionResponse> {
