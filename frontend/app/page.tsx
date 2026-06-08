@@ -791,6 +791,13 @@ export default function Home() {
 
   const caseLawColumns = useMemo<GridColDef<CaseLawGridRow>[]>(() => [
     {
+      field: "court",
+      headerName: locale === "en" ? "Court" : "Mahkeme",
+      minWidth: 160,
+      flex: 0.9,
+      renderCell: (params) => <span className="feedback-pill feedback-pill-status">{getCourtDisplayName(params.row.court)}</span>
+    },
+    {
       field: "chamber",
       headerName: locale === "en" ? "Chamber" : "Daire",
       flex: 1.2,
@@ -1339,6 +1346,15 @@ export default function Home() {
       return `/precedents/aym/${encodeURIComponent(year)}/${encodeURIComponent(number)}`;
     }
     return null;
+  }
+
+  function getCourtDisplayName(court: string) {
+    const normalized = court.toLowerCase();
+    if (normalized.includes("yarg")) return locale === "en" ? "Court of Cassation" : "Yargitay";
+    if (normalized.includes("danis")) return locale === "en" ? "Council of State" : "Danistay";
+    if (normalized.includes("anayasa") || normalized.includes("aym")) return locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi";
+    if (normalized.includes("rekabet")) return locale === "en" ? "Competition Board" : "Rekabet Kurulu";
+    return court || "-";
   }
 
   function openPrecedent(index: number) {
@@ -2236,7 +2252,8 @@ export default function Home() {
                           type="button"
                           onClick={() => openPrecedent(index)}
                         >
-                          <span>{item.court}{item.chamber ? ` / ${item.chamber}` : ""}</span>
+                          <span className="feedback-pill feedback-pill-status">{getCourtDisplayName(item.court)}</span>
+                          <span>{item.chamber ?? "-"}</span>
                           <strong>{item.topic}</strong>
                           <small>{[item.docketNo, item.decisionNo, item.date].filter(Boolean).join(" - ") || "-"}</small>
                           <p>{item.summary}</p>

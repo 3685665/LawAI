@@ -42,10 +42,6 @@ public class AnayasaPrecedentService {
       "<div class=\"basvurukonualani\">(.*?)</div>",
       Pattern.DOTALL | Pattern.CASE_INSENSITIVE
   );
-  private static final Pattern DETAIL_PATTERN = Pattern.compile(
-      "<span class=\"kararHtml\"[^>]*>(.*?)</span>",
-      Pattern.DOTALL | Pattern.CASE_INSENSITIVE
-  );
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
     String query = normalizeQuery(request.query());
@@ -194,11 +190,50 @@ public class AnayasaPrecedentService {
     if (html == null || html.isBlank()) {
       return "";
     }
-    Matcher matcher = DETAIL_PATTERN.matcher(html);
-    if (matcher.find()) {
-      return HtmlUtils.htmlUnescape(matcher.group(1));
+    String detailHtml = extractKararHtmlBlock(html);
+    if (!detailHtml.isBlank()) {
+      return HtmlUtils.htmlUnescape(detailHtml);
     }
     return html;
+  }
+
+  private String extractKararHtmlBlock(String html) {
+    String lower = html.toLowerCase(Locale.ROOT);
+    int marker = lower.indexOf("class=\"kararhtml\"");
+    if (marker < 0) {
+      marker = lower.indexOf("class='kararhtml'");
+    }
+    if (marker < 0) {
+      return "";
+    }
+    int start = html.indexOf('>', marker);
+    if (start < 0 || start + 1 >= html.length()) {
+      return "";
+    }
+    int depth = 1;
+    int index = start + 1;
+    while (index < html.length()) {
+      int nextOpen = indexOfIgnoreCase(html, "<span", index);
+      int nextClose = indexOfIgnoreCase(html, "</span>", index);
+      if (nextClose < 0) {
+        break;
+      }
+      if (nextOpen >= 0 && nextOpen < nextClose) {
+        depth++;
+        index = nextOpen + 5;
+        continue;
+      }
+      depth--;
+      if (depth == 0) {
+        return html.substring(start + 1, nextClose);
+      }
+      index = nextClose + 7;
+    }
+    return html.substring(start + 1);
+  }
+
+  private int indexOfIgnoreCase(String value, String token, int fromIndex) {
+    return value.toLowerCase(Locale.ROOT).indexOf(token.toLowerCase(Locale.ROOT), fromIndex);
   }
 
   private String extractFirstToken(String info) {
