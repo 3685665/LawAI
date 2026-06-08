@@ -16,6 +16,8 @@ import com.lawai.api.service.AiServiceClient;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.ChatHistoryService;
 import com.lawai.api.service.DocumentService;
+import com.lawai.api.service.AnayasaPrecedentService;
+import com.lawai.api.service.DanistayPrecedentService;
 import com.lawai.api.service.PrecedentSearchService;
 import com.lawai.api.service.YargitayPrecedentService;
 import com.lawai.auth.model.AuthenticatedUser;
@@ -49,6 +51,8 @@ public class LawaiController {
   private final ActivityLogService activityLogService;
   private final PrecedentSearchService precedentSearchService;
   private final YargitayPrecedentService yargitayPrecedentService;
+  private final DanistayPrecedentService danistayPrecedentService;
+  private final AnayasaPrecedentService anayasaPrecedentService;
 
   public LawaiController(
       AiServiceClient aiServiceClient,
@@ -57,7 +61,9 @@ public class LawaiController {
       DocumentProcessingService documentProcessingService,
       ActivityLogService activityLogService,
       PrecedentSearchService precedentSearchService,
-      YargitayPrecedentService yargitayPrecedentService
+      YargitayPrecedentService yargitayPrecedentService,
+      DanistayPrecedentService danistayPrecedentService,
+      AnayasaPrecedentService anayasaPrecedentService
   ) {
     this.aiServiceClient = aiServiceClient;
     this.chatHistoryService = chatHistoryService;
@@ -66,6 +72,8 @@ public class LawaiController {
     this.activityLogService = activityLogService;
     this.precedentSearchService = precedentSearchService;
     this.yargitayPrecedentService = yargitayPrecedentService;
+    this.danistayPrecedentService = danistayPrecedentService;
+    this.anayasaPrecedentService = anayasaPrecedentService;
   }
 
   @GetMapping("/health")
@@ -127,6 +135,20 @@ public class LawaiController {
   public PrecedentDto getYargitayPrecedent(@PathVariable String documentId, Authentication authentication) {
     PrecedentDto result = yargitayPrecedentService.getDocument(documentId);
     activityLogService.logBackend(requireUser(authentication), "case-law-detail", "Ictihat Arama", "Yargitay karar detayi goruntulendi.", "/api/precedents/yargitay/" + documentId);
+    return result;
+  }
+
+  @GetMapping("/precedents/danistay/{documentId}")
+  public PrecedentDto getDanistayPrecedent(@PathVariable String documentId, Authentication authentication) {
+    PrecedentDto result = danistayPrecedentService.getDocument(documentId);
+    activityLogService.logBackend(requireUser(authentication), "case-law-detail", "Ictihat Arama", "Danistay karar detayi goruntulendi.", "/api/precedents/danistay/" + documentId);
+    return result;
+  }
+
+  @GetMapping("/precedents/aym/{year}/{number}")
+  public PrecedentDto getAnayasaPrecedent(@PathVariable String year, @PathVariable String number, Authentication authentication) {
+    PrecedentDto result = anayasaPrecedentService.getDocument("BB/" + year + "/" + number);
+    activityLogService.logBackend(requireUser(authentication), "case-law-detail", "Ictihat Arama", "Anayasa Mahkemesi karar detayi goruntulendi.", "/api/precedents/aym/" + year + "/" + number);
     return result;
   }
 

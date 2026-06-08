@@ -5387,5 +5387,113 @@
     "detail" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat aramasi yapildi.",
     "path" : "/api/precedents/yargitay/search",
     "createdAt" : "2026-06-08T07:19:08.6606533Z"
+  }, {
+    "id" : "871af84d-2ab1-4ccb-8fc7-1a1f06a92c83",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T07:29:10.4033179Z"
+  }, {
+    "id" : "e5bc323f-24ed-4724-a646-7876ea46115e",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Ictihat Arama",
+    "detail" : "Ictihat Arama ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T07:29:13.5632225Z"
+  }, {
+    "id" : "26714ee6-ecf0-4571-9777-9017777df2f0",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-search",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat aramasi yapildi.",
+    "path" : "/api/precedents/yargitay/search",
+    "createdAt" : "2026-06-08T07:29:22.2037659Z"
+  }, {
+    "id" : "d0615e17-5487-42fc-808f-c88121e52a6d",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-search",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat aramasi yapildi.",
+    "path" : "/api/precedents/yargitay/search",
+    "createdAt" : "2026-06-08T07:29:35.3196737Z"
+  }, {
+    "id" : "5abc934e-258a-43d2-aeeb-3796b3ca96b1",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Danistay karar detayi goruntulendi.",
+    "path" : "/api/precedents/danistay/1201097100",
+    "createdAt" : "2026-06-08T07:29:42.268898Z"
+  }, {
+    "id" : "1eb9b4bf-2ea6-4dcf-8234-a67128641e52",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-search",
+    "screen" : "Ictihat Arama",
+    "detail" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat aramasi yapildi.",
+    "path" : "/api/precedents/yargitay/search",
+    "createdAt" : "2026-06-08T07:30:28.2731639Z"
+  }, {
+    "id" : "5fac89cb-109b-4b57-ac9e-e0621de379d0",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Anayasa Mahkemesi karar detayi goruntulendi.",
+    "path" : "/api/precedents/aym/2025/16250",
+    "createdAt" : "2026-06-08T07:30:31.9846387Z"
+  }, {
+    "id" : "8ba1bebb-6540-449b-9eac-db4392f4d2b9",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Anayasa Mahkemesi karar detayi goruntulendi.",
+    "path" : "/api/precedents/aym/2020/23865",
+    "createdAt" : "2026-06-08T07:30:37.2220131Z"
+  }, {
+    "id" : "34056384-6ad7-4247-87be-a4bd5f893bca",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "case-law-detail",
+    "screen" : "Ictihat Arama",
+    "detail" : "Anayasa Mahkemesi karar detayi goruntulendi.",
+    "path" : "/api/precedents/aym/2021/46728",
+    "createdAt" : "2026-06-08T07:30:43.358848Z"
   } ]
 }

@@ -42,6 +42,10 @@ public class AnayasaPrecedentService {
       "<div class=\"basvurukonualani\">(.*?)</div>",
       Pattern.DOTALL | Pattern.CASE_INSENSITIVE
   );
+  private static final Pattern DETAIL_PATTERN = Pattern.compile(
+      "<span class=\"kararHtml\"[^>]*>(.*?)</span>",
+      Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+  );
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
     String query = normalizeQuery(request.query());
@@ -62,6 +66,28 @@ public class AnayasaPrecedentService {
           .toList();
     } catch (IOException exception) {
       throw new IllegalStateException("Anayasa Mahkemesi karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public PrecedentDto getDocument(String documentId) {
+    String normalizedId = normalizeDocumentId(documentId);
+    try {
+      String html = HttpClientSupport.get(BASE_URL + "/" + normalizedId);
+      String content = extractDetailContent(html);
+      String cleanContent = cleanText(content);
+      return new PrecedentDto(
+          normalizedId,
+          "Anayasa Mahkemesi",
+          null,
+          null,
+          null,
+          null,
+          "",
+          preview(cleanContent, 650),
+          cleanContent
+      );
+    } catch (IOException exception) {
+      throw new IllegalStateException("Anayasa Mahkemesi karar detayi alinamadi: " + exception.getMessage(), exception);
     }
   }
 
@@ -123,6 +149,17 @@ public class AnayasaPrecedentService {
     return normalized;
   }
 
+  private String normalizeDocumentId(String documentId) {
+    String normalized = documentId == null ? "" : documentId.trim();
+    if (normalized.matches("BB/\\d{4}/\\d+")) {
+      return normalized;
+    }
+    if (normalized.matches("\\d{4}/\\d+")) {
+      return "BB/" + normalized;
+    }
+    throw new IllegalArgumentException("Gecersiz Anayasa Mahkemesi karar ID.");
+  }
+
   private int normalizeLimit(Integer limit) {
     if (limit == null || limit <= 0) {
       return DEFAULT_LIMIT;
@@ -151,6 +188,17 @@ public class AnayasaPrecedentService {
     text = text.replace('\u00a0', ' ');
     text = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
     return text.trim();
+  }
+
+  private String extractDetailContent(String html) {
+    if (html == null || html.isBlank()) {
+      return "";
+    }
+    Matcher matcher = DETAIL_PATTERN.matcher(html);
+    if (matcher.find()) {
+      return HtmlUtils.htmlUnescape(matcher.group(1));
+    }
+    return html;
   }
 
   private String extractFirstToken(String info) {
@@ -195,6 +243,13 @@ public class AnayasaPrecedentService {
       return "";
     }
     return cleanText(matcher.group(1));
+  }
+
+  private String preview(String content, int maxLength) {
+    if (content == null || content.length() <= maxLength) {
+      return content;
+    }
+    return content.substring(0, maxLength) + "...";
   }
 
   private static final class HttpClientSupport {

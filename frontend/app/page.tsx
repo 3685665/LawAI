@@ -1321,21 +1321,47 @@ export default function Home() {
     executePrecedentSearch(example, searchCourt, precedentSource);
   }
 
+  function getPrecedentDetailPath(item: Precedent) {
+    const court = item.court.toLowerCase();
+    if (court.includes("yarg")) {
+      return `/precedents/yargitay/${encodeURIComponent(item.sourceId ?? "")}`;
+    }
+    if (court.includes("danis")) {
+      return `/precedents/danistay/${encodeURIComponent(item.sourceId ?? "")}`;
+    }
+    if (court.includes("anayasa") || court.includes("aym")) {
+      const rawId = item.sourceId ?? "";
+      const normalizedId = rawId.startsWith("BB/") ? rawId.slice(3) : rawId;
+      const [year, number] = normalizedId.split("/");
+      if (!year || !number) {
+        return null;
+      }
+      return `/precedents/aym/${encodeURIComponent(year)}/${encodeURIComponent(number)}`;
+    }
+    return null;
+  }
+
   function openPrecedent(index: number) {
     setSelectedPrecedentIndex(index);
     setPrecedentDetailOpen(true);
     const item = precedents[index];
-    if (activeTab !== "caseLaw" || !item?.sourceId || item.content || !item.court.toLowerCase().includes("yarg")) {
+    const detailPath = item ? getPrecedentDetailPath(item) : null;
+    if (activeTab !== "caseLaw" || !item?.sourceId || item.content || !detailPath) {
       return;
     }
     run("precedent-detail", async () => {
-      const detail = await getJson<Precedent>(`/precedents/yargitay/${encodeURIComponent(item.sourceId ?? "")}`);
+      const detail = await getJson<Precedent>(detailPath);
       setPrecedents((current) => current.map((entry, entryIndex) => entryIndex === index ? {
         ...entry,
         ...detail,
-        docketNo: detail.docketNo ?? entry.docketNo,
-        decisionNo: detail.decisionNo ?? entry.decisionNo,
-        date: detail.date ?? entry.date
+        court: detail.court || entry.court,
+        chamber: detail.chamber || entry.chamber,
+        docketNo: detail.docketNo || entry.docketNo,
+        decisionNo: detail.decisionNo || entry.decisionNo,
+        date: detail.date || entry.date,
+        topic: detail.topic || entry.topic,
+        summary: detail.summary || entry.summary,
+        content: detail.content || entry.content
       } : entry));
     });
   }
@@ -2089,7 +2115,7 @@ export default function Home() {
               <div className="precedent-hero-copy">
                 <span className="eyebrow">{activeTab === "caseLaw" ? (locale === "en" ? "Court of Cassation, Council of State and Constitutional Court" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat arama") : (locale === "en" ? "Precedent search" : "Emsal arama")}</span>
                 <h1>{activeTab === "caseLaw" ? (locale === "en" ? "Case-Law Search" : "Ictihat Arama") : (locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama")}</h1>
-                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open Yargitay items to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; Yargitay kayitlarinda detay metni acilir, digerlerinde ozet bilgiler listelenir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
+                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open any record to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; listeden bir karara basinca tam karar metni acilir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
               </div>
               <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
                 {precedentSources.map((source) => (
@@ -2385,13 +2411,6 @@ export default function Home() {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                {selectedPrecedent && !selectedPrecedent.court.toLowerCase().includes("yarg") ? (
-                  <p className="precedent-detail-note">
-                    {locale === "en"
-                      ? "Full decision text is loaded only for Court of Cassation items. This record is shown with the available summary."
-                      : "Tam karar metni sadece Yargitay kayitlarinda yuklenir. Bu kayit su an mevcut ozeti ile goruntuleniyor."}
-                  </p>
-                ) : null}
                 <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
               </section>
             ) : <EmptyState text={t.tools.searchEmpty} />}

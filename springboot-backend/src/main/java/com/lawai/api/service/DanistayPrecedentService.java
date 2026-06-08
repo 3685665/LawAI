@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class DanistayPrecedentService {
@@ -29,6 +31,8 @@ public class DanistayPrecedentService {
   private static final String BASE_URL = "https://karararama.danistay.gov.tr";
   private static final int DEFAULT_LIMIT = 10;
   private static final int MAX_LIMIT = 20;
+  private static final Pattern HEADER_PATTERN = Pattern.compile("^(.*?)\\s+(\\d{4}/\\d+)\\s*E\\.?\\s*,\\s*(\\d{4}/\\d+)\\s*K\\.?\\b", Pattern.DOTALL);
+  private static final Pattern DOCUMENT_PATTERN = Pattern.compile("<p id=\"hiddencontent\" style=\"display: none\">(.*?)</p>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
 
   private final ObjectMapper objectMapper;
 
@@ -51,6 +55,32 @@ public class DanistayPrecedentService {
       return parseResults(json);
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Danistay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public PrecedentDto getDocument(String documentId) {
+    String normalizedDocumentId = normalizeDocumentId(documentId);
+    try {
+      String html = sendGetDocument(normalizedDocumentId, "");
+      String content = extractContent(html);
+      String cleanContent = cleanText(content);
+      Header header = parseHeader(cleanContent);
+      String topic = header.chamber().isBlank()
+          ? "Danistay karari"
+          : header.chamber() + " - " + docketLabel(header.docketNo(), header.decisionNo());
+      return new PrecedentDto(
+          normalizedDocumentId,
+          "Danistay",
+          header.chamber(),
+          header.docketNo(),
+          header.decisionNo(),
+          null,
+          topic,
+          preview(cleanContent, 650),
+          cleanContent
+      );
+    } catch (IOException | ParseException exception) {
+      throw new IllegalStateException("Danistay karar detayi alinamadi: " + exception.getMessage(), exception);
     }
   }
 
@@ -116,6 +146,15 @@ public class DanistayPrecedentService {
     }
   }
 
+  private String sendGetDocument(String documentId, String queryHint) throws IOException, ParseException {
+    BasicCookieStore cookieStore = new BasicCookieStore();
+    try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
+      sendGet(client, BASE_URL);
+      String url = BASE_URL + "/getDokuman?id=" + java.net.URLEncoder.encode(documentId, StandardCharsets.UTF_8) + "&arananKelime=" + java.net.URLEncoder.encode(queryHint, StandardCharsets.UTF_8);
+      return sendGet(client, url);
+    }
+  }
+
   private void addCommonHeaders(org.apache.hc.core5.http.HttpMessage request) {
     request.addHeader("Accept", "application/json, text/html, */*");
     request.addHeader("User-Agent", "LawAI/1.0 (+https://karararama.danistay.gov.tr)");
@@ -136,6 +175,14 @@ public class DanistayPrecedentService {
     String normalized = query == null ? "" : query.trim();
     if (normalized.length() < 3) {
       throw new IllegalArgumentException("Ictihat aramasi icin en az 3 karakter girin.");
+    }
+    return normalized;
+  }
+
+  private String normalizeDocumentId(String documentId) {
+    String normalized = documentId == null ? "" : documentId.trim();
+    if (!normalized.matches("\\d{3,20}")) {
+      throw new IllegalArgumentException("Gecersiz Danistay karar ID.");
     }
     return normalized;
   }
@@ -166,6 +213,29 @@ public class DanistayPrecedentService {
     return text.trim();
   }
 
+  private String extractContent(String html) {
+    Matcher matcher = DOCUMENT_PATTERN.matcher(html == null ? "" : html);
+    if (!matcher.find()) {
+      return html == null ? "" : html;
+    }
+    return org.springframework.web.util.HtmlUtils.htmlUnescape(matcher.group(1));
+  }
+
+  private Header parseHeader(String content) {
+    if (content == null || content.isBlank()) {
+      return new Header("Danistay", "", "");
+    }
+    Matcher matcher = HEADER_PATTERN.matcher(content.trim());
+    if (!matcher.find()) {
+      return new Header("Danistay", "", "");
+    }
+    return new Header(
+        cleanText(matcher.group(1)),
+        cleanText(matcher.group(2)),
+        cleanText(matcher.group(3))
+    );
+  }
+
   private String docketLabel(String docketNo, String decisionNo) {
     if (docketNo.isBlank() && decisionNo.isBlank()) {
       return "";
@@ -184,5 +254,8 @@ public class DanistayPrecedentService {
       return content;
     }
     return content.substring(0, maxLength) + "...";
+  }
+
+  private record Header(String chamber, String docketNo, String decisionNo) {
   }
 }
