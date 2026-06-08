@@ -1,0 +1,25 @@
+# SMTP ayarlari — gercek e-posta gonderimi icin bu dosyayi kopyalayin:
+#   application-local.yml.example  ->  springboot-backend/application-local.yml
+# application-local.yml gitignore'da; sifreler repoya gitmez.
+#
+# Alternatif: .env.smtp.example -> springboot-backend/.env.smtp
+# NOT: backend/.env ve frontend/.env.local Spring Boot tarafindan OKUNMAZ.
+
+spring:
+  mail:
+    host: smtp-relay.brevo.com
+    port: 587
+    username: sizin-smtp-kullanici-adiniz
+    password: sizin-smtp-sifreniz
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+app:
+  mail:
+    # Brevo/SendGrid vb. panelde dogrulanmis gonderici adresi olmali
+    from: no-reply@sizin-domaininiz.com

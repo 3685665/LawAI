@@ -1631,12 +1631,14 @@ export default function Home() {
         setActiveTab("chat");
       } else if (authMode === "register") {
         if (!authForm.name.trim()) throw new Error("Ad soyad gerekli.");
+        if (!authForm.email.trim()) throw new Error("E-posta gerekli.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authForm.email.trim())) throw new Error("Gecerli bir e-posta adresi girin.");
         if (authForm.password !== authForm.confirmPassword) throw new Error("Sifreler eslesmiyor.");
         // Enforce same password policy as backend: minimum 10 characters
         if (!authForm.password || authForm.password.length < 10) throw new Error("Sifre en az 10 karakter olmali.");
         const result = await authRegister({
-          name: authForm.name,
-          email: authForm.email,
+          name: authForm.name.trim(),
+          email: authForm.email.trim(),
           password: authForm.password
         });
         setRegisterResult(result);

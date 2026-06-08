@@ -1,11 +1,12 @@
 package com.lawai.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
 
 public record AuthRegisterResponse(
     String message,
-    String previewToken,
+    @JsonProperty("verificationTokenPreview") String previewToken,
     OffsetDateTime expiresAt,
-    String previewLink
+    @JsonProperty("verificationLinkPreview") String previewLink
 ) {
 }

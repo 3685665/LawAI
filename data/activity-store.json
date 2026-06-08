@@ -5759,5 +5759,65 @@
     "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
     "path" : "/api/auth/register",
     "createdAt" : "2026-06-08T14:02:17.5245958Z"
+  }, {
+    "id" : "187caa2c-df19-45d1-b96f-418d99fce64d",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci1@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T20:24:11.1882332Z"
+  }, {
+    "id" : "c489af69-acbb-4423-adc6-44bf1112eeb6",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan___avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T20:37:42.0361235Z"
+  }, {
+    "id" : "61d36480-a253-44d1-9b8a-7fe65a3e6af5",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan___avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T20:42:59.2397642Z"
+  }, {
+    "id" : "1ea4a2b4-9466-4110-9b0d-23c6873eb238",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T20:44:52.5103824Z"
+  }, {
+    "id" : "7d44db90-3618-4092-917e-b84bdc8da761",
+    "userId" : "",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-register",
+    "screen" : "Oturum",
+    "detail" : "Yeni kullanici kaydi yapildi (dogrulama bekleniyor).",
+    "path" : "/api/auth/register",
+    "createdAt" : "2026-06-08T21:10:03.6969741Z"
   } ]
 }

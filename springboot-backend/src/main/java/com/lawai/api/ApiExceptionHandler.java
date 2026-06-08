@@ -39,7 +39,12 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<Map<String, String>> validation(MethodArgumentNotValidException exception) {
-    return ResponseEntity.badRequest().body(Map.of("detail", "Gecersiz istek."));
+    String detail = exception.getBindingResult().getFieldErrors().stream()
+        .map(error -> error.getDefaultMessage())
+        .filter(message -> message != null && !message.isBlank())
+        .findFirst()
+        .orElse("Gecersiz istek.");
+    return ResponseEntity.badRequest().body(Map.of("detail", detail));
   }
 
   @ExceptionHandler(MaxUploadSizeExceededException.class)

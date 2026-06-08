@@ -16,6 +16,7 @@ application-local.yml
 application-local.yaml
 application-dev.yml
 application-dev.yaml
+.env.smtp
 *.log
 logs/
 

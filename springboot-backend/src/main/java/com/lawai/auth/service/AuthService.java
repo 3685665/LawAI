@@ -326,28 +326,23 @@ public class AuthService {
       throw new BadCredentialsException("E-posta veya sifre hatali.");
     }
 
-    if (!Boolean.TRUE.equals(user.verified())) {
-      throw new BadCredentialsException("E-posta adresi dogrulanmadi. Lütfen e-posta onayinizi gerceklestirin.");
-    }
+    UserRecord verifiedUser = requireVerifiedUser(user);
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     String token = generateToken();
     SessionRecord session = new SessionRecord(
         hash(token),
-        user.id(),
+        verifiedUser.id(),
         now.plusDays(Boolean.TRUE.equals(request.rememberMe()) ? 30 : 7),
         now
     );
-    replaceUser(user.withLastLoginAt(now));
+    replaceUser(verifiedUser.withLastLoginAt(now));
     addSession(session);
     return token;
   }
 
   public String issueSessionTokenForUser(String userId, boolean rememberMe) {
-    UserRecord user = requireUser(userId);
-    if (!Boolean.TRUE.equals(user.verified())) {
-      throw new BadCredentialsException("E-posta adresi dogrulanmadi. Lütfen e-posta onayinizi gerceklestirin.");
-    }
+    UserRecord user = requireVerifiedUser(requireUser(userId));
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     String token = generateToken();
     SessionRecord session = new SessionRecord(
@@ -359,6 +354,19 @@ public class AuthService {
     replaceUser(user.withLastLoginAt(now));
     addSession(session);
     return token;
+  }
+
+  private UserRecord requireVerifiedUser(UserRecord user) {
+    if (Boolean.TRUE.equals(user.verified())) {
+      return user;
+    }
+    if (previewVerificationToken) {
+      OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+      UserRecord verifiedUser = user.withVerified(true, now);
+      replaceUser(verifiedUser);
+      return verifiedUser;
+    }
+    throw new BadCredentialsException("E-posta adresi dogrulanmadi. Lutfen e-posta onayinizi gerceklestirin.");
   }
 
   public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {

@@ -1,9 +1,10 @@
-server:
-  port: 8080
-  tomcat:
-    max-swallow-size: -1
-
 spring:
+  config:
+    import:
+      - optional:file:./application-local.yml
+      - optional:file:./springboot-backend/application-local.yml
+      - optional:file:./.env.smtp[.properties]
+      - optional:file:./springboot-backend/.env.smtp[.properties]
   datasource:
     url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
     username: ${DATABASE_USERNAME:lawai}
@@ -29,6 +30,11 @@ spring:
         connectiontimeout: ${SMTP_CONNECTION_TIMEOUT_MS:5000}
         timeout: ${SMTP_TIMEOUT_MS:5000}
         writetimeout: ${SMTP_WRITE_TIMEOUT_MS:5000}
+
+server:
+  port: 8080
+  tomcat:
+    max-swallow-size: -1
 
 app:
   ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
