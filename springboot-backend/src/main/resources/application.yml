@@ -34,7 +34,7 @@ app:
     reset-password-url-base: ${AUTH_RESET_PASSWORD_URL_BASE:http://localhost:3000}
     cookie-secure: ${AUTH_COOKIE_SECURE:false}
     preview-reset-token: ${AUTH_PREVIEW_RESET_TOKEN:true}
-    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-id: ${GOOGLE_CLIENT_ID:702835844513-puqle248iramljphtubb3558823hn6pe.apps.googleusercontent.com}
   billing:
     success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/subscriptions?checkout=success}
     cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/subscriptions?checkout=cancel}

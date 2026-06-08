@@ -5123,5 +5123,89 @@
     "detail" : "Yargitay karar detayi goruntulendi.",
     "path" : "/api/precedents/yargitay/1158411000",
     "createdAt" : "2026-06-08T06:24:02.6826848Z"
+  }, {
+    "id" : "198b6a44-16ea-4e07-b0f7-9ccc52adc8f4",
+    "userId" : "b236b272-49d2-45da-b085-c01e148bf37b",
+    "userName" : "Yonetici",
+    "userEmail" : "admin@lawai.local",
+    "role" : "ADMIN",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T06:26:08.3048255Z"
+  }, {
+    "id" : "666cc9c7-45a6-4d5b-b1f3-a7dbae6d6072",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-google",
+    "screen" : "Oturum",
+    "detail" : "Google hesabi ile oturum acildi.",
+    "path" : "/api/auth/google",
+    "createdAt" : "2026-06-08T06:54:31.2536482Z"
+  }, {
+    "id" : "857fed13-2810-404e-b4e8-a0e79b825e68",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:54:31.6677891Z"
+  }, {
+    "id" : "ab222618-5caa-49b4-9a2c-17b1f4434652",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Profil",
+    "detail" : "Profil ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:54:37.0786017Z"
+  }, {
+    "id" : "b557f9a5-bd4f-4956-a02c-e565323d84b4",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-08T06:54:42.2978611Z"
+  }, {
+    "id" : "2edf06b5-2e08-4857-aaec-56997c9cef76",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-google",
+    "screen" : "Oturum",
+    "detail" : "Google hesabi ile oturum acildi.",
+    "path" : "/api/auth/google",
+    "createdAt" : "2026-06-08T06:54:48.7207665Z"
+  }, {
+    "id" : "1edf7536-0dff-4097-9197-91b6b9a41dbe",
+    "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-08T06:54:49.1032144Z"
   } ]
 }
