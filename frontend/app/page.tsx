@@ -841,17 +841,19 @@ export default function Home() {
     }
   ], [loading, locale, precedentDetailOpen, selectedPrecedentIndex]);
 
-  const precedentSources = useMemo(() => [
-    ...(activeTab === "caseLaw"
-      ? [{ key: "yargitay" as const, label: "Yargitay", court: "Yargitay" }]
-      : [
-          { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
-          { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
-          { key: "danistay" as const, label: "Danistay", court: "Danistay" },
-          { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" },
-          { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
-        ])
-  ], [activeTab, locale]);
+  const precedentSources = useMemo(() => {
+    const caseLawSources = [
+      { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
+      { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
+      { key: "danistay" as const, label: "Danistay", court: "Danistay" },
+      { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" }
+    ];
+    const searchSources = [
+      ...caseLawSources,
+      { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
+    ];
+    return activeTab === "caseLaw" ? caseLawSources : searchSources;
+  }, [activeTab, locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
     "Determining child living standard and parent income in child support amount",
@@ -1280,15 +1282,6 @@ export default function Home() {
     printWindow.document.close();
   }
 
-  function buildPrecedentQuery(query: string, sourceKey = precedentSource) {
-    const sourceHint = precedentSources.find((item) => item.key === sourceKey);
-    const baseQuery = query.trim();
-    if (!sourceHint || sourceHint.key === "all" || sourceHint.court) {
-      return baseQuery;
-    }
-    return `${sourceHint.label}: ${baseQuery}`;
-  }
-
   function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
     const normalizedQuery = query.trim();
     setPrecedents([]);
@@ -1299,13 +1292,12 @@ export default function Home() {
       setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
       return;
     }
-    const effectiveSourceKey = activeTab === "caseLaw" ? "yargitay" : sourceKey;
-    const sourceHint = precedentSources.find((item) => item.key === effectiveSourceKey);
-    const effectiveCourt = activeTab === "caseLaw" ? "Yargitay" : (court || sourceHint?.court || "");
+    const sourceHint = precedentSources.find((item) => item.key === sourceKey);
+    const effectiveCourt = court || sourceHint?.court || "";
     run("search", async () => {
       const endpoint = activeTab === "caseLaw" ? "/precedents/yargitay/search" : "/precedents/search";
       const data = await postJson<{ results: Precedent[] }>(endpoint, {
-        query: buildPrecedentQuery(normalizedQuery, effectiveSourceKey),
+        query: normalizedQuery,
         court: effectiveCourt || undefined,
         limit: activeTab === "caseLaw" ? 20 : 50
       });
@@ -1333,7 +1325,7 @@ export default function Home() {
     setSelectedPrecedentIndex(index);
     setPrecedentDetailOpen(true);
     const item = precedents[index];
-    if (activeTab !== "caseLaw" || !item?.sourceId || item.content) {
+    if (activeTab !== "caseLaw" || !item?.sourceId || item.content || !item.court.toLowerCase().includes("yarg")) {
       return;
     }
     run("precedent-detail", async () => {
@@ -1351,6 +1343,13 @@ export default function Home() {
   function closePrecedentDetail() {
     setPrecedentDetailOpen(false);
   }
+
+  useEffect(() => {
+    if (activeTab === "caseLaw") {
+      setPrecedentSource("all");
+      setSearchCourt("");
+    }
+  }, [activeTab]);
 
   function summarizePrecedents() {
     if (!precedents.length) {
@@ -2088,9 +2087,9 @@ export default function Home() {
                 <span>LawAI Studio</span>
               </div>
               <div className="precedent-hero-copy">
-                <span className="eyebrow">{activeTab === "caseLaw" ? (locale === "en" ? "Court of Cassation case-law" : "Yargitay ictihat arama") : (locale === "en" ? "Precedent search" : "Emsal arama")}</span>
+                <span className="eyebrow">{activeTab === "caseLaw" ? (locale === "en" ? "Court of Cassation, Council of State and Constitutional Court" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat arama") : (locale === "en" ? "Precedent search" : "Emsal arama")}</span>
                 <h1>{activeTab === "caseLaw" ? (locale === "en" ? "Case-Law Search" : "Ictihat Arama") : (locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama")}</h1>
-                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation decisions, and open the details to read the decision text." : "Aramaniza gore Yargitay kararlarini getirir; listeden bir karara basinca karar metnini detayda gosterir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
+                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open Yargitay items to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; Yargitay kayitlarinda detay metni acilir, digerlerinde ozet bilgiler listelenir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
               </div>
               <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
                 {precedentSources.map((source) => (
@@ -2386,6 +2385,13 @@ export default function Home() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                {selectedPrecedent && !selectedPrecedent.court.toLowerCase().includes("yarg") ? (
+                  <p className="precedent-detail-note">
+                    {locale === "en"
+                      ? "Full decision text is loaded only for Court of Cassation items. This record is shown with the available summary."
+                      : "Tam karar metni sadece Yargitay kayitlarinda yuklenir. Bu kayit su an mevcut ozeti ile goruntuleniyor."}
+                  </p>
+                ) : null}
                 <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
               </section>
             ) : <EmptyState text={t.tools.searchEmpty} />}

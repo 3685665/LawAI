@@ -16,6 +16,7 @@ import com.lawai.api.service.AiServiceClient;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.ChatHistoryService;
 import com.lawai.api.service.DocumentService;
+import com.lawai.api.service.PrecedentSearchService;
 import com.lawai.api.service.YargitayPrecedentService;
 import com.lawai.auth.model.AuthenticatedUser;
 import com.lawai.document.dto.DocumentSearchResult;
@@ -46,6 +47,7 @@ public class LawaiController {
   private final DocumentService documentService;
   private final DocumentProcessingService documentProcessingService;
   private final ActivityLogService activityLogService;
+  private final PrecedentSearchService precedentSearchService;
   private final YargitayPrecedentService yargitayPrecedentService;
 
   public LawaiController(
@@ -54,6 +56,7 @@ public class LawaiController {
       DocumentService documentService,
       DocumentProcessingService documentProcessingService,
       ActivityLogService activityLogService,
+      PrecedentSearchService precedentSearchService,
       YargitayPrecedentService yargitayPrecedentService
   ) {
     this.aiServiceClient = aiServiceClient;
@@ -61,6 +64,7 @@ public class LawaiController {
     this.documentService = documentService;
     this.documentProcessingService = documentProcessingService;
     this.activityLogService = activityLogService;
+    this.precedentSearchService = precedentSearchService;
     this.yargitayPrecedentService = yargitayPrecedentService;
   }
 
@@ -114,8 +118,8 @@ public class LawaiController {
 
   @PostMapping("/precedents/yargitay/search")
   public PrecedentSearchResponse searchYargitayPrecedents(@Valid @RequestBody PrecedentSearchRequest request, Authentication authentication) {
-    List<PrecedentDto> results = yargitayPrecedentService.search(request);
-    activityLogService.logBackend(requireUser(authentication), "case-law-search", "Ictihat Arama", "Yargitay ictihat aramasi yapildi.", "/api/precedents/yargitay/search");
+    List<PrecedentDto> results = precedentSearchService.search(request);
+    activityLogService.logBackend(requireUser(authentication), "case-law-search", "Ictihat Arama", "Yargitay, Danistay ve Anayasa Mahkemesi ictihat aramasi yapildi.", "/api/precedents/yargitay/search");
     return new PrecedentSearchResponse(request.query(), results);
   }
 
