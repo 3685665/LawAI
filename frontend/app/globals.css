@@ -2940,6 +2940,102 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   margin: 0;
 }
 
+.precedent-search-modes {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.precedent-mode-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.precedent-mode-grid button {
+  align-content: start;
+  background: #f4f7fa;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+  color: var(--accent-strong);
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 88px;
+  padding: 14px;
+  text-align: left;
+}
+
+.precedent-mode-grid button svg {
+  color: var(--accent);
+}
+
+.precedent-mode-grid button strong {
+  font-size: 15px;
+}
+
+.precedent-mode-grid button span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.precedent-mode-grid button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.precedent-mode-grid button.active svg,
+.precedent-mode-grid button.active span {
+  color: #fff;
+  opacity: 0.92;
+}
+
+.precedent-advanced-search {
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  width: 100%;
+}
+
+.precedent-advanced-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.precedent-advanced-field input {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.precedent-advanced-field input:focus {
+  border-color: rgba(31, 79, 122, 0.45);
+  box-shadow: 0 0 0 3px rgba(31, 79, 122, 0.12);
+  outline: none;
+}
+
+.precedent-advanced-field-wide {
+  grid-column: 1 / -1;
+}
+
+.precedent-advanced-submit {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
 .precedent-source-chips {
   display: flex;
   flex-wrap: wrap;
@@ -4193,7 +4289,9 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   }
 
   .petition-segmented,
-  .petition-export-actions {
+  .petition-export-actions,
+  .precedent-mode-grid,
+  .precedent-advanced-grid {
     grid-template-columns: 1fr;
   }
 

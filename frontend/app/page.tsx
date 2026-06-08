@@ -27,6 +27,7 @@ import {
   Scale,
   Search,
   Send,
+  SlidersHorizontal,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -137,6 +138,7 @@ type FeedbackStatusFilter = "all" | FeedbackStatus;
 type PetitionMethod = "case" | "quick" | "detailed";
 type PetitionModel = "standard" | "premium";
 type PrecedentSourceKey = "all" | "yargitay" | "danistay" | "aym" | "rekabet";
+type CaseLawSearchMode = "simple" | "advanced";
 type NavigationGroup = {
   id: string;
   label: string;
@@ -395,6 +397,14 @@ export default function Home() {
   const voiceBaseDraftRef = useRef("");
   const [searchQuery, setSearchQuery] = useState("Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?");
   const [searchCourt, setSearchCourt] = useState("");
+  const [caseLawSearchMode, setCaseLawSearchMode] = useState<CaseLawSearchMode>("simple");
+  const [advancedSearch, setAdvancedSearch] = useState({
+    chamber: "",
+    docketNo: "",
+    decisionNo: "",
+    dateFrom: "",
+    dateTo: ""
+  });
   const [precedentSource, setPrecedentSource] = useState<PrecedentSourceKey>("all");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
   const [precedentSummary, setPrecedentSummary] = useState("");
@@ -1291,12 +1301,31 @@ export default function Home() {
 
   function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
     const normalizedQuery = query.trim();
+    const advanced = activeTab === "caseLaw" && caseLawSearchMode === "advanced";
+    const advancedPayload = {
+      chamber: advancedSearch.chamber.trim() || undefined,
+      docketNo: advancedSearch.docketNo.trim() || undefined,
+      decisionNo: advancedSearch.decisionNo.trim() || undefined,
+      dateFrom: advancedSearch.dateFrom || undefined,
+      dateTo: advancedSearch.dateTo || undefined
+    };
+    const hasAdvancedCriteria = Boolean(
+      advancedPayload.chamber
+      || advancedPayload.docketNo
+      || advancedPayload.decisionNo
+      || advancedPayload.dateFrom
+      || advancedPayload.dateTo
+    );
     setPrecedents([]);
     setSelectedPrecedentIndex(null);
     setPrecedentDetailOpen(false);
     setPrecedentSummary("");
-    if (!normalizedQuery) {
-      setError(locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.");
+    if (!normalizedQuery && (!advanced || !hasAdvancedCriteria)) {
+      setError(
+        advanced
+          ? (locale === "en" ? "Enter keywords or at least one advanced filter." : "Anahtar kelime veya en az bir gelismis filtre girin.")
+          : (locale === "en" ? "Enter a query to search." : "Arama yapmak icin sorgu girin.")
+      );
       return;
     }
     const sourceHint = precedentSources.find((item) => item.key === sourceKey);
@@ -1306,6 +1335,7 @@ export default function Home() {
       const data = await postJson<{ results: Precedent[] }>(endpoint, {
         query: normalizedQuery,
         court: effectiveCourt || undefined,
+        ...(advanced ? advancedPayload : {}),
         limit: activeTab === "caseLaw" ? 20 : 50
       });
       setPrecedents(data.results);
@@ -1390,6 +1420,7 @@ export default function Home() {
     if (activeTab === "caseLaw") {
       setPrecedentSource("all");
       setSearchCourt("");
+      setCaseLawSearchMode("simple");
     }
   }, [activeTab]);
 
@@ -2133,6 +2164,31 @@ export default function Home() {
                 <h1>{activeTab === "caseLaw" ? (locale === "en" ? "Case-Law Search" : "Ictihat Arama") : (locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama")}</h1>
                 <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open any record to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; listeden bir karara basinca tam karar metni acilir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
               </div>
+              {activeTab === "caseLaw" ? (
+                <section className="precedent-search-modes" aria-label={t.tools.researchMethods}>
+                  <span className="section-label">{t.tools.researchMethods}</span>
+                  <div className="precedent-mode-grid">
+                    <button
+                      className={caseLawSearchMode === "simple" ? "active" : ""}
+                      type="button"
+                      onClick={() => setCaseLawSearchMode("simple")}
+                    >
+                      <Search size={18} />
+                      <strong>{t.tools.researchAiSearch}</strong>
+                      <span>{t.tools.researchAiSearchDesc}</span>
+                    </button>
+                    <button
+                      className={caseLawSearchMode === "advanced" ? "active" : ""}
+                      type="button"
+                      onClick={() => setCaseLawSearchMode("advanced")}
+                    >
+                      <SlidersHorizontal size={18} />
+                      <strong>{t.tools.researchAdvancedSearch}</strong>
+                      <span>{t.tools.researchManualSearchDesc}</span>
+                    </button>
+                  </div>
+                </section>
+              ) : null}
               <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
                 {precedentSources.map((source) => (
                   <button
@@ -2146,27 +2202,88 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <div className="precedent-hero-search">
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={locale === "en" ? "Enter the legal issue or click a suggestion" : "Hukuki konuyu yazin veya ornek sorgu secin"}
-                />
-                <button aria-label={t.tools.searchSubmit} disabled={loading === "search"} type="submit">
-                  {loading === "search" ? <LoaderCircle className="spin" size={28} /> : <Search size={30} />}
-                </button>
-              </div>
-              <section className="precedent-suggestions">
-                <span>{locale === "en" ? "Example queries:" : "Ornek sorgular:"}</span>
-                <div>
-                  {precedentExampleQueries.map((example) => (
-                    <button key={example} type="button" onClick={() => runExampleSearch(example)}>
-                      <CheckCircle2 size={18} />
-                      {example}
+              {activeTab === "caseLaw" && caseLawSearchMode === "advanced" ? (
+                <section className="precedent-advanced-search">
+                  <div className="precedent-advanced-grid">
+                    <label className="field-label precedent-advanced-field precedent-advanced-field-wide">
+                      {t.tools.researchKeywords}
+                      <input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder={locale === "en" ? "e.g. property right, demolition decision" : "Orn: mulkiyet hakki, yikim karari"}
+                      />
+                    </label>
+                    <label className="field-label precedent-advanced-field">
+                      {t.tools.researchChamber}
+                      <input
+                        value={advancedSearch.chamber}
+                        onChange={(event) => setAdvancedSearch({ ...advancedSearch, chamber: event.target.value })}
+                        placeholder={locale === "en" ? "e.g. 2nd Civil Chamber" : "Orn: 2. Hukuk Dairesi"}
+                      />
+                    </label>
+                    <label className="field-label precedent-advanced-field">
+                      {t.tools.researchDocketEsas}
+                      <input
+                        value={advancedSearch.docketNo}
+                        onChange={(event) => setAdvancedSearch({ ...advancedSearch, docketNo: event.target.value })}
+                        placeholder="2024/1234"
+                      />
+                    </label>
+                    <label className="field-label precedent-advanced-field">
+                      {t.tools.researchDocketKarar}
+                      <input
+                        value={advancedSearch.decisionNo}
+                        onChange={(event) => setAdvancedSearch({ ...advancedSearch, decisionNo: event.target.value })}
+                        placeholder="2025/2402"
+                      />
+                    </label>
+                    <label className="field-label precedent-advanced-field">
+                      {t.tools.researchDateFrom}
+                      <input
+                        type="date"
+                        value={advancedSearch.dateFrom}
+                        onChange={(event) => setAdvancedSearch({ ...advancedSearch, dateFrom: event.target.value })}
+                      />
+                    </label>
+                    <label className="field-label precedent-advanced-field">
+                      {t.tools.researchDateTo}
+                      <input
+                        type="date"
+                        value={advancedSearch.dateTo}
+                        onChange={(event) => setAdvancedSearch({ ...advancedSearch, dateTo: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <button className="precedent-advanced-submit" disabled={loading === "search"} type="submit">
+                    {loading === "search" ? <LoaderCircle className="spin" size={18} /> : <Search size={18} />}
+                    {t.tools.searchSubmit}
+                  </button>
+                </section>
+              ) : (
+                <>
+                  <div className="precedent-hero-search">
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder={locale === "en" ? "Enter the legal issue or click a suggestion" : "Hukuki konuyu yazin veya ornek sorgu secin"}
+                    />
+                    <button aria-label={t.tools.searchSubmit} disabled={loading === "search"} type="submit">
+                      {loading === "search" ? <LoaderCircle className="spin" size={28} /> : <Search size={30} />}
                     </button>
-                  ))}
-                </div>
-              </section>
+                  </div>
+                  <section className="precedent-suggestions">
+                    <span>{locale === "en" ? "Example queries:" : "Ornek sorgular:"}</span>
+                    <div>
+                      {precedentExampleQueries.map((example) => (
+                        <button key={example} type="button" onClick={() => runExampleSearch(example)}>
+                          <CheckCircle2 size={18} />
+                          {example}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
             </form>
 
             {activeTab === "caseLaw" ? (

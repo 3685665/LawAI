@@ -26,9 +26,13 @@ class ChatResponse(BaseModel):
 
 
 class PrecedentSearchRequest(BaseModel):
-    query: str = Field(min_length=1)
+    query: str = ""
     court: str | None = None
     chamber: str | None = None
+    docketNo: str | None = None
+    decisionNo: str | None = None
+    dateFrom: str | None = None
+    dateTo: str | None = None
     limit: int | None = 5
 
 

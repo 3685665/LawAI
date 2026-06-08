@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -40,17 +41,20 @@ public class YargitayPrecedentService {
   }
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
-    String query = normalizeQuery(request.query());
+    boolean advanced = PrecedentSearchSupport.isAdvanced(request);
+    String query = PrecedentSearchSupport.normalizeOptionalQuery(request.query(), advanced);
     int limit = normalizeLimit(request.limit());
     BasicCookieStore cookieStore = new BasicCookieStore();
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
-      List<YargitayRow> rows = searchRows(client, query, limit);
+      List<YargitayRow> rows = advanced
+          ? searchDetailedRows(client, request, query, limit)
+          : searchRows(client, query, limit);
       List<PrecedentDto> results = new ArrayList<>();
       for (YargitayRow row : rows) {
         results.add(toListPrecedent(row));
       }
-      return results;
+      return PrecedentSearchSupport.applyAdvancedFilters(request, results);
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Yargitay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }
@@ -76,6 +80,55 @@ public class YargitayPrecedentService {
     }
   }
 
+  private List<YargitayRow> searchDetailedRows(
+      CloseableHttpClient client,
+      PrecedentSearchRequest request,
+      String query,
+      int limit
+  ) throws IOException, ParseException {
+    Map<String, Object> data = new LinkedHashMap<>();
+    data.put("arananKelime", query);
+    data.put("baslangicTarihi", PrecedentSearchSupport.normalizeDate(request.dateFrom()));
+    data.put("bitisTarihi", PrecedentSearchSupport.normalizeDate(request.dateTo()));
+    data.put("birimYrgKurulDaire", "");
+    data.put("birimYrgHukukDaire", "");
+    data.put("birimYrgCezaDaire", "");
+    applyChamber(data, request.chamber());
+
+    String[] esas = PrecedentSearchSupport.parseDocketParts(request.docketNo());
+    String[] karar = PrecedentSearchSupport.parseDocketParts(request.decisionNo());
+    data.put("esasYil", esas[0]);
+    data.put("esasIlkSiraNo", esas[1]);
+    data.put("esasSonSiraNo", "");
+    data.put("kararYil", karar[0]);
+    data.put("kararIlkSiraNo", karar[1]);
+    data.put("kararSonSiraNo", "");
+    data.put("pageSize", String.valueOf(limit));
+    data.put("pageNumber", "1");
+    data.put("siralama", "3");
+    data.put("siralamaDirection", "desc");
+
+    String json = sendPost(client, BASE_URL + "/aramadetaylist", objectMapper.writeValueAsString(Map.of("data", data)));
+    return parseRows(json);
+  }
+
+  private void applyChamber(Map<String, Object> data, String chamber) {
+    if (chamber == null || chamber.isBlank()) {
+      return;
+    }
+    String normalized = chamber.trim();
+    String lower = normalized.toLowerCase(Locale.ROOT);
+    if (lower.contains("ceza")) {
+      data.put("birimYrgCezaDaire", normalized);
+      return;
+    }
+    if (lower.contains("hukuk")) {
+      data.put("birimYrgHukukDaire", normalized);
+      return;
+    }
+    data.put("birimYrgKurulDaire", normalized);
+  }
+
   private List<YargitayRow> searchRows(CloseableHttpClient client, String query, int limit) throws IOException, ParseException {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("arananKelime", query);
@@ -86,6 +139,10 @@ public class YargitayPrecedentService {
 
     Map<String, Object> payload = Map.of("data", data);
     String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(payload));
+    return parseRows(json);
+  }
+
+  private List<YargitayRow> parseRows(String json) throws IOException {
     JsonNode rows = objectMapper.readTree(json).path("data").path("data");
     if (!rows.isArray()) {
       return List.of();
@@ -185,14 +242,6 @@ public class YargitayPrecedentService {
       throw new IllegalStateException("Yargitay servisi " + response.getCode() + " dondu: " + preview(body, 300));
     }
     return body;
-  }
-
-  private String normalizeQuery(String query) {
-    String normalized = query == null ? "" : query.trim();
-    if (normalized.length() < 3) {
-      throw new IllegalArgumentException("Ictihat aramasi icin en az 3 karakter girin.");
-    }
-    return normalized;
   }
 
   private int normalizeLimit(Integer limit) {

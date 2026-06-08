@@ -44,7 +44,8 @@ public class AnayasaPrecedentService {
   );
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
-    String query = normalizeQuery(request.query());
+    boolean advanced = PrecedentSearchSupport.isAdvanced(request);
+    String query = resolveQuery(request, advanced);
     int limit = normalizeLimit(request.limit());
     List<PrecedentDto> results = new ArrayList<>();
     try {
@@ -56,13 +57,30 @@ public class AnayasaPrecedentService {
         }
         results.addAll(pageResults);
       }
-      return results.stream()
+      return PrecedentSearchSupport.applyAdvancedFilters(request, results.stream()
           .distinct()
           .limit(limit)
-          .toList();
+          .toList());
     } catch (IOException exception) {
       throw new IllegalStateException("Anayasa Mahkemesi karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }
+  }
+
+  private String resolveQuery(PrecedentSearchRequest request, boolean advanced) {
+    String query = PrecedentSearchSupport.normalizeOptionalQuery(request.query(), advanced);
+    if (!query.isBlank()) {
+      return query;
+    }
+    if (request.docketNo() != null && !request.docketNo().isBlank()) {
+      return request.docketNo().trim();
+    }
+    if (request.decisionNo() != null && !request.decisionNo().isBlank()) {
+      return request.decisionNo().trim();
+    }
+    if (request.chamber() != null && !request.chamber().isBlank()) {
+      return request.chamber().trim();
+    }
+    return "anayasa";
   }
 
   public PrecedentDto getDocument(String documentId) {
@@ -135,14 +153,6 @@ public class AnayasaPrecedentService {
       ));
     }
     return results;
-  }
-
-  private String normalizeQuery(String query) {
-    String normalized = query == null ? "" : query.trim();
-    if (normalized.length() < 3) {
-      throw new IllegalArgumentException("Ictihat aramasi icin en az 3 karakter girin.");
-    }
-    return normalized;
   }
 
   private String normalizeDocumentId(String documentId) {

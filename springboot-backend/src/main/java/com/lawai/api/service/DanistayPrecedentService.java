@@ -41,18 +41,19 @@ public class DanistayPrecedentService {
   }
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
-    String query = normalizeQuery(request.query());
+    boolean advanced = PrecedentSearchSupport.isAdvanced(request);
+    String query = PrecedentSearchSupport.normalizeOptionalQuery(request.query(), advanced);
     int limit = normalizeLimit(request.limit());
     BasicCookieStore cookieStore = new BasicCookieStore();
 
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
-      Map<String, Object> data = searchPayload(query);
+      Map<String, Object> data = advanced ? detailedSearchPayload(request, query) : searchPayload(query);
       sendPost(client, BASE_URL + "/arama", objectMapper.writeValueAsString(Map.of("data", data)));
       data.put("pageSize", String.valueOf(limit));
       data.put("pageNumber", "1");
       String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(Map.of("data", data)));
-      return parseResults(json);
+      return PrecedentSearchSupport.applyAdvancedFilters(request, parseResults(json));
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Danistay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }
@@ -87,12 +88,38 @@ public class DanistayPrecedentService {
   private Map<String, Object> searchPayload(String query) {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("aranan", query);
-    data.put("andKelimeler", List.of("\"" + query + "\""));
+    if (!query.isBlank()) {
+      data.put("andKelimeler", List.of("\"" + query + "\""));
+    } else {
+      data.put("andKelimeler", List.of());
+    }
     data.put("orKelimeler", List.of());
     data.put("notAndKelimeler", List.of());
     data.put("notOrKelimeler", List.of());
     data.put("siralama", "3");
     data.put("siralamaDirection", "desc");
+    return data;
+  }
+
+  private Map<String, Object> detailedSearchPayload(PrecedentSearchRequest request, String query) {
+    Map<String, Object> data = searchPayload(query);
+    if (request.chamber() != null && !request.chamber().isBlank()) {
+      data.put("daire", request.chamber().trim());
+    }
+    if (request.docketNo() != null && !request.docketNo().isBlank()) {
+      data.put("esas", request.docketNo().trim());
+    }
+    if (request.decisionNo() != null && !request.decisionNo().isBlank()) {
+      data.put("karar", request.decisionNo().trim());
+    }
+    String dateFrom = PrecedentSearchSupport.normalizeDate(request.dateFrom());
+    String dateTo = PrecedentSearchSupport.normalizeDate(request.dateTo());
+    if (!dateFrom.isBlank()) {
+      data.put("baslangicTarihi", dateFrom);
+    }
+    if (!dateTo.isBlank()) {
+      data.put("bitisTarihi", dateTo);
+    }
     return data;
   }
 
@@ -169,14 +196,6 @@ public class DanistayPrecedentService {
       throw new IllegalStateException("Danistay servisi " + response.getCode() + " dondu: " + preview(body, 300));
     }
     return body;
-  }
-
-  private String normalizeQuery(String query) {
-    String normalized = query == null ? "" : query.trim();
-    if (normalized.length() < 3) {
-      throw new IllegalArgumentException("Ictihat aramasi icin en az 3 karakter girin.");
-    }
-    return normalized;
   }
 
   private String normalizeDocumentId(String documentId) {

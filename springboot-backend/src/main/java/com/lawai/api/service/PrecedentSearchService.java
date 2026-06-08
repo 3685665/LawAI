@@ -55,7 +55,16 @@ public class PrecedentSearchService {
   }
 
   private PrecedentSearchRequest withLimit(PrecedentSearchRequest request, int limit) {
-    return new PrecedentSearchRequest(request.query(), request.court(), request.chamber(), limit);
+    return new PrecedentSearchRequest(
+        request.query(),
+        request.court(),
+        request.chamber(),
+        request.docketNo(),
+        request.decisionNo(),
+        request.dateFrom(),
+        request.dateTo(),
+        limit
+    );
   }
 
   private int normalizeLimit(Integer limit) {
