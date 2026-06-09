@@ -91,6 +91,41 @@ def test_chat_uses_indexed_local_documents() -> None:
     assert body["citations"][0]["topic"] == "Ayipli arac raporu"
 
 
+def test_precedent_apply_to_petition() -> None:
+    response = client.post(
+        "/api/precedents/apply-to-petition",
+        json={
+            "court": "Yargitay",
+            "chamber": "9. Hukuk Dairesi",
+            "docketNo": "2022/1845",
+            "decisionNo": "2022/7281",
+            "date": "2022-06-14",
+            "topic": "Ise iade",
+            "summary": "Kisa liste ozeti",
+            "content": "Mahkeme, is sozlesmesinin hakli nedenle feshedilmedigini ve ise iade kosullarinin olustugunu belirterek karari bozmustur.",
+            "caseContext": {
+                "caseId": "case-1",
+                "caseLabel": "Ise iade",
+                "clientName": "Ahmet Yilmaz",
+                "opponentName": "ABC Ltd.",
+                "courtName": "Ankara Is Mahkemesi",
+                "subject": "Haksiz fesih nedeniyle ise iade",
+                "summary": "Musteri 5 yillik calisma sonrasi haksiz fesih almis, ihtar gonderilmistir.",
+                "petitionType": "Ise iade",
+                "petitionFacts": "Musteri fesih gerekcesinin somut olmadigini ileri suruyor.",
+                "petitionDemands": "Ise iade ve ucret alacagi talep edilmektedir.",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["citationLine"]
+    assert body["applicationNote"]
+    assert body["legalGroundsSnippet"]
+    assert body["factsLinkSnippet"]
+
+
 def test_precedent_summarize_uses_decision_text() -> None:
     response = client.post(
         "/api/precedents/summarize",

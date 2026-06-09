@@ -12,6 +12,8 @@ import com.lawai.api.dto.PetitionResponse;
 import com.lawai.api.dto.PrecedentDto;
 import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
+import com.lawai.api.dto.PrecedentApplyRequest;
+import com.lawai.api.dto.PrecedentApplyResponse;
 import com.lawai.api.dto.PrecedentSummarizeRequest;
 import com.lawai.api.dto.PrecedentSummarizeResponse;
 import com.lawai.api.service.AiServiceClient;
@@ -158,6 +160,13 @@ public class LawaiController {
   public PrecedentSummarizeResponse summarizePrecedent(@Valid @RequestBody PrecedentSummarizeRequest request, Authentication authentication) {
     PrecedentSummarizeResponse response = aiServiceClient.summarizePrecedent(request);
     activityLogService.logBackend(requireUser(authentication), "precedent-summary", "Ictihat Arama", "Karar metni AI ile ozetlendi.", "/api/precedents/summarize");
+    return response;
+  }
+
+  @PostMapping("/precedents/apply-to-petition")
+  public PrecedentApplyResponse applyPrecedentToPetition(@Valid @RequestBody PrecedentApplyRequest request, Authentication authentication) {
+    PrecedentApplyResponse response = aiServiceClient.applyPrecedentToPetition(request);
+    activityLogService.logBackend(requireUser(authentication), "precedent-apply", "Ictihat Arama", "Emsal karar dilekce dosyasi ile eslestirildi.", "/api/precedents/apply-to-petition");
     return response;
   }
 

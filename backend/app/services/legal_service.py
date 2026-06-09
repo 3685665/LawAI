@@ -16,6 +16,9 @@ from app.models.schemas import (
     PrecedentDto,
     PrecedentSearchRequest,
     PrecedentSearchResponse,
+    PetitionCaseContext,
+    PrecedentApplyRequest,
+    PrecedentApplyResponse,
     PrecedentSummarizeRequest,
     PrecedentSummarizeResponse,
 )
@@ -114,6 +117,40 @@ class LegalService:
                 return PrecedentSummarizeResponse(summary=fallback, disclaimer=DISCLAIMER)
         return PrecedentSummarizeResponse(
             summary=self._local_precedent_summary(metadata, content),
+            disclaimer=DISCLAIMER,
+        )
+
+    def apply_precedent_to_petition(self, request: PrecedentApplyRequest) -> PrecedentApplyResponse:
+        content = request.content.strip()
+        metadata = self._format_precedent_metadata(request)
+        citation_line = self._format_precedent_citation(request)
+        case_context = request.caseContext
+        if self.chat_model:
+            try:
+                applied = self._apply_precedent_with_ai(metadata, content, request.aiSummary, case_context, citation_line)
+                return PrecedentApplyResponse(
+                    applicationNote=applied["applicationNote"],
+                    legalGroundsSnippet=applied["legalGroundsSnippet"],
+                    factsLinkSnippet=applied["factsLinkSnippet"],
+                    citationLine=citation_line,
+                    disclaimer=DISCLAIMER,
+                )
+            except Exception as exc:
+                fallback = self._local_precedent_application(metadata, content, case_context, citation_line)
+                fallback["applicationNote"] += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel eslestirme modu kullanildi. Detay: {exc}"
+                return PrecedentApplyResponse(
+                    applicationNote=fallback["applicationNote"],
+                    legalGroundsSnippet=fallback["legalGroundsSnippet"],
+                    factsLinkSnippet=fallback["factsLinkSnippet"],
+                    citationLine=citation_line,
+                    disclaimer=DISCLAIMER,
+                )
+        fallback = self._local_precedent_application(metadata, content, case_context, citation_line)
+        return PrecedentApplyResponse(
+            applicationNote=fallback["applicationNote"],
+            legalGroundsSnippet=fallback["legalGroundsSnippet"],
+            factsLinkSnippet=fallback["factsLinkSnippet"],
+            citationLine=citation_line,
             disclaimer=DISCLAIMER,
         )
 
@@ -223,6 +260,7 @@ class LegalService:
             "Basliklari sadece su sirayla ve birer kez kullan: MAHKEME, TARAFLAR, KONU, ACIKLAMALAR, HUKUKI NEDENLER, DELILLER, SONUC VE TALEP.\n"
             "Alacak, kira, tazminat veya hukuk davalarinda suc, ceza, sanik, magdur gibi ceza hukuku ifadeleri kullanma.\n"
             "HUKUKI NEDENLER bolumunde yalnizca genel ve guvenli dayanaklari yaz: ilgili Turk Borclar Kanunu, HMK ve sair mevzuat.\n"
+            "Vakialar veya baglam bolumunde davaya bagli emsal/atif metni varsa HUKUKI NEDENLER bolumune ayni dosyayla tutarli sekilde aktar; uydurma emsal ekleme.\n"
             "SONUC VE TALEP bolumunde talebi davalidan tahsil, yargilama gideri ve vekalet ucreti seklinde dogru taraf yonuyle kur.\n"
             "ACIKLAMALAR bolumunu kullanicinin vakialarina gore somut ve maddeli yaz. SONUC VE TALEP bolumunu verilen taleplere gore netlestir.\n\n"
             f"Dilekce turu: {request.petitionType}\nMahkeme: {request.court}\nTaraflar: {request.parties}\n"
@@ -301,6 +339,124 @@ class LegalService:
                 f"Konu: {request.topic}",
             ]
         )
+
+    def _format_precedent_citation(self, request: PrecedentSummarizeRequest | PrecedentApplyRequest) -> str:
+        parts = [request.court.strip()]
+        if request.chamber:
+            parts.append(request.chamber.strip())
+        docket = request.docketNo or "-"
+        decision = request.decisionNo or "-"
+        return f"{' '.join(parts)}, E. {docket}, K. {decision}, T. {request.date or '-'}"
+
+    def _format_case_context(self, case: PetitionCaseContext) -> str:
+        return "\n".join(
+            [
+                f"Dosya: {case.caseLabel or case.caseType or '-'}",
+                f"Dava konusu: {case.subject or '-'}",
+                f"Dosya ozeti: {case.summary or '-'}",
+                f"Davaci/Muvekkil: {case.clientName or '-'}",
+                f"Davali/Karsi taraf: {case.opponentName or '-'}",
+                f"Mahkeme: {case.courtName or '-'}",
+                f"Dilekce turu: {case.petitionType or '-'}",
+                f"Mevcut vakialar: {case.petitionFacts or '-'}",
+                f"Mevcut talepler: {case.petitionDemands or '-'}",
+            ]
+        )
+
+    def _apply_precedent_with_ai(
+        self,
+        metadata: str,
+        content: str,
+        ai_summary: str | None,
+        case: PetitionCaseContext,
+        citation_line: str,
+    ) -> dict[str, str]:
+        max_chars = 18000
+        decision_text = content if len(content) <= max_chars else content[:max_chars] + "\n\n[Metin uzunlugu nedeniyle kirpildi...]"
+        summary_block = f"\n\nKarar AI ozeti:\n{ai_summary.strip()}" if ai_summary and ai_summary.strip() else ""
+        prompt = (
+            "Turk hukuku baglaminda bir avukat asistanisin. Asagidaki emsal karari, secili dava dosyasi "
+            "ve mevcut dilekce taslagi bilgileriyle eslestir.\n"
+            "Metinde ve dosyada olmayan olay, tarih, karar veya taraf uydurma.\n"
+            "Yalnizca gercekten iliskili noktalari bagla; zorla benzerlik kurma.\n"
+            "Ciktiyi su basliklarla ver:\n"
+            "UYGULAMA NOTU:\n"
+            "(Bu emsalin bu davaya neden ve nasil uygulanabilecegi; 120-180 kelime)\n\n"
+            "HUKUKI DAYANAK TASLAGI:\n"
+            "(Dilekcede HUKUKI NEDENLER bolumune eklenebilecek 2-4 cumle; emsal atfi dahil)\n\n"
+            "VAKIA BAGLANTISI:\n"
+            "(Dosyadaki somut vakialar ile karar gerekcesi arasindaki bag; 2-3 cumle)\n\n"
+            f"Emsal atif satiri: {citation_line}\n\n"
+            f"Emsal bilgileri:\n{metadata}\n\n"
+            f"Dava dosyasi:\n{self._format_case_context(case)}\n\n"
+            f"Emsal karar metni:\n{decision_text}{summary_block}"
+        )
+        response = self.chat_model.invoke(prompt)
+        text = str(response.content).strip()
+        return self._parse_precedent_application(text, metadata, case, citation_line)
+
+    def _parse_precedent_application(
+        self,
+        text: str,
+        metadata: str,
+        case: PetitionCaseContext,
+        citation_line: str,
+    ) -> dict[str, str]:
+        def extract(label: str, next_labels: list[str]) -> str:
+            start = text.find(label)
+            if start < 0:
+                return ""
+            start += len(label)
+            end = len(text)
+            for marker in next_labels:
+                index = text.find(marker, start)
+                if index >= 0:
+                    end = min(end, index)
+            return text[start:end].strip()
+
+        application_note = extract("UYGULAMA NOTU:", ["HUKUKI DAYANAK TASLAGI:", "VAKIA BAGLANTISI:"]) or text.strip()
+        legal_grounds = extract("HUKUKI DAYANAK TASLAGI:", ["VAKIA BAGLANTISI:"])
+        facts_link = extract("VAKIA BAGLANTISI:", [])
+        if not legal_grounds:
+            legal_grounds = f"{citation_line} sayili kararda benzer olayda benimsenen hukuki ilke, isbu dosyada da dikkate alinmalidir."
+        if not facts_link:
+            facts_link = f"Dosya konusu ({case.subject or '-'}) ile emsal kararin konusu ({metadata.splitlines()[-1].replace('Konu: ', '')}) arasinda bag kurulabilir."
+        return {
+            "applicationNote": application_note,
+            "legalGroundsSnippet": legal_grounds,
+            "factsLinkSnippet": facts_link,
+        }
+
+    def _local_precedent_application(
+        self,
+        metadata: str,
+        content: str,
+        case: PetitionCaseContext,
+        citation_line: str,
+    ) -> dict[str, str]:
+        excerpt = content[:900].strip()
+        if len(content) > 900:
+            excerpt += "..."
+        application_note = (
+            f"Dosya: {case.caseLabel or case.caseType or '-'}\n"
+            f"Dava konusu: {case.subject or '-'}\n"
+            f"Emsal: {citation_line}\n"
+            f"Karar konusu: {metadata.splitlines()[-1].replace('Konu: ', '')}\n\n"
+            "Yerel eslestirme: Emsal karar metni ile dosya ozeti birlikte incelenmelidir. "
+            "Tam baglanti metni icin AI saglayicisini etkinlestirin.\n\n"
+            f"Metinden alinti:\n{excerpt}"
+        )
+        return {
+            "applicationNote": application_note,
+            "legalGroundsSnippet": (
+                f"Somut olayda {citation_line} sayili Yargitay kararinda benimsenen degerlendirme "
+                f"isbu {case.subject or 'dosya'} kapsaminda da dikkate alinmalidir."
+            ),
+            "factsLinkSnippet": (
+                f"Dosya ozetinde yer alan {case.summary or 'vakialar'}, emsal karardaki olay ve hukuki "
+                "degerlendirme ile karsilastirilmalidir."
+            ),
+        }
 
     def _summarize_precedent_with_ai(self, metadata: str, content: str) -> str:
         max_chars = 24000

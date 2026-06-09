@@ -10,6 +10,8 @@ import com.lawai.api.dto.PetitionRequest;
 import com.lawai.api.dto.PetitionResponse;
 import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
+import com.lawai.api.dto.PrecedentApplyRequest;
+import com.lawai.api.dto.PrecedentApplyResponse;
 import com.lawai.api.dto.PrecedentSummarizeRequest;
 import com.lawai.api.dto.PrecedentSummarizeResponse;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -63,6 +65,11 @@ public class AiServiceClient {
   public PrecedentSummarizeResponse summarizePrecedent(PrecedentSummarizeRequest request) {
     String response = send(post("/precedents/summarize", toJson(request)));
     return fromJson(response, PrecedentSummarizeResponse.class);
+  }
+
+  public PrecedentApplyResponse applyPrecedentToPetition(PrecedentApplyRequest request) {
+    String response = send(post("/precedents/apply-to-petition", toJson(request)));
+    return fromJson(response, PrecedentApplyResponse.class);
   }
 
   public PetitionResponse generatePetition(PetitionRequest request) {

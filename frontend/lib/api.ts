@@ -28,6 +28,33 @@ export type PrecedentSummarizePayload = {
   content: string;
 };
 
+export type PetitionCaseContextPayload = {
+  caseId?: string | null;
+  caseType?: string | null;
+  caseLabel?: string | null;
+  clientName?: string | null;
+  opponentName?: string | null;
+  courtName?: string | null;
+  subject?: string | null;
+  summary?: string | null;
+  petitionType?: string | null;
+  petitionFacts?: string | null;
+  petitionDemands?: string | null;
+};
+
+export type PrecedentApplyPayload = PrecedentSummarizePayload & {
+  aiSummary?: string | null;
+  caseContext: PetitionCaseContextPayload;
+};
+
+export type PrecedentApplyResponse = {
+  applicationNote: string;
+  legalGroundsSnippet: string;
+  factsLinkSnippet: string;
+  citationLine: string;
+  disclaimer?: string | null;
+};
+
 export type CaseDocument = {
   id: string;
   title: string;
@@ -252,6 +279,10 @@ export async function seedSamples<T>(path: string): Promise<T> {
 
 export async function summarizePrecedent(payload: PrecedentSummarizePayload): Promise<PrecedentSummarizeResponse> {
   return postJson<PrecedentSummarizeResponse>("/precedents/summarize", payload);
+}
+
+export async function applyPrecedentToPetition(payload: PrecedentApplyPayload): Promise<PrecedentApplyResponse> {
+  return postJson<PrecedentApplyResponse>("/precedents/apply-to-petition", payload);
 }
 
 export async function uploadMultipart<T>(path: string, form: FormData): Promise<T> {

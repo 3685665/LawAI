@@ -69,6 +69,7 @@ import {
   Precedent,
   seedSamples,
   summarizePrecedent,
+  applyPrecedentToPetition,
   submitFeedback as postFeedback,
   type FeedbackStatus,
   type FeedbackRecord,
@@ -168,6 +169,18 @@ type CaseLawGridRow = Precedent & {
 type PrecedentDetailRow = {
   label: string;
   value: string;
+};
+
+type PetitionPrecedentBlock = {
+  id: string;
+  caseId: string;
+  caseLabel: string;
+  precedentKey: string;
+  precedentTitle: string;
+  citationLine: string;
+  applicationNote: string;
+  legalGroundsSnippet: string;
+  factsLinkSnippet: string;
 };
 
 function getPrecedentKey(item: Precedent, index: number) {
@@ -429,6 +442,10 @@ export default function Home() {
   const [petitionMethod, setPetitionMethod] = useState<PetitionMethod>("quick");
   const [petitionModel, setPetitionModel] = useState<PetitionModel>("standard");
   const [petitionContext, setPetitionContext] = useState("");
+  const [savedPetitionCases, setSavedPetitionCases] = useState<CaseRecord[]>([]);
+  const [petitionLinkedCaseId, setPetitionLinkedCaseId] = useState<string | null>(null);
+  const [petitionPrecedentBlocks, setPetitionPrecedentBlocks] = useState<PetitionPrecedentBlock[]>([]);
+  const [petitionApplySuccess, setPetitionApplySuccess] = useState("");
   const [petitionContextSources, setPetitionContextSources] = useState({
     upload: false,
     existing: true
@@ -598,6 +615,45 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!authUser) {
+      setSavedPetitionCases([]);
+      return;
+    }
+    let cancelled = false;
+    getJson<CaseRecord[]>("/cases")
+      .then((cases) => {
+        if (cancelled) return;
+        setSavedPetitionCases(cases);
+        setPetitionLinkedCaseId((current) => {
+          if (current && cases.some((item) => item.id === current)) {
+            return current;
+          }
+          const stored = window.localStorage.getItem("lawai-petition-case-id");
+          if (stored && cases.some((item) => item.id === stored)) {
+            return stored;
+          }
+          return cases[0]?.id ?? null;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSavedPetitionCases([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (petitionLinkedCaseId) {
+      window.localStorage.setItem("lawai-petition-case-id", petitionLinkedCaseId);
+      return;
+    }
+    window.localStorage.removeItem("lawai-petition-case-id");
+  }, [petitionLinkedCaseId]);
 
   useEffect(() => {
     if (!authReady || authUser || authMode === "forgot" || !googleClientId || !googleButtonRef.current) {
@@ -800,6 +856,11 @@ export default function Home() {
     if (!selectedPrecedentKey) return "";
     return precedentSummaries[selectedPrecedentKey] ?? "";
   }, [precedentSummaries, selectedPrecedentKey]);
+
+  const linkedPetitionCase = useMemo(
+    () => savedPetitionCases.find((item) => item.id === petitionLinkedCaseId) ?? null,
+    [petitionLinkedCaseId, savedPetitionCases]
+  );
 
   const selectedPrecedentDetailRows = useMemo<PrecedentDetailRow[]>(() => {
     if (!selectedPrecedent) return [];
@@ -1471,6 +1532,49 @@ export default function Home() {
     }
   }, [activeTab]);
 
+  function buildPetitionContextFromBlocks(blocks: PetitionPrecedentBlock[]) {
+    return blocks.map((block) => [
+      `${block.caseLabel} / ${block.precedentTitle}`,
+      `${t.tools.researchDocket}: ${block.citationLine}`,
+      `${t.tools.petitionCaseContext}: ${block.factsLinkSnippet}`,
+      block.applicationNote,
+      `${t.tools.petitionDemands}: ${block.legalGroundsSnippet}`
+    ].join("\n")).join("\n\n---\n\n");
+  }
+
+  function buildCaseContextPayload(caseRecord: CaseRecord) {
+    const draftFacts = [caseRecord.subject, caseRecord.summary].filter(Boolean).join("\n\n");
+    return {
+      caseId: caseRecord.id,
+      caseType: caseRecord.caseType,
+      caseLabel: caseRecord.caseLabel,
+      clientName: caseRecord.clientName,
+      opponentName: caseRecord.opponentName,
+      courtName: caseRecord.courtName,
+      subject: caseRecord.subject,
+      summary: caseRecord.summary,
+      petitionType: caseRecord.caseLabel || petition.petitionType,
+      petitionFacts: draftFacts || petition.facts,
+      petitionDemands: petition.demands
+    };
+  }
+
+  function syncPetitionFromCase(caseRecord: CaseRecord) {
+    const parties = [
+      caseRecord.clientName ? `${t.tools.petitionApplicant}: ${caseRecord.clientName}` : "",
+      caseRecord.opponentName ? `${t.tools.petitionOpponent}: ${caseRecord.opponentName}` : ""
+    ].filter(Boolean).join("\n");
+    const facts = [caseRecord.subject, caseRecord.summary].filter(Boolean).join("\n\n");
+    setPetition({
+      petitionType: caseRecord.caseLabel || petition.petitionType,
+      court: caseRecord.courtName || petition.court,
+      parties: parties || petition.parties,
+      facts: facts || petition.facts,
+      demands: petition.demands
+    });
+    setPetitionMethod("case");
+  }
+
   function summarizeSelectedPrecedent() {
     if (!selectedPrecedent || selectedPrecedentIndex === null) {
       setError(t.tools.researchSummarySelectDecision);
@@ -1529,9 +1633,32 @@ export default function Home() {
         <section className="precedent-use-box">
           <span className="section-label">{t.tools.researchUse}</span>
           <p>{t.tools.researchUseText}</p>
-          <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
-            <FileText size={17} />
-            {t.tools.petitionContext}
+          <label className="field-label">
+            {t.tools.researchUseLinkedCase}
+            <select
+              value={petitionLinkedCaseId ?? ""}
+              onChange={(event) => {
+                setPetitionApplySuccess("");
+                setPetitionLinkedCaseId(event.target.value || null);
+              }}
+            >
+              <option value="">{t.tools.petitionSelectCase}</option>
+              {savedPetitionCases.map((caseRecord) => (
+                <option key={caseRecord.id} value={caseRecord.id}>
+                  {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!savedPetitionCases.length ? <p>{t.tools.researchUseNoCases}</p> : null}
+          {petitionApplySuccess ? <p className="auth-preview">{petitionApplySuccess}</p> : null}
+          <button
+            disabled={!selectedPrecedent || !linkedPetitionCase || loading === "precedent-apply"}
+            type="button"
+            onClick={addSelectedPrecedentToPetition}
+          >
+            {loading === "precedent-apply" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}
+            {t.tools.researchUseApply}
           </button>
         </section>
       </>
@@ -1539,16 +1666,70 @@ export default function Home() {
   }
 
   function addSelectedPrecedentToPetition() {
-    if (!selectedPrecedent) return;
-    const reference = [
-      `${selectedPrecedent.court}${selectedPrecedent.chamber ? ` - ${selectedPrecedent.chamber}` : ""}`,
-      `${t.tools.researchDocket}: ${[selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-"}`,
-      `${t.feedback.date}: ${selectedPrecedent.date ?? "-"}`,
-      `${t.feedback.subject}: ${selectedPrecedent.topic}`,
-      selectedPrecedent.content || selectedPrecedent.summary
-    ].join("\n");
-    setPetitionContext((current) => [current.trim(), `${t.tools.researchUse}:\n${reference}`].filter(Boolean).join("\n\n"));
-    setActiveTab("petition");
+    if (!selectedPrecedent || selectedPrecedentIndex === null) {
+      setError(t.tools.researchSummarySelectDecision);
+      return;
+    }
+    if (!linkedPetitionCase) {
+      setError(t.tools.researchUseSelectCase);
+      return;
+    }
+    const key = getPrecedentKey(selectedPrecedent, selectedPrecedentIndex);
+    run("precedent-apply", async () => {
+      setPetitionApplySuccess("");
+      const item = await ensurePrecedentDetailLoaded(selectedPrecedentIndex);
+      if (!item) {
+        throw new Error(t.tools.researchSummaryNoContent);
+      }
+      const content = item.content?.trim() || item.summary?.trim() || "";
+      if (content.length < 20) {
+        throw new Error(t.tools.researchSummaryNoContent);
+      }
+      const response = await applyPrecedentToPetition({
+        court: item.court,
+        chamber: item.chamber,
+        docketNo: item.docketNo,
+        decisionNo: item.decisionNo,
+        date: item.date,
+        topic: item.topic,
+        summary: item.summary,
+        content,
+        aiSummary: selectedPrecedentSummary || null,
+        caseContext: buildCaseContextPayload(linkedPetitionCase)
+      });
+      const draftFacts = [linkedPetitionCase.subject, linkedPetitionCase.summary].filter(Boolean).join("\n\n");
+      const draftParties = [
+        linkedPetitionCase.clientName ? `${t.tools.petitionApplicant}: ${linkedPetitionCase.clientName}` : "",
+        linkedPetitionCase.opponentName ? `${t.tools.petitionOpponent}: ${linkedPetitionCase.opponentName}` : ""
+      ].filter(Boolean).join("\n");
+      const block: PetitionPrecedentBlock = {
+        id: `${key}:${linkedPetitionCase.id}:${Date.now()}`,
+        caseId: linkedPetitionCase.id,
+        caseLabel: linkedPetitionCase.caseLabel,
+        precedentKey: key,
+        precedentTitle: item.topic,
+        citationLine: response.citationLine,
+        applicationNote: response.applicationNote,
+        legalGroundsSnippet: response.legalGroundsSnippet,
+        factsLinkSnippet: response.factsLinkSnippet
+      };
+      const nextBlocks = [
+        ...petitionPrecedentBlocks.filter((entry) => !(entry.caseId === block.caseId && entry.precedentKey === block.precedentKey)),
+        block
+      ];
+      setPetitionPrecedentBlocks(nextBlocks);
+      setPetitionContext(buildPetitionContextFromBlocks(nextBlocks));
+      setPetition({
+        petitionType: linkedPetitionCase.caseLabel || petition.petitionType,
+        court: linkedPetitionCase.courtName || petition.court,
+        parties: draftParties || petition.parties,
+        facts: [draftFacts, response.factsLinkSnippet].filter(Boolean).join("\n\n"),
+        demands: [petition.demands.trim(), response.legalGroundsSnippet].filter(Boolean).join("\n\n")
+      });
+      setPetitionMethod("case");
+      setPetitionApplySuccess(t.tools.researchUseSuccess);
+      setActiveTab("petition");
+    });
   }
 
   function submitPetition(event: FormEvent) {
@@ -1568,6 +1749,9 @@ export default function Home() {
     const enrichedPetition = {
       ...petition,
       facts: [
+        linkedPetitionCase
+          ? `\n\n${t.tools.petitionLinkedCase}: ${linkedPetitionCase.caseLabel} — ${linkedPetitionCase.subject}`
+          : "",
         petition.facts,
         petitionContext.trim() ? `\n\n${t.tools.petitionCaseContext}:\n${petitionContext.trim()}` : "",
         selectedSources ? `\n\n${t.tools.petitionContext}: ${selectedSources}` : "",
@@ -2551,6 +2735,69 @@ export default function Home() {
             <section className="petition-assistant-layout">
               <form className="panel petition-builder-panel" onSubmit={submitPetition}>
                 <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
+
+                <div className="petition-form-grid">
+                  <label className="field-label">
+                    {t.tools.petitionLinkedCase}
+                    <select
+                      value={petitionLinkedCaseId ?? ""}
+                      onChange={(event) => setPetitionLinkedCaseId(event.target.value || null)}
+                    >
+                      <option value="">{t.tools.petitionSelectCase}</option>
+                      {savedPetitionCases.map((caseRecord) => (
+                        <option key={caseRecord.id} value={caseRecord.id}>
+                          {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="petition-sync-case-row">
+                    <button
+                      className="secondary-button"
+                      disabled={!linkedPetitionCase}
+                      type="button"
+                      onClick={() => linkedPetitionCase && syncPetitionFromCase(linkedPetitionCase)}
+                    >
+                      {t.tools.petitionSyncCase}
+                    </button>
+                  </div>
+                </div>
+
+                {linkedPetitionCase ? (
+                  <div className="petition-linked-case-card">
+                    <strong>{linkedPetitionCase.caseLabel}</strong>
+                    <span>{linkedPetitionCase.subject}</span>
+                    <small>{linkedPetitionCase.clientName} / {linkedPetitionCase.opponentName} — {linkedPetitionCase.courtName}</small>
+                  </div>
+                ) : null}
+
+                <div className="petition-linked-precedents">
+                  <span className="section-label">{t.tools.petitionLinkedPrecedents}</span>
+                  {petitionPrecedentBlocks.filter((block) => block.caseId === petitionLinkedCaseId).length ? (
+                    <ul>
+                      {petitionPrecedentBlocks
+                        .filter((block) => block.caseId === petitionLinkedCaseId)
+                        .map((block) => (
+                          <li key={block.id}>
+                            <strong>{block.precedentTitle}</strong>
+                            <span>{block.citationLine}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p>{t.tools.petitionLinkedPrecedentsEmpty}</p>
+                  )}
+                </div>
+
+                <label className="field-label">
+                  {t.tools.petitionCaseContext}
+                  <textarea
+                    rows={5}
+                    value={petitionContext}
+                    onChange={(event) => setPetitionContext(event.target.value)}
+                    placeholder={t.tools.petitionCaseContextPlaceholder}
+                  />
+                </label>
 
                 <div className="petition-form-grid">
                   <label className="field-label">

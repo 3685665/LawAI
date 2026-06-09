@@ -11,6 +11,8 @@ from app.models.schemas import (
     PdfTextExtractionResponse,
     PrecedentSearchRequest,
     PrecedentSearchResponse,
+    PrecedentApplyRequest,
+    PrecedentApplyResponse,
     PrecedentSummarizeRequest,
     PrecedentSummarizeResponse,
 )
@@ -51,6 +53,11 @@ def search_precedents(request: PrecedentSearchRequest) -> PrecedentSearchRespons
 @app.post("/api/precedents/summarize", response_model=PrecedentSummarizeResponse)
 def summarize_precedent(request: PrecedentSummarizeRequest) -> PrecedentSummarizeResponse:
     return legal_service.summarize_precedent(request)
+
+
+@app.post("/api/precedents/apply-to-petition", response_model=PrecedentApplyResponse)
+def apply_precedent_to_petition(request: PrecedentApplyRequest) -> PrecedentApplyResponse:
+    return legal_service.apply_precedent_to_petition(request)
 
 
 @app.post("/api/petitions", response_model=PetitionResponse)

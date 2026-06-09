@@ -3303,10 +3303,56 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   width: 42%;
 }
 
-.precedent-use-box p {
+.petition-linked-case-card,
+.petition-linked-precedents,
+.precedent-use-box select {
+  margin-top: 12px;
+}
+
+.petition-linked-case-card {
+  background: #f7fafc;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.petition-linked-case-card span,
+.petition-linked-case-card small {
   color: var(--muted);
-  line-height: 1.55;
-  margin: 0;
+  line-height: 1.5;
+}
+
+.petition-linked-precedents ul {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.petition-linked-precedents li {
+  background: #fff;
+  border: 1px solid rgba(215, 222, 232, 0.9);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.petition-linked-precedents li span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.petition-sync-case-row {
+  align-items: end;
+  display: flex;
+}
+
+.precedent-use-box select {
+  width: 100%;
 }
 
 .precedent-reporting-panel {
