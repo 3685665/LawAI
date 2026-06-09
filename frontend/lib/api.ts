@@ -12,6 +12,22 @@ export type Precedent = {
   content?: string | null;
 };
 
+export type PrecedentSummarizeResponse = {
+  summary: string;
+  disclaimer?: string | null;
+};
+
+export type PrecedentSummarizePayload = {
+  court: string;
+  chamber?: string | null;
+  docketNo?: string | null;
+  decisionNo?: string | null;
+  date?: string | null;
+  topic: string;
+  summary?: string | null;
+  content: string;
+};
+
 export type CaseDocument = {
   id: string;
   title: string;
@@ -232,6 +248,10 @@ export async function seedSamples<T>(path: string): Promise<T> {
     throw new Error(await readError(response));
   }
   return response.json();
+}
+
+export async function summarizePrecedent(payload: PrecedentSummarizePayload): Promise<PrecedentSummarizeResponse> {
+  return postJson<PrecedentSummarizeResponse>("/precedents/summarize", payload);
 }
 
 export async function uploadMultipart<T>(path: string, form: FormData): Promise<T> {

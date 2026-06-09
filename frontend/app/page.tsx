@@ -68,6 +68,7 @@ import {
   listUsers,
   Precedent,
   seedSamples,
+  summarizePrecedent,
   submitFeedback as postFeedback,
   type FeedbackStatus,
   type FeedbackRecord,
@@ -168,6 +169,13 @@ type PrecedentDetailRow = {
   label: string;
   value: string;
 };
+
+function getPrecedentKey(item: Precedent, index: number) {
+  if (item.sourceId) {
+    return `${item.court}:${item.sourceId}`;
+  }
+  return `${item.court}:${item.docketNo ?? ""}:${item.decisionNo ?? ""}:${index}`;
+}
 type AdminSection = "feedback" | "users";
 type AdminUserView = "list" | "detail";
 type ThemeMode = "original" | "light" | "dark";
@@ -408,7 +416,7 @@ export default function Home() {
   });
   const [precedentSource, setPrecedentSource] = useState<PrecedentSourceKey>("all");
   const [precedents, setPrecedents] = useState<Precedent[]>([]);
-  const [precedentSummary, setPrecedentSummary] = useState("");
+  const [precedentSummaries, setPrecedentSummaries] = useState<Record<string, string>>({});
   const [selectedPrecedentIndex, setSelectedPrecedentIndex] = useState<number | null>(null);
   const [precedentDetailOpen, setPrecedentDetailOpen] = useState(false);
   const [petition, setPetition] = useState({
@@ -779,10 +787,19 @@ export default function Home() {
   ], [locale]);
 
   const selectedPrecedent = useMemo(() => {
-    if (!precedents.length) return null;
-    const index = selectedPrecedentIndex ?? 0;
-    return precedents[index] ?? precedents[0];
+    if (selectedPrecedentIndex === null || !precedents.length) return null;
+    return precedents[selectedPrecedentIndex] ?? null;
   }, [precedents, selectedPrecedentIndex]);
+
+  const selectedPrecedentKey = useMemo(() => {
+    if (selectedPrecedentIndex === null || !selectedPrecedent) return null;
+    return getPrecedentKey(selectedPrecedent, selectedPrecedentIndex);
+  }, [selectedPrecedent, selectedPrecedentIndex]);
+
+  const selectedPrecedentSummary = useMemo(() => {
+    if (!selectedPrecedentKey) return "";
+    return precedentSummaries[selectedPrecedentKey] ?? "";
+  }, [precedentSummaries, selectedPrecedentKey]);
 
   const selectedPrecedentDetailRows = useMemo<PrecedentDetailRow[]>(() => {
     if (!selectedPrecedent) return [];
@@ -1320,7 +1337,7 @@ export default function Home() {
     setPrecedents([]);
     setSelectedPrecedentIndex(null);
     setPrecedentDetailOpen(false);
-    setPrecedentSummary("");
+    setPrecedentSummaries({});
     if (!normalizedQuery && (!advanced || !hasAdvancedCriteria)) {
       setError(
         advanced
@@ -1388,28 +1405,57 @@ export default function Home() {
     return court || "-";
   }
 
+  function mergePrecedentDetail(base: Precedent, detail: Precedent): Precedent {
+    return {
+      ...base,
+      ...detail,
+      court: detail.court || base.court,
+      chamber: detail.chamber || base.chamber,
+      docketNo: detail.docketNo || base.docketNo,
+      decisionNo: detail.decisionNo || base.decisionNo,
+      date: detail.date || base.date,
+      topic: detail.topic || base.topic,
+      summary: detail.summary || base.summary,
+      content: detail.content || base.content
+    };
+  }
+
+  function hasPrecedentDetailText(item: Precedent) {
+    const content = item.content?.trim() ?? "";
+    const summary = item.summary?.trim() ?? "";
+    return content.length >= 80 && content.length > summary.length + 40;
+  }
+
+  async function ensurePrecedentDetailLoaded(index: number): Promise<Precedent | null> {
+    const item = precedents[index];
+    if (!item) {
+      return null;
+    }
+    if (hasPrecedentDetailText(item)) {
+      return item;
+    }
+    const detailPath = getPrecedentDetailPath(item);
+    if (!detailPath) {
+      const fallbackContent = item.content?.trim() || item.summary?.trim() || "";
+      return fallbackContent.length >= 20 ? item : null;
+    }
+    const detail = await getJson<Precedent>(detailPath);
+    const merged = mergePrecedentDetail(item, detail);
+    setPrecedents((current) => current.map((entry, entryIndex) => entryIndex === index ? merged : entry));
+    return merged;
+  }
+
   function openPrecedent(index: number) {
     setSelectedPrecedentIndex(index);
     setPrecedentDetailOpen(true);
     const item = precedents[index];
     const detailPath = item ? getPrecedentDetailPath(item) : null;
-    if (activeTab !== "caseLaw" || !item?.sourceId || item.content || !detailPath) {
+    if (!item?.sourceId || item.content || !detailPath) {
       return;
     }
     run("precedent-detail", async () => {
       const detail = await getJson<Precedent>(detailPath);
-      setPrecedents((current) => current.map((entry, entryIndex) => entryIndex === index ? {
-        ...entry,
-        ...detail,
-        court: detail.court || entry.court,
-        chamber: detail.chamber || entry.chamber,
-        docketNo: detail.docketNo || entry.docketNo,
-        decisionNo: detail.decisionNo || entry.decisionNo,
-        date: detail.date || entry.date,
-        topic: detail.topic || entry.topic,
-        summary: detail.summary || entry.summary,
-        content: detail.content || entry.content
-      } : entry));
+      setPrecedents((current) => current.map((entry, entryIndex) => entryIndex === index ? mergePrecedentDetail(entry, detail) : entry));
     });
   }
 
@@ -1425,33 +1471,71 @@ export default function Home() {
     }
   }, [activeTab]);
 
-  function summarizePrecedents() {
-    if (!precedents.length) {
-      setError(t.tools.researchSummaryEmpty);
+  function summarizeSelectedPrecedent() {
+    if (!selectedPrecedent || selectedPrecedentIndex === null) {
+      setError(t.tools.researchSummarySelectDecision);
       return;
     }
-    const decisionList = precedents.slice(0, 10).map((item, index) => [
-      `${index + 1}. ${item.court}${item.chamber ? ` - ${item.chamber}` : ""}`,
-      `${t.tools.researchDocket}: ${[item.docketNo, item.decisionNo].filter(Boolean).join(" / ") || "-"}`,
-      `${t.feedback.date}: ${item.date ?? "-"}`,
-      `${t.feedback.subject}: ${item.topic}`,
-      item.content || item.summary
-    ].join("\n")).join("\n\n");
+    const key = getPrecedentKey(selectedPrecedent, selectedPrecedentIndex);
     run("precedent-summary", async () => {
-      const response = await postJson<ChatResponse>("/chat", {
-        question: [
-          t.tools.researchAiSummary,
-          "",
-          `Arama: ${searchQuery}`,
-          "",
-          "Bulunan kararlar:",
-          decisionList
-        ].join("\n"),
-        mode: "precedent-summary",
-        privateMode
+      const item = await ensurePrecedentDetailLoaded(selectedPrecedentIndex);
+      if (!item) {
+        throw new Error(t.tools.researchSummaryNoContent);
+      }
+      const content = item.content?.trim() || item.summary?.trim() || "";
+      if (content.length < 20) {
+        throw new Error(t.tools.researchSummaryNoContent);
+      }
+      const response = await summarizePrecedent({
+        court: item.court,
+        chamber: item.chamber,
+        docketNo: item.docketNo,
+        decisionNo: item.decisionNo,
+        date: item.date,
+        topic: item.topic,
+        summary: item.summary,
+        content
       });
-      setPrecedentSummary(response.answer);
+      setPrecedentSummaries((current) => ({ ...current, [key]: response.summary }));
     });
+  }
+
+  function renderPrecedentDetailActions() {
+    return (
+      <>
+        <section className="precedent-summary-box">
+          <div className="section-head">
+            <div>
+              <span className="section-label">{t.tools.researchAiSummary}</span>
+              <h3>{t.tools.researchSummarize}</h3>
+            </div>
+          </div>
+          <button
+            className="secondary-button"
+            disabled={
+              !selectedPrecedent
+              || loading === "precedent-summary"
+              || (loading === "precedent-detail" && !hasPrecedentDetailText(selectedPrecedent))
+            }
+            type="button"
+            onClick={summarizeSelectedPrecedent}
+          >
+            {loading === "precedent-summary" ? <LoaderCircle className="spin" size={17} /> : <Bot size={17} />}
+            {loading === "precedent-detail" && !hasPrecedentDetailText(selectedPrecedent) ? t.tools.researchSummaryLoadingDetail : t.tools.researchSummarize}
+          </button>
+          {selectedPrecedentSummary ? <pre>{selectedPrecedentSummary}</pre> : <p>{t.tools.researchSummaryHint}</p>}
+        </section>
+
+        <section className="precedent-use-box">
+          <span className="section-label">{t.tools.researchUse}</span>
+          <p>{t.tools.researchUseText}</p>
+          <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
+            <FileText size={17} />
+            {t.tools.petitionContext}
+          </button>
+        </section>
+      </>
+    );
   }
 
   function addSelectedPrecedentToPetition() {
@@ -2362,7 +2446,7 @@ export default function Home() {
                         rows={caseLawRows}
                         columns={caseLawColumns}
                         disableRowSelectionOnClick
-                        onRowClick={(params) => setSelectedPrecedentIndex(params.row.rowIndex)}
+                        onRowClick={(params) => openPrecedent(params.row.rowIndex)}
                         initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                         pageSizeOptions={[10, 20, 50]}
                         sx={{
@@ -2385,29 +2469,6 @@ export default function Home() {
                     </div>
                   ) : <EmptyState text={t.tools.searchEmpty} />}
                 </section>
-
-                <section className="precedent-summary-box precedent-reporting-panel">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-label">{t.tools.researchAiSummary}</span>
-                      <h3>{t.tools.researchSummarize}</h3>
-                    </div>
-                  </div>
-                  <button className="secondary-button" disabled={!precedents.length || loading === "precedent-summary"} type="button" onClick={summarizePrecedents}>
-                    {loading === "precedent-summary" ? <LoaderCircle className="spin" size={17} /> : <Bot size={17} />}
-                    {t.tools.researchSummarize}
-                  </button>
-                  {precedentSummary ? <pre>{precedentSummary}</pre> : <p>{t.tools.researchSummaryEmpty}</p>}
-                </section>
-
-                <section className="precedent-use-box precedent-reporting-panel">
-                  <span className="section-label">{t.tools.researchUse}</span>
-                  <p>{t.tools.researchUseText}</p>
-                  <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
-                    <FileText size={17} />
-                    {t.tools.petitionContext}
-                  </button>
-                </section>
               </section>
             ) : (
               <section className="precedent-research-layout">
@@ -2424,7 +2485,7 @@ export default function Home() {
                       {precedents.map((item, index) => (
                         <button
                           key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
-                          className={`precedent-result-card ${selectedPrecedent === item ? "active" : ""}`}
+                          className={`precedent-result-card ${selectedPrecedentIndex === index ? "active" : ""}`}
                           type="button"
                           onClick={() => openPrecedent(index)}
                         >
@@ -2471,28 +2532,7 @@ export default function Home() {
                     </section>
                   ) : <EmptyState text={t.tools.searchEmpty} />}
 
-                  <section className="precedent-summary-box">
-                    <div className="section-head">
-                      <div>
-                        <span className="section-label">{t.tools.researchAiSummary}</span>
-                        <h3>{t.tools.researchSummarize}</h3>
-                      </div>
-                    </div>
-                    <button className="secondary-button" disabled={!precedents.length || loading === "precedent-summary"} type="button" onClick={summarizePrecedents}>
-                      {loading === "precedent-summary" ? <LoaderCircle className="spin" size={17} /> : <Bot size={17} />}
-                      {t.tools.researchSummarize}
-                    </button>
-                    {precedentSummary ? <pre>{precedentSummary}</pre> : <p>{t.tools.researchSummaryEmpty}</p>}
-                  </section>
-
-                  <section className="precedent-use-box">
-                    <span className="section-label">{t.tools.researchUse}</span>
-                    <p>{t.tools.researchUseText}</p>
-                    <button disabled={!selectedPrecedent} type="button" onClick={addSelectedPrecedentToPetition}>
-                      <FileText size={17} />
-                      {t.tools.petitionContext}
-                    </button>
-                  </section>
+                  {selectedPrecedent ? renderPrecedentDetailActions() : null}
                 </aside>
               </section>
             )}
@@ -2607,6 +2647,8 @@ export default function Home() {
                 <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
               </section>
             ) : <EmptyState text={t.tools.searchEmpty} />}
+
+            {selectedPrecedent ? renderPrecedentDetailActions() : null}
           </div>
         </Drawer>
 

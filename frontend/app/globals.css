@@ -3331,8 +3331,14 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   width: min(56vw, 720px);
 }
 
-.precedent-detail-drawer-head {
-  align-items: flex-start;
+.precedent-detail-drawer-inner .precedent-summary-box,
+.precedent-detail-drawer-inner .precedent-use-box {
+  margin-top: 4px;
+}
+
+.precedent-detail-panel .precedent-summary-box,
+.precedent-detail-panel .precedent-use-box {
+  margin-top: 16px;
 }
 
 @media (max-width: 900px) {

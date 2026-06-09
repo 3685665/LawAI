@@ -89,3 +89,24 @@ def test_chat_uses_indexed_local_documents() -> None:
     body = response.json()
     assert "Ayipli arac raporu" in body["answer"]
     assert body["citations"][0]["topic"] == "Ayipli arac raporu"
+
+
+def test_precedent_summarize_uses_decision_text() -> None:
+    response = client.post(
+        "/api/precedents/summarize",
+        json={
+            "court": "Yargitay",
+            "chamber": "9. Hukuk Dairesi",
+            "docketNo": "2022/1845",
+            "decisionNo": "2022/7281",
+            "date": "2022-06-14",
+            "topic": "Ise iade",
+            "summary": "Kisa liste ozeti",
+            "content": "Mahkeme, is sozlesmesinin hakli nedenle feshedilmedigini ve ise iade kosullarinin olustugunu belirterek karari bozmustur.",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "ise iade" in body["summary"].lower() or "Ise iade" in body["summary"]
+    assert body["disclaimer"]

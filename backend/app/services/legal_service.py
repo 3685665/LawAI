@@ -16,6 +16,8 @@ from app.models.schemas import (
     PrecedentDto,
     PrecedentSearchRequest,
     PrecedentSearchResponse,
+    PrecedentSummarizeRequest,
+    PrecedentSummarizeResponse,
 )
 from app.services.vector_store import normalize, vector_store
 from app.settings import settings
@@ -97,6 +99,22 @@ class LegalService:
         return PrecedentSearchResponse(
             query=request.query,
             results=self.search(request.query, request.court, request.chamber, limit, use_samples=False),
+        )
+
+    def summarize_precedent(self, request: PrecedentSummarizeRequest) -> PrecedentSummarizeResponse:
+        content = request.content.strip()
+        metadata = self._format_precedent_metadata(request)
+        if self.chat_model:
+            try:
+                summary = self._summarize_precedent_with_ai(metadata, content)
+                return PrecedentSummarizeResponse(summary=summary, disclaimer=DISCLAIMER)
+            except Exception as exc:
+                fallback = self._local_precedent_summary(metadata, content)
+                fallback += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel ozet modu kullanildi. Detay: {exc}"
+                return PrecedentSummarizeResponse(summary=fallback, disclaimer=DISCLAIMER)
+        return PrecedentSummarizeResponse(
+            summary=self._local_precedent_summary(metadata, content),
+            disclaimer=DISCLAIMER,
         )
 
     def generate_petition(self, request: PetitionRequest) -> PetitionResponse:
@@ -271,6 +289,51 @@ class LegalService:
         if self.provider == "local":
             return LocalEmbeddings()
         return None
+
+    def _format_precedent_metadata(self, request: PrecedentSummarizeRequest) -> str:
+        return "\n".join(
+            [
+                f"Mahkeme: {request.court}",
+                f"Daire/Kurul: {request.chamber or '-'}",
+                f"Esas No: {request.docketNo or '-'}",
+                f"Karar No: {request.decisionNo or '-'}",
+                f"Tarih: {request.date or '-'}",
+                f"Konu: {request.topic}",
+            ]
+        )
+
+    def _summarize_precedent_with_ai(self, metadata: str, content: str) -> str:
+        max_chars = 24000
+        decision_text = content if len(content) <= max_chars else content[:max_chars] + "\n\n[Metin uzunlugu nedeniyle kirpildi...]"
+        prompt = (
+            "Turk hukuku baglaminda calisan bir hukuk asistanisin. Asagidaki mahkeme kararinin "
+            "TAM METNINI okuyup ozet cikar.\n"
+            "Metinde olmayan bilgi, karar numarasi, tarih veya sonuc uydurma.\n"
+            "Ozeti su basliklarla ver:\n"
+            "1. Kararin konusu\n"
+            "2. Taraflar ve uyuasmazlik (metinde varsa)\n"
+            "3. Mahkemenin olay degerlendirmesi\n"
+            "4. Hukuki gerekce ve dayanak\n"
+            "5. Sonuc / hukum\n"
+            "6. Emsal degeri (dilekcede nasil kullanilabilecegi)\n\n"
+            f"Karar bilgileri:\n{metadata}\n\n"
+            f"Karar metni:\n{decision_text}\n\n"
+            "En fazla 450 kelime, Turkce, net maddeler halinde yaz."
+        )
+        response = self.chat_model.invoke(prompt)
+        return str(response.content).strip() or self._local_precedent_summary(metadata, content)
+
+    def _local_precedent_summary(self, metadata: str, content: str) -> str:
+        excerpt = content[:1800].strip()
+        if len(content) > 1800:
+            excerpt += "..."
+        return (
+            f"{metadata}\n\n"
+            "Yerel ozet (AI yapilandirilmamis):\n"
+            f"Metin uzunlugu: {len(content)} karakter.\n"
+            f"Metinden alinti:\n{excerpt}\n\n"
+            "Tam AI ozeti icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin."
+        )
 
     def _format_citations(self, citations: list[PrecedentDto]) -> str:
         if not citations:

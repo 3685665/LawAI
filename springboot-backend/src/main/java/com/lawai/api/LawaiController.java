@@ -12,6 +12,8 @@ import com.lawai.api.dto.PetitionResponse;
 import com.lawai.api.dto.PrecedentDto;
 import com.lawai.api.dto.PrecedentSearchRequest;
 import com.lawai.api.dto.PrecedentSearchResponse;
+import com.lawai.api.dto.PrecedentSummarizeRequest;
+import com.lawai.api.dto.PrecedentSummarizeResponse;
 import com.lawai.api.service.AiServiceClient;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.ChatHistoryService;
@@ -150,6 +152,13 @@ public class LawaiController {
     PrecedentDto result = anayasaPrecedentService.getDocument("BB/" + year + "/" + number);
     activityLogService.logBackend(requireUser(authentication), "case-law-detail", "Ictihat Arama", "Anayasa Mahkemesi karar detayi goruntulendi.", "/api/precedents/aym/" + year + "/" + number);
     return result;
+  }
+
+  @PostMapping("/precedents/summarize")
+  public PrecedentSummarizeResponse summarizePrecedent(@Valid @RequestBody PrecedentSummarizeRequest request, Authentication authentication) {
+    PrecedentSummarizeResponse response = aiServiceClient.summarizePrecedent(request);
+    activityLogService.logBackend(requireUser(authentication), "precedent-summary", "Ictihat Arama", "Karar metni AI ile ozetlendi.", "/api/precedents/summarize");
+    return response;
   }
 
   @PostMapping("/petitions")

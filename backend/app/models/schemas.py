@@ -41,6 +41,22 @@ class PrecedentSearchResponse(BaseModel):
     results: list[PrecedentDto]
 
 
+class PrecedentSummarizeRequest(BaseModel):
+    court: str = Field(min_length=1)
+    chamber: str | None = None
+    docketNo: str | None = None
+    decisionNo: str | None = None
+    date: str | None = None
+    topic: str = Field(min_length=1)
+    summary: str | None = None
+    content: str = Field(min_length=20)
+
+
+class PrecedentSummarizeResponse(BaseModel):
+    summary: str
+    disclaimer: str
+
+
 class PetitionRequest(BaseModel):
     petitionType: str
     court: str

@@ -11,6 +11,8 @@ from app.models.schemas import (
     PdfTextExtractionResponse,
     PrecedentSearchRequest,
     PrecedentSearchResponse,
+    PrecedentSummarizeRequest,
+    PrecedentSummarizeResponse,
 )
 from app.services.document_service import document_service
 from app.services.legal_service import legal_service
@@ -44,6 +46,11 @@ def chat(request: ChatRequest) -> ChatResponse:
 @app.post("/api/precedents/search", response_model=PrecedentSearchResponse)
 def search_precedents(request: PrecedentSearchRequest) -> PrecedentSearchResponse:
     return legal_service.search_precedents(request)
+
+
+@app.post("/api/precedents/summarize", response_model=PrecedentSummarizeResponse)
+def summarize_precedent(request: PrecedentSummarizeRequest) -> PrecedentSummarizeResponse:
+    return legal_service.summarize_precedent(request)
 
 
 @app.post("/api/petitions", response_model=PetitionResponse)
