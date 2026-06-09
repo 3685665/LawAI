@@ -8,8 +8,6 @@ import com.lawai.api.dto.KnowledgeIngestRequest;
 import com.lawai.api.dto.KnowledgeIngestResponse;
 import com.lawai.api.dto.PetitionRequest;
 import com.lawai.api.dto.PetitionResponse;
-import com.lawai.api.dto.PrecedentSearchRequest;
-import com.lawai.api.dto.PrecedentSearchResponse;
 import com.lawai.api.dto.PrecedentApplyRequest;
 import com.lawai.api.dto.PrecedentApplyResponse;
 import com.lawai.api.dto.PrecedentSummarizeRequest;
@@ -57,11 +55,6 @@ public class AiServiceClient {
     payload.put("privateMode", request.privateMode());
     String response = send(post("/chat", toJson(payload)));
     return fromJson(response, ChatResponse.class);
-  }
-
-  public PrecedentSearchResponse searchPrecedents(PrecedentSearchRequest request) {
-    String response = send(post("/precedents/search", toJson(request)));
-    return fromJson(response, PrecedentSearchResponse.class);
   }
 
   public PrecedentSummarizeResponse summarizePrecedent(PrecedentSummarizeRequest request) {

@@ -25,8 +25,6 @@ import com.lawai.api.service.DanistayPrecedentService;
 import com.lawai.api.service.PrecedentSearchService;
 import com.lawai.api.service.YargitayPrecedentService;
 import com.lawai.auth.model.AuthenticatedUser;
-import com.lawai.document.dto.DocumentSearchResult;
-import com.lawai.document.service.DocumentProcessingService;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -51,7 +49,6 @@ public class LawaiController {
   private final AiServiceClient aiServiceClient;
   private final ChatHistoryService chatHistoryService;
   private final DocumentService documentService;
-  private final DocumentProcessingService documentProcessingService;
   private final ActivityLogService activityLogService;
   private final PrecedentSearchService precedentSearchService;
   private final YargitayPrecedentService yargitayPrecedentService;
@@ -62,7 +59,6 @@ public class LawaiController {
       AiServiceClient aiServiceClient,
       ChatHistoryService chatHistoryService,
       DocumentService documentService,
-      DocumentProcessingService documentProcessingService,
       ActivityLogService activityLogService,
       PrecedentSearchService precedentSearchService,
       YargitayPrecedentService yargitayPrecedentService,
@@ -72,7 +68,6 @@ public class LawaiController {
     this.aiServiceClient = aiServiceClient;
     this.chatHistoryService = chatHistoryService;
     this.documentService = documentService;
-    this.documentProcessingService = documentProcessingService;
     this.activityLogService = activityLogService;
     this.precedentSearchService = precedentSearchService;
     this.yargitayPrecedentService = yargitayPrecedentService;
@@ -110,22 +105,6 @@ public class LawaiController {
   @DeleteMapping("/chat/sessions/{sessionId}")
   public List<ChatSessionDto> deleteChatSession(@PathVariable String sessionId, Authentication authentication) {
     return chatHistoryService.deleteForUser(requireUser(authentication), sessionId);
-  }
-
-  @PostMapping("/precedents/search")
-  public PrecedentSearchResponse searchPrecedents(@Valid @RequestBody PrecedentSearchRequest request, Authentication authentication) {
-    List<PrecedentDto> results = List.of();
-    try {
-      results = documentProcessingService.searchWholeDocuments(request.query(), 1)
-          .results()
-          .stream()
-          .map(this::toPrecedent)
-          .toList();
-    } catch (RuntimeException ignored) {
-      // Keep the endpoint stable if the uploaded-document index is empty or unavailable.
-    }
-    activityLogService.logBackend(requireUser(authentication), "precedent-search", "Emsal Arama", "Emsal karar aramasi yapildi.", "/api/precedents/search");
-    return new PrecedentSearchResponse(request.query(), results);
   }
 
   @PostMapping("/precedents/yargitay/search")
@@ -218,24 +197,4 @@ public class LawaiController {
     throw new BadCredentialsException("Oturum gerekli.");
   }
 
-  private PrecedentDto toPrecedent(DocumentSearchResult result) {
-    return new PrecedentDto(
-        null,
-        "Yuklenen belge",
-        "OpenSearch",
-        "DOC-" + result.documentId(),
-        null,
-        null,
-        result.filename(),
-        preview(result.content(), 450),
-        result.content()
-    );
-  }
-
-  private String preview(String content, int maxLength) {
-    if (content == null || content.length() <= maxLength) {
-      return content;
-    }
-    return content.substring(0, maxLength) + "...";
-  }
 }

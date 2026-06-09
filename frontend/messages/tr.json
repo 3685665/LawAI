@@ -2,7 +2,6 @@
   "tabs": {
     "dashboard": "Dashboard",
     "chat": "Asistan",
-    "search": "Emsal Arama",
     "caseLaw": "Ictihat Arama",
     "petition": "Dilekce Taslak",
     "cases": "Davalar",
@@ -27,7 +26,7 @@
       "forgot": "Sifrenizi sifirlayin."
     },
     "heroDescription": {
-      "login": "Dosyalar, dilekceler ve emsal arama icin tek calisma alani.",
+      "login": "Dosyalar, dilekceler ve ictihat arama icin tek calisma alani.",
       "register": "Kurum e-posta adresinizle guvenli bir hesap olusturun ve hukuki analizlere hizlica erisin.",
       "forgot": "E-posta adresinizi girin, size bir sifirlama baglantisi gonderelim."
     },
@@ -47,7 +46,7 @@
       },
       {
         "title": "3. LawAI ile calismaya baslayin",
-        "text": "Emsal arama, dilekce taslaklari ve dosya yonetimine erisin."
+        "text": "Ictihat arama, dilekce taslaklari ve dosya yonetimine erisin."
       }
     ],
     "recovery": {
@@ -134,10 +133,10 @@
   },
   "dashboard": {
     "eyebrow": "Hukuk AI Calisma Sistemi",
-    "title": "Dosya, dilekce ve emsal calismasi icin kurumsal arayuz.",
+    "title": "Dosya, dilekce ve ictihat calismasi icin kurumsal arayuz.",
     "subtitle": "Kaynakli yanit, belge inceleme, risk kontrolu ve taslak olusturma tek panelde; resmi ofis kullanimina uygun, sakin ve kontrollu bir akis.",
     "heroTitle": "Ofis standardinda calisan, kaynakli ve izlenebilir hukuk uygulamasi.",
-    "heroBody": "Dilekce, emsal ve dosya modulleri tek yapida; avukat icin hizli ama resmi is akisi sunar.",
+    "heroBody": "Dilekce, ictihat ve dosya modulleri tek yapida; avukat icin hizli ama resmi is akisi sunar.",
     "statusReady": "Hazir",
     "statusBackendDown": "Backend yok",
     "statusLoading": "Isleniyor",
@@ -167,7 +166,7 @@
     "quickAccess": "Hizli erisim",
     "workShortcuts": "Calisma kisa yollari",
     "startPetition": "Dilekce baslat",
-    "searchPrecedent": "Emsal ara",
+    "searchPrecedent": "Ictihat ara",
     "uploadDocument": "Belge yukle",
     "knowledgeBase": "Bilgi bankasi",
     "procedureCheck": "Usul kontrolu",
@@ -219,7 +218,7 @@
     "legalResearchStepWebIn": "Web arastirmasi yapiliyor",
     "legalResearchStepWebDone": "Web arastirmasi tamamlandi",
     "legalResearchStepFinal": "Nihai cevap hazirlaniyor",
-    "searchTitle": "Emsal Karar Arama Araci",
+    "searchTitle": "Ictihat Arama Araci",
     "searchPlaceholder": "Orn: Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?",
     "searchSubmit": "Ara",
     "searchResults": "Sonuc ve Raporlama",
@@ -448,7 +447,7 @@
     "storedPath": "Kayit yolu",
     "postgres": "PostgreSQL",
     "pipelineCompleted": "Belge isleme hatti tamamlandi.",
-    "resultHelp": "Bu sayilar belgenin hangi sistemlere yazildigini gosterir. OpenSearch emsal arama icin, pgvector anlamsal arama icin kullanilir.",
+    "resultHelp": "Bu sayilar belgenin hangi sistemlere yazildigini gosterir. OpenSearch tam metin arama, pgvector anlamsal arama icin kullanilir.",
     "contentSummary": "Icerik ozeti",
     "textPreview": "Metin onizlemesi",
     "goChat": "Sohbete git",

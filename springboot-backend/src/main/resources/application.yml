@@ -52,6 +52,8 @@ app:
     case-law-search-limit: ${RESEARCH_CASE_LAW_LIMIT:5}
     web-search-limit: ${RESEARCH_WEB_LIMIT:3}
   max-upload-mb: ${MAX_UPLOAD_MB:25}
+  data:
+    seed-enabled: ${DATA_SEED_ENABLED:true}
   document:
     upload-dir: ${DOCUMENT_UPLOAD_DIR:uploads/documents}
     chunk-size: ${DOCUMENT_CHUNK_SIZE:1200}

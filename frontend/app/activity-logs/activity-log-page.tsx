@@ -386,7 +386,7 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
 function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
   const groups: NavGroup[] = [
     { id: "assistant", label: locale === "en" ? "Assistant" : "Asistan", icon: Bot, href: "/" },
-    { id: "precedents", label: locale === "en" ? "Precedent Search" : "Emsal Arama", icon: FileSearch, href: "/" },
+    { id: "case-law", label: locale === "en" ? "Case-Law Search" : "Ictihat Arama", icon: Scale, href: "/" },
     { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" },
     { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: BriefcaseBusiness, href: "/" },
     { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: FileUp, href: "/" },

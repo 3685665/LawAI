@@ -9,8 +9,6 @@ from app.models.schemas import (
     PetitionRequest,
     PetitionResponse,
     PdfTextExtractionResponse,
-    PrecedentSearchRequest,
-    PrecedentSearchResponse,
     PrecedentApplyRequest,
     PrecedentApplyResponse,
     PrecedentSummarizeRequest,
@@ -45,11 +43,6 @@ def health() -> dict[str, str]:
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     return legal_service.answer(request)
-
-
-@app.post("/api/precedents/search", response_model=PrecedentSearchResponse)
-def search_precedents(request: PrecedentSearchRequest) -> PrecedentSearchResponse:
-    return legal_service.search_precedents(request)
 
 
 @app.post("/api/precedents/summarize", response_model=PrecedentSummarizeResponse)

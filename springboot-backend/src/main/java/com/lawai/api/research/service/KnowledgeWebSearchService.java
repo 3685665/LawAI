@@ -1,7 +1,5 @@
 package com.lawai.api.research.service;
 
-import com.lawai.api.dto.PrecedentSearchRequest;
-import com.lawai.api.service.AiServiceClient;
 import com.lawai.config.ResearchProperties;
 import com.lawai.document.dto.DocumentSearchResult;
 import com.lawai.document.service.DocumentProcessingService;
@@ -22,16 +20,13 @@ public class KnowledgeWebSearchService implements WebSearchService {
   private static final Logger log = LoggerFactory.getLogger(KnowledgeWebSearchService.class);
 
   private final DocumentProcessingService documentProcessingService;
-  private final AiServiceClient aiServiceClient;
   private final ResearchProperties researchProperties;
 
   public KnowledgeWebSearchService(
       DocumentProcessingService documentProcessingService,
-      AiServiceClient aiServiceClient,
       ResearchProperties researchProperties
   ) {
     this.documentProcessingService = documentProcessingService;
-    this.aiServiceClient = aiServiceClient;
     this.researchProperties = researchProperties;
   }
 
@@ -40,7 +35,6 @@ public class KnowledgeWebSearchService implements WebSearchService {
     log.info("Web/knowledge aramasi: query={}", query);
     Set<String> findings = new LinkedHashSet<>();
     collectIndexedDocuments(query, findings);
-    collectKnowledgeBase(query, findings);
     if (findings.isEmpty()) {
       findings.add("Harici web arama kaynagi henuz bagli degil; indekslenmis belge bulunamadi.");
     }
@@ -57,28 +51,6 @@ public class KnowledgeWebSearchService implements WebSearchService {
       }
     } catch (RuntimeException exception) {
       log.warn("Indekslenmis belge aramasi basarisiz: {}", exception.getMessage());
-    }
-  }
-
-  private void collectKnowledgeBase(String query, Set<String> findings) {
-    try {
-      aiServiceClient.searchPrecedents(new PrecedentSearchRequest(
-          query,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          researchProperties.webSearchLimit()
-      )).results().forEach(precedent -> {
-        if (findings.size() >= researchProperties.webSearchLimit()) {
-          return;
-        }
-        findings.add("Bilgi bankasi — " + precedent.court() + ": " + precedent.topic() + " — " + preview(precedent.summary(), 160));
-      });
-    } catch (RuntimeException exception) {
-      log.warn("Bilgi bankasi aramasi basarisiz: {}", exception.getMessage());
     }
   }
 

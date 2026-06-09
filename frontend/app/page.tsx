@@ -81,7 +81,7 @@ import {
   type ResearchStep
 } from "@/lib/api";
 
-type Tab = "chat" | "search" | "caseLaw" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
+type Tab = "chat" | "caseLaw" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
 type AuthMode = "login" | "register" | "forgot";
 type GoogleCredentialResponse = { credential?: string };
 type GoogleAccountsId = {
@@ -347,7 +347,6 @@ function getFeedbackStatusLabel(value: string) {
 function getTabLabel(tab: Tab, locale: Locale) {
   const labels: Record<Tab, { tr: string; en: string }> = {
     chat: { tr: "Asistan", en: "Assistant" },
-    search: { tr: "Emsal Arama", en: "Precedent Search" },
     caseLaw: { tr: "Ictihat Arama", en: "Case-Law Search" },
     petition: { tr: "Dilekce Taslak", en: "Petition Draft" },
     cases: { tr: "Davalar", en: "Cases" },
@@ -488,7 +487,6 @@ export default function Home() {
   const navigationGroups = useMemo<NavigationGroup[]>(() => {
     const groups: NavigationGroup[] = [
       { id: "assistant", label: t.tabs.chat, icon: Bot, tab: "chat" },
-      { id: "precedents", label: t.tabs.search, icon: FileSearch, tab: "search" },
       { id: "case-law", label: t.tabs.caseLaw, icon: Scale, tab: "caseLaw" },
       { id: "petition", label: t.tabs.petition, icon: ScrollText, tab: "petition" },
       { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness, tab: "cases" },
@@ -945,19 +943,12 @@ export default function Home() {
     }
   ], [loading, locale, precedentDetailOpen, selectedPrecedentIndex]);
 
-  const precedentSources = useMemo(() => {
-    const caseLawSources = [
-      { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
-      { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
-      { key: "danistay" as const, label: "Danistay", court: "Danistay" },
-      { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" }
-    ];
-    const searchSources = [
-      ...caseLawSources,
-      { key: "rekabet" as const, label: locale === "en" ? "Competition Board" : "Rekabet Kurulu", court: "Rekabet Kurulu" }
-    ];
-    return activeTab === "caseLaw" ? caseLawSources : searchSources;
-  }, [activeTab, locale]);
+  const precedentSources = useMemo(() => [
+    { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
+    { key: "yargitay" as const, label: "Yargitay", court: "Yargitay" },
+    { key: "danistay" as const, label: "Danistay", court: "Danistay" },
+    { key: "aym" as const, label: locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi", court: "AYM" }
+  ], [locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
     "Determining child living standard and parent income in child support amount",
@@ -1483,7 +1474,7 @@ export default function Home() {
 
   function executePrecedentSearch(query = searchQuery, court = searchCourt, sourceKey = precedentSource) {
     const normalizedQuery = query.trim();
-    const advanced = activeTab === "caseLaw" && caseLawSearchMode === "advanced";
+    const advanced = caseLawSearchMode === "advanced";
     const advancedPayload = {
       chamber: advancedSearch.chamber.trim() || undefined,
       docketNo: advancedSearch.docketNo.trim() || undefined,
@@ -1513,12 +1504,11 @@ export default function Home() {
     const sourceHint = precedentSources.find((item) => item.key === sourceKey);
     const effectiveCourt = court || sourceHint?.court || "";
     run("search", async () => {
-      const endpoint = activeTab === "caseLaw" ? "/precedents/yargitay/search" : "/precedents/search";
-      const data = await postJson<{ results: Precedent[] }>(endpoint, {
+      const data = await postJson<{ results: Precedent[] }>("/precedents/yargitay/search", {
         query: normalizedQuery,
         court: effectiveCourt || undefined,
         ...(advanced ? advancedPayload : {}),
-        limit: activeTab === "caseLaw" ? 20 : 50
+        limit: 20
       });
       setPrecedents(data.results);
       setSelectedPrecedentIndex(data.results.length ? 0 : null);
@@ -1565,7 +1555,6 @@ export default function Home() {
     if (normalized.includes("yarg")) return locale === "en" ? "Court of Cassation" : "Yargitay";
     if (normalized.includes("danis")) return locale === "en" ? "Council of State" : "Danistay";
     if (normalized.includes("anayasa") || normalized.includes("aym")) return locale === "en" ? "Constitutional Court" : "Anayasa Mahkemesi";
-    if (normalized.includes("rekabet")) return locale === "en" ? "Competition Board" : "Rekabet Kurulu";
     return court || "-";
   }
 
@@ -2623,7 +2612,7 @@ export default function Home() {
             </div>
           </section>
         )}
-        {(activeTab === "search" || activeTab === "caseLaw") && (
+        {activeTab === "caseLaw" && (
           <section className="precedent-research-workspace">
             <form className="precedent-search-hero" onSubmit={submitSearch}>
               <div className="precedent-brand-mark" aria-hidden="true">
@@ -2631,35 +2620,33 @@ export default function Home() {
                 <span>LawAI Studio</span>
               </div>
               <div className="precedent-hero-copy">
-                <span className="eyebrow">{activeTab === "caseLaw" ? (locale === "en" ? "Court of Cassation, Council of State and Constitutional Court" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat arama") : (locale === "en" ? "Precedent search" : "Emsal arama")}</span>
-                <h1>{activeTab === "caseLaw" ? (locale === "en" ? "Case-Law Search" : "Ictihat Arama") : (locale === "en" ? "Precedent Decision Search" : "Emsal Karar Arama")}</h1>
-                <p>{activeTab === "caseLaw" ? (locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open any record to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; listeden bir karara basinca tam karar metni acilir.") : (locale === "en" ? "Search uploaded precedent documents and review the most relevant records." : "Yuklenen emsal belgelerde arama yapin ve en ilgili kayitlari inceleyin.")}</p>
+                <span className="eyebrow">{locale === "en" ? "Court of Cassation, Council of State and Constitutional Court" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat arama"}</span>
+                <h1>{locale === "en" ? "Case-Law Search" : "Ictihat Arama"}</h1>
+                <p>{locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open any record to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; listeden bir karara basinca tam karar metni acilir."}</p>
               </div>
-              {activeTab === "caseLaw" ? (
-                <section className="precedent-search-modes" aria-label={t.tools.researchMethods}>
-                  <span className="section-label">{t.tools.researchMethods}</span>
-                  <div className="precedent-mode-grid">
-                    <button
-                      className={caseLawSearchMode === "simple" ? "active" : ""}
-                      type="button"
-                      onClick={() => setCaseLawSearchMode("simple")}
-                    >
-                      <Search size={18} />
-                      <strong>{t.tools.researchAiSearch}</strong>
-                      <span>{t.tools.researchAiSearchDesc}</span>
-                    </button>
-                    <button
-                      className={caseLawSearchMode === "advanced" ? "active" : ""}
-                      type="button"
-                      onClick={() => setCaseLawSearchMode("advanced")}
-                    >
-                      <SlidersHorizontal size={18} />
-                      <strong>{t.tools.researchAdvancedSearch}</strong>
-                      <span>{t.tools.researchManualSearchDesc}</span>
-                    </button>
-                  </div>
-                </section>
-              ) : null}
+              <section className="precedent-search-modes" aria-label={t.tools.researchMethods}>
+                <span className="section-label">{t.tools.researchMethods}</span>
+                <div className="precedent-mode-grid">
+                  <button
+                    className={caseLawSearchMode === "simple" ? "active" : ""}
+                    type="button"
+                    onClick={() => setCaseLawSearchMode("simple")}
+                  >
+                    <Search size={18} />
+                    <strong>{t.tools.researchAiSearch}</strong>
+                    <span>{t.tools.researchAiSearchDesc}</span>
+                  </button>
+                  <button
+                    className={caseLawSearchMode === "advanced" ? "active" : ""}
+                    type="button"
+                    onClick={() => setCaseLawSearchMode("advanced")}
+                  >
+                    <SlidersHorizontal size={18} />
+                    <strong>{t.tools.researchAdvancedSearch}</strong>
+                    <span>{t.tools.researchManualSearchDesc}</span>
+                  </button>
+                </div>
+              </section>
               <div className="precedent-source-chips" aria-label={t.tools.researchCourt}>
                 {precedentSources.map((source) => (
                   <button
@@ -2673,7 +2660,7 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              {activeTab === "caseLaw" && caseLawSearchMode === "advanced" ? (
+              {caseLawSearchMode === "advanced" ? (
                 <section className="precedent-advanced-search">
                   <div className="precedent-advanced-grid">
                     <label className="field-label precedent-advanced-field precedent-advanced-field-wide">
@@ -2757,113 +2744,46 @@ export default function Home() {
               )}
             </form>
 
-            {activeTab === "caseLaw" ? (
-              <section className="precedent-research-layout precedent-research-layout-wide">
-                <section className="panel precedent-results-panel">
-                  <div className="section-head precedent-results-head">
-                    <div>
-                      <span className="section-label">{t.tools.researchMaxResults}</span>
-                      <h3>{t.tools.searchResults}</h3>
-                    </div>
-                    <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
+            <section className="precedent-research-layout precedent-research-layout-wide">
+              <section className="panel precedent-results-panel">
+                <div className="section-head precedent-results-head">
+                  <div>
+                    <span className="section-label">{t.tools.researchMaxResults}</span>
+                    <h3>{t.tools.searchResults}</h3>
                   </div>
-                  {precedents.length ? (
-                    <div className="feedback-datagrid-wrap precedent-datagrid-wrap">
-                      <DataGrid
-                        autoHeight
-                        rows={caseLawRows}
-                        columns={caseLawColumns}
-                        disableRowSelectionOnClick
-                        onRowClick={(params) => openPrecedent(params.row.rowIndex)}
-                        initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
-                        pageSizeOptions={[10, 20, 50]}
-                        sx={{
-                          border: 0,
-                          "& .MuiDataGrid-columnHeaders": {
-                            borderBottom: "1px solid var(--line)",
-                            backgroundColor: "#f7f9fb"
-                          },
-                          "& .MuiDataGrid-cell": {
-                            borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
-                          },
-                          "& .MuiDataGrid-row:hover": {
-                            backgroundColor: "#f7fafc"
-                          },
-                          "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
-                            outline: "none"
-                          }
-                        }}
-                      />
-                    </div>
-                  ) : <EmptyState text={t.tools.searchEmpty} />}
-                </section>
+                  <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
+                </div>
+                {precedents.length ? (
+                  <div className="feedback-datagrid-wrap precedent-datagrid-wrap">
+                    <DataGrid
+                      autoHeight
+                      rows={caseLawRows}
+                      columns={caseLawColumns}
+                      disableRowSelectionOnClick
+                      onRowClick={(params) => openPrecedent(params.row.rowIndex)}
+                      initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
+                      pageSizeOptions={[10, 20, 50]}
+                      sx={{
+                        border: 0,
+                        "& .MuiDataGrid-columnHeaders": {
+                          borderBottom: "1px solid var(--line)",
+                          backgroundColor: "#f7f9fb"
+                        },
+                        "& .MuiDataGrid-cell": {
+                          borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                        },
+                        "& .MuiDataGrid-row:hover": {
+                          backgroundColor: "#f7fafc"
+                        },
+                        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
+                          outline: "none"
+                        }
+                      }}
+                    />
+                  </div>
+                ) : <EmptyState text={t.tools.searchEmpty} />}
               </section>
-            ) : (
-              <section className="precedent-research-layout">
-                <section className="panel precedent-results-panel">
-                  <div className="section-head precedent-results-head">
-                    <div>
-                      <span className="section-label">{t.tools.researchMaxResults}</span>
-                      <h3>{t.tools.searchResults}</h3>
-                    </div>
-                    <strong className="precedent-count-pill">{precedents.length} {t.tools.records}</strong>
-                  </div>
-                  {precedents.length ? (
-                    <div className="precedent-result-list">
-                      {precedents.map((item, index) => (
-                        <button
-                          key={`${item.court}-${item.chamber}-${item.docketNo}-${item.decisionNo}-${index}`}
-                          className={`precedent-result-card ${selectedPrecedentIndex === index ? "active" : ""}`}
-                          type="button"
-                          onClick={() => openPrecedent(index)}
-                        >
-                          <span className="feedback-pill feedback-pill-status">{getCourtDisplayName(item.court)}</span>
-                          <span>{item.chamber ?? "-"}</span>
-                          <strong>{item.topic}</strong>
-                          <small>{[item.docketNo, item.decisionNo, item.date].filter(Boolean).join(" - ") || "-"}</small>
-                          <p>{item.summary}</p>
-                        </button>
-                      ))}
-                    </div>
-                  ) : <EmptyState text={t.tools.searchEmpty} />}
-                </section>
-
-                <aside className="panel precedent-detail-panel">
-                  <div className="section-head">
-                    <div>
-                      <span className="section-label">{t.tools.researchDetails}</span>
-                      <h3>{selectedPrecedent?.topic ?? t.tools.researchDetails}</h3>
-                    </div>
-                  </div>
-
-                  {selectedPrecedent ? (
-                    <section className="precedent-detail-box">
-                      <TableContainer component={Paper} className="precedent-detail-table" elevation={0}>
-                        <Table size="small" aria-label={t.tools.researchDetails}>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>{locale === "en" ? "Field" : "Alan"}</TableCell>
-                              <TableCell>{locale === "en" ? "Value" : "Deger"}</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {selectedPrecedentDetailRows.map((row) => (
-                              <TableRow key={row.label} hover>
-                                <TableCell component="th" scope="row">{row.label}</TableCell>
-                                <TableCell>{row.value}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                      <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
-                    </section>
-                  ) : <EmptyState text={t.tools.searchEmpty} />}
-
-                  {selectedPrecedent ? renderPrecedentDetailActions() : null}
-                </aside>
-              </section>
-            )}
+            </section>
           </section>
         )}
 

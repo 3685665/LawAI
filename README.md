@@ -5,7 +5,7 @@ Bu proje, web/API katmanini Spring Boot'a, AI/RAG katmanini Python'a ayiracak se
 ## Kapsam
 
 - Hukuki soru-cevap paneli
-- Emsal karar arama ve ozetleri
+- Ictihat arama ve karar ozetleri
 - Dilekce taslagi uretimi
 - PDF/Word/TXT dokuman on kontrolu
 - Dokuman parcalama ve LangChain embedding hattina indeksleme
@@ -73,11 +73,22 @@ cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
 
 Frontend varsayilan olarak `http://localhost:3000`, ana API `http://localhost:8080/api` adresinde calisir.
 
+## Demo Hesaplari
+
+Uygulama ilk acilista (`app.data.seed-enabled=true`) ornek verileri PostgreSQL'e yukler. Asagidaki hesaplarla giris yapabilirsiniz:
+
+| Rol | E-posta | Sifre |
+| --- | --- | --- |
+| Yonetici | `admin@lawai.local` | `ChangeMe123!` |
+| Avukat | `avukat@demo.lawai` | `Demo1234!` |
+| Stajyer | `stajyer@demo.lawai` | `Demo1234!` |
+
+Otomatik seed'i kapatmak icin `DATA_SEED_ENABLED=false` kullanin.
+
 ## Endpointler
 
 - `GET /api/health`
 - `POST /api/chat`
-- `POST /api/precedents/search`
 - `POST /api/petitions`
 - `POST /api/documents/analyze`
 - `POST /api/documents/ingest`

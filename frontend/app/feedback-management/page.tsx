@@ -106,7 +106,7 @@ export default function FeedbackManagementPage() {
   const tabs = useMemo(() => {
     const baseTabs = [
       { id: "chat", label: t.tabs.chat, icon: Bot },
-      { id: "search", label: t.tabs.search, icon: FileSearch },
+      { id: "caseLaw", label: t.tabs.caseLaw, icon: Scale },
       { id: "petition", label: t.tabs.petition, icon: ScrollText },
       { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness },
       { id: "document", label: t.tabs.document, icon: FileUp },

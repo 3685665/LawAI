@@ -2,7 +2,6 @@
   "tabs": {
     "dashboard": "Dashboard",
     "chat": "Assistant",
-    "search": "Precedent Research",
     "caseLaw": "Case-Law Search",
     "petition": "Petition Draft",
     "cases": "Cases",
@@ -27,7 +26,7 @@
       "forgot": "Reset your password."
     },
     "heroDescription": {
-      "login": "One workspace for cases, petitions and precedent research.",
+      "login": "One workspace for cases, petitions and case-law research.",
       "register": "Create a secure firm account and access legal analysis tools quickly.",
       "forgot": "Enter your email and we will send you a secure reset link."
     },
@@ -47,7 +46,7 @@
       },
       {
         "title": "3. Start working with LawAI",
-        "text": "Access precedent search, petition drafts and case management."
+        "text": "Access case-law search, petition drafts and case management."
       }
     ],
     "recovery": {
@@ -134,10 +133,10 @@
   },
   "dashboard": {
     "eyebrow": "Legal AI Workspace",
-    "title": "Corporate interface for case, petition and precedent work.",
+    "title": "Corporate interface for case, petition and case-law work.",
     "subtitle": "Source-backed answers, document review, risk control and drafting in one panel; designed for a calm and controlled office workflow.",
     "heroTitle": "A source-backed and traceable legal app built for office use.",
-    "heroBody": "Petition, precedent and case modules in one structure; a fast yet formal workflow for lawyers.",
+    "heroBody": "Petition, case-law and case modules in one structure; a fast yet formal workflow for lawyers.",
     "statusReady": "Ready",
     "statusBackendDown": "Backend unavailable",
     "statusLoading": "Processing",
@@ -167,7 +166,7 @@
     "quickAccess": "Quick access",
     "workShortcuts": "Work shortcuts",
     "startPetition": "Start petition",
-    "searchPrecedent": "Search precedent",
+    "searchPrecedent": "Search case law",
     "uploadDocument": "Upload document",
     "knowledgeBase": "Knowledge base",
     "procedureCheck": "Procedure check",
@@ -219,7 +218,7 @@
     "legalResearchStepWebIn": "Searching the web",
     "legalResearchStepWebDone": "Web search completed",
     "legalResearchStepFinal": "Preparing final answer",
-    "searchTitle": "Precedent Research",
+    "searchTitle": "Case-Law Search",
     "searchPlaceholder": "Ex: According to current decisions, how are wedding jewelry assets divided in divorce?",
     "searchSubmit": "Search",
     "searchResults": "Results and Reporting",
@@ -256,7 +255,7 @@
     "researchUseApply": "Add to case and petition",
     "researchUseSuccess": "The precedent was matched with the selected case and added to the petition draft.",
     "researchTechnicalNotice": "Important Technical Note",
-    "researchTechnicalNoticeText": "Precedent research can ONLY be performed from the Precedent page. Instructions in the petition assistant such as \"find precedent and add it to the petition\" do not access the precedent database. These two systems operate independently.",
+    "researchTechnicalNoticeText": "Case-law research can ONLY be performed from the Case-Law page. Instructions in the petition assistant such as \"find precedent and add it to the petition\" do not access the case-law database. These two systems operate independently.",
     "researchSummaryEmpty": "Run a search before creating an AI summary.",
     "researchSummaryHint": "No AI summary for this decision yet. Click the button to generate one.",
     "researchSummarySelectDecision": "Select a decision from the list before creating an AI summary.",
@@ -448,7 +447,7 @@
     "storedPath": "Stored path",
     "postgres": "PostgreSQL",
     "pipelineCompleted": "Document processing pipeline completed.",
-    "resultHelp": "These numbers show which systems received the document. OpenSearch is used for precedent-style search, pgvector for semantic search.",
+    "resultHelp": "These numbers show which systems received the document. OpenSearch is used for full-text search, pgvector for semantic search.",
     "contentSummary": "Content summary",
     "textPreview": "Text preview",
     "goChat": "Go to chat",

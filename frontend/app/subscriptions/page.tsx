@@ -215,7 +215,7 @@ function PlanCard({ plan, cycle, currentSubscription, loading, onSelect }: { pla
 function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onToggleAdmin, onToggleSidebar }: { active: "subscriptions"; authUser: AuthUser; adminMenuOpen: boolean; onLogout: () => void; onToggleAdmin: () => void; onToggleSidebar: () => void }) {
   const base = [
     { href: "/", label: "Asistan", icon: Bot },
-    { href: "/", label: "Emsal Arama", icon: FileSearch },
+    { href: "/", label: "Ictihat Arama", icon: Scale },
     { href: "/", label: "Dilekce", icon: ScrollText },
     { href: "/", label: "Davalar", icon: BriefcaseBusiness },
     { href: "/", label: "Belge Isleme", icon: FileUp },

@@ -15,8 +15,6 @@ from app.models.schemas import (
     PetitionRequest,
     PetitionResponse,
     PrecedentDto,
-    PrecedentSearchRequest,
-    PrecedentSearchResponse,
     PetitionCaseContext,
     PrecedentApplyRequest,
     PrecedentApplyResponse,
@@ -257,13 +255,6 @@ class LegalService:
                 "Daha guclu yorumlama icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin.",
             ],
             disclaimer=DISCLAIMER,
-        )
-
-    def search_precedents(self, request: PrecedentSearchRequest) -> PrecedentSearchResponse:
-        limit = min(max(request.limit or 5, 1), 20)
-        return PrecedentSearchResponse(
-            query=request.query,
-            results=self.search(request.query, request.court, request.chamber, limit, use_samples=False),
         )
 
     def summarize_precedent(self, request: PrecedentSummarizeRequest) -> PrecedentSummarizeResponse:

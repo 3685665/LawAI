@@ -25,22 +25,6 @@ class ChatResponse(BaseModel):
     disclaimer: str
 
 
-class PrecedentSearchRequest(BaseModel):
-    query: str = ""
-    court: str | None = None
-    chamber: str | None = None
-    docketNo: str | None = None
-    decisionNo: str | None = None
-    dateFrom: str | None = None
-    dateTo: str | None = None
-    limit: int | None = 5
-
-
-class PrecedentSearchResponse(BaseModel):
-    query: str
-    results: list[PrecedentDto]
-
-
 class PrecedentSummarizeRequest(BaseModel):
     court: str = Field(min_length=1)
     chamber: str | None = None

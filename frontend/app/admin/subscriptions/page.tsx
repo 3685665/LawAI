@@ -291,7 +291,7 @@ function lines(value: string) {
 function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onToggleSidebar }: { authUser: AuthUser; adminMenuOpen: boolean; onLogout: () => void; onToggleAdmin: () => void; onToggleSidebar: () => void }) {
   const base = [
     { href: "/", label: "Asistan", icon: Bot },
-    { href: "/", label: "Emsal Arama", icon: FileSearch },
+    { href: "/", label: "Ictihat Arama", icon: Scale },
     { href: "/", label: "Dilekce", icon: ScrollText },
     { href: "/", label: "Davalar", icon: BriefcaseBusiness },
     { href: "/", label: "Belge Isleme", icon: FileUp },
