@@ -148,13 +148,13 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3, h4, .brand strong, .panel-title h2, .result-panel h2 {
+h1, h2, h3, h4, .brand strong, .auth-topbar-brand strong, .panel-title h2, .result-panel h2, .petition-hero h1, .petition-draft-heading h3, .petition-section-head h3, .petition-stat-card strong, .petition-linked-case-card strong, .petition-empty-state strong {
   font-family: var(--font-serif), Georgia, serif;
   letter-spacing: -0.02em;
 }
 
 button, input, textarea, select {
-  font: inherit;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
 }
 
 button {
@@ -187,9 +187,21 @@ input, textarea, select {
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
   padding: 12px;
   width: 100%;
   box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  opacity: 1;
 }
 
 textarea {
@@ -843,6 +855,7 @@ button[aria-expanded="false"] .sidebar-submenu-chevron {
 .auth-shell {
   align-items: center;
   display: grid;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   background:
     radial-gradient(circle at 14% 12%, rgba(31, 79, 122, 0.14), transparent 34%),
     radial-gradient(circle at 86% 88%, rgba(31, 79, 122, 0.1), transparent 30%),
@@ -1041,16 +1054,16 @@ body[data-theme="dark"] .auth-card-animated {
 
 .auth-topbar-brand strong {
   display: block;
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.05;
 }
 
 .auth-topbar-brand span {
   color: var(--muted);
   display: block;
-  font-size: 12px;
-  margin-top: 2px;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
+  margin-top: 3px;
 }
 
 .auth-footer {
@@ -1080,12 +1093,14 @@ body[data-theme="dark"] .auth-card-animated {
 }
 
 .auth-loading-card h1 {
-  font-size: 28px;
+  font-size: clamp(24px, 2.4vw, 28px);
   margin: 0;
 }
 
 .auth-loading-card p {
   color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -1118,14 +1133,17 @@ body[data-theme="dark"] .auth-card-animated {
 }
 
 .auth-reset-head h1 {
-  font-size: clamp(28px, 3vw, 36px);
+  font-size: clamp(28px, 2.4vw, 36px);
+  line-height: 1.02;
   margin: 0;
 }
 
 .auth-reset-head p {
   color: var(--muted);
-  margin: 0;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
   line-height: 1.55;
+  margin: 0;
   max-width: 60ch;
 }
 
@@ -1195,10 +1213,9 @@ body[data-theme="dark"] .auth-card-animated {
 }
 
 .auth-brand-mark span {
-  font-family: var(--font-serif), Georgia, serif;
   font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .auth-hero-points {
@@ -1250,6 +1267,7 @@ body[data-theme="dark"] .auth-card-animated {
   align-content: center;
   background: var(--panel);
   display: grid;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   gap: 18px;
   padding: clamp(28px, 4vw, 44px);
 }
@@ -1262,13 +1280,13 @@ body[data-theme="dark"] .auth-card-animated {
 .auth-form-head h2 {
   animation: authTitleSwap 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
   font-size: clamp(24px, 2.4vw, 30px);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.08;
   margin: 0;
 }
 
 .auth-form-head p {
   color: var(--muted);
+  font-size: 15px;
   margin: 0;
   line-height: 1.5;
 }
@@ -1304,8 +1322,9 @@ body[data-theme="dark"] .auth-card-animated {
   background: transparent;
   border-radius: 8px;
   color: var(--accent-strong);
-  font-size: 13px;
-  font-weight: 700;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
   min-height: 40px;
   padding: 0 10px;
   position: relative;
@@ -1353,11 +1372,15 @@ body[data-theme="dark"] .auth-card-animated {
 }
 
 .auth-form .field-label {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
   gap: 8px;
 }
 
 .auth-form input {
   background: var(--panel-strong);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
   min-height: 46px;
   transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
@@ -1384,8 +1407,9 @@ body[data-theme="dark"] .auth-card-animated {
   background: transparent;
   box-shadow: none;
   color: var(--accent);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   min-height: 0;
   padding: 0;
 }
@@ -1403,8 +1427,9 @@ body[data-theme="dark"] .auth-card-animated {
 
 .auth-google-label {
   color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .google-auth-button {
@@ -1422,8 +1447,9 @@ body[data-theme="dark"] .auth-card-animated {
   align-items: center;
   color: var(--muted);
   display: grid;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   gap: 12px;
   grid-template-columns: 1fr auto 1fr;
   text-transform: uppercase;
@@ -1459,6 +1485,8 @@ body[data-theme="dark"] .auth-card-animated {
   align-items: center;
   color: var(--muted);
   display: flex;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
   gap: 10px;
 }
 
@@ -1469,6 +1497,7 @@ body[data-theme="dark"] .auth-card-animated {
 .auth-preview,
 .auth-note {
   color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 14px;
 }
 
@@ -1501,11 +1530,14 @@ body[data-theme="dark"] .auth-card-animated {
 }
 
 .auth-recovery-card strong {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .auth-recovery-card span {
   color: #2f6d47;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1635,6 +1667,9 @@ body[data-theme="dark"] .auth-card-animated {
 
 .auth-actions button,
 .auth-submit-button {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
   overflow: hidden;
   position: relative;
   transition: transform 0.22s ease, box-shadow 0.22s ease;
@@ -3291,21 +3326,394 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 
 .petition-assistant-workspace {
   display: grid;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  gap: 20px;
+}
+
+.petition-hero {
+  align-items: stretch;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(31, 79, 122, 0.1), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(31, 79, 122, 0.06), transparent 28%),
+    linear-gradient(180deg, var(--panel) 0%, var(--panel-strong) 100%);
+  display: grid;
   gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 32px);
+  position: relative;
+}
+
+.petition-hero::after {
+  background: linear-gradient(135deg, rgba(31, 79, 122, 0.05), transparent 55%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.petition-hero-copy,
+.petition-hero-side {
+  position: relative;
+  z-index: 1;
+}
+
+.petition-hero-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.petition-brand-mark {
+  align-items: center;
+  color: var(--accent);
+  display: inline-flex;
+  gap: 10px;
+  width: fit-content;
+}
+
+.petition-brand-mark span {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.petition-hero h1 {
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.05;
+  margin: 0;
+  max-width: 18ch;
+}
+
+.petition-hero p {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 62ch;
+}
+
+.petition-hero-side {
+  display: grid;
+  gap: 12px;
+}
+
+.petition-stat-card {
+  background: var(--accent-soft);
+  border: 1px solid rgba(31, 79, 122, 0.12);
+  border-radius: 14px;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.petition-stat-card:hover {
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+.petition-stat-card span {
+  color: var(--accent);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.petition-stat-card strong {
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.15;
+}
+
+.petition-animate-in {
+  animation: petitionReveal 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .petition-assistant-layout {
   align-items: start;
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(320px, 0.78fr) minmax(520px, 1.22fr);
+  gap: 20px;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(520px, 1.18fr);
 }
 
 .petition-builder-panel,
 .petition-draft-panel {
   align-content: start;
   display: grid;
+  gap: 16px;
+}
+
+.petition-panel-head {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding-bottom: 14px;
+}
+
+.petition-panel-head p {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.petition-section {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 250, 252, 0.92) 100%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
   gap: 14px;
+  padding: 16px;
+}
+
+.petition-section-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--accent-strong);
+  display: flex;
+  gap: 10px;
+  margin-bottom: 2px;
+  padding-bottom: 12px;
+}
+
+.petition-section-head h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.petition-muted-copy {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 8px 0 0;
+}
+
+.petition-builder-panel .field-label {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.petition-builder-panel input,
+.petition-builder-panel textarea,
+.petition-builder-panel select {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.petition-builder-panel input:focus,
+.petition-builder-panel textarea:focus,
+.petition-builder-panel select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 79, 122, 0.1);
+  outline: none;
+}
+
+.petition-submit-row {
+  display: grid;
+  padding-top: 4px;
+}
+
+.petition-submit-button {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 46px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.petition-submit-button:not(:disabled):hover {
+  box-shadow: 0 14px 28px rgba(31, 79, 122, 0.24);
+  transform: translateY(-2px);
+}
+
+.petition-submit-button::after {
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.22) 48%, transparent 100%);
+  content: "";
+  inset: 0;
+  left: -120%;
+  position: absolute;
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+}
+
+.petition-submit-button:not(:disabled):hover::after {
+  left: 120%;
+}
+
+.petition-draft-toolbar {
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  padding-bottom: 14px;
+}
+
+.petition-draft-heading h3 {
+  font-size: 20px;
+  margin: 4px 0 0;
+}
+
+.petition-export-label {
+  color: var(--muted);
+  display: block;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.petition-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.petition-export-chip {
+  background: #f4f7fa;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--accent-strong);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 14px;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.petition-export-chip:not(:disabled):hover {
+  background: var(--accent-soft);
+  border-color: rgba(31, 79, 122, 0.22);
+  transform: translateY(-1px);
+}
+
+.petition-export-chip:disabled {
+  opacity: 0.45;
+}
+
+.petition-draft-surface {
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  min-height: 560px;
+  transition: box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.petition-draft-surface.is-empty {
+  align-content: center;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.96) 100%);
+  border: 1px dashed rgba(31, 79, 122, 0.18);
+  justify-items: center;
+  padding: 28px;
+}
+
+.petition-draft-surface.is-filled {
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  padding: 14px;
+}
+
+.petition-empty-state {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  max-width: 34ch;
+  text-align: center;
+}
+
+.petition-empty-icon {
+  align-items: center;
+  animation: petitionFloat 4.8s ease-in-out infinite;
+  background: var(--accent-soft);
+  border: 1px solid rgba(31, 79, 122, 0.14);
+  border-radius: 18px;
+  color: var(--accent);
+  display: inline-flex;
+  height: 72px;
+  justify-content: center;
+  margin-bottom: 4px;
+  width: 72px;
+}
+
+.petition-empty-state strong {
+  font-size: 20px;
+}
+
+.petition-empty-state p {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.petition-draft-panel .citations {
+  margin-top: 4px;
+}
+
+.petition-draft-panel .citations article {
+  animation: petitionReveal 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: #f8fafc;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+.petition-draft-panel .citations strong {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.petition-draft-panel .citations span,
+.petition-draft-panel .citations p {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.petition-linked-precedents li strong {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.petition-linked-precedents li span {
+  color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+@keyframes petitionReveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes petitionFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .petition-segmented,
@@ -3398,18 +3806,8 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   top: 24px;
 }
 
-.petition-export-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .petition-draft-panel .section-head {
   align-items: start;
-}
-
-.petition-draft-panel .petition-export-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .petition-export-panel .petition-export-actions {
@@ -3441,14 +3839,30 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 }
 
 .petition-draft-panel {
-  min-height: 620px;
+  min-height: 640px;
+  position: sticky;
+  top: 24px;
 }
 
 .petition-draft-textarea {
-  font-family: var(--font-serif), Georgia, serif;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
   line-height: 1.65;
-  min-height: 520px;
+  min-height: 500px;
+  padding: 8px 6px;
   resize: vertical;
+  transition: background 0.2s ease;
+}
+
+.petition-draft-textarea:focus {
+  background: rgba(31, 79, 122, 0.03);
+  box-shadow: none;
+  outline: none;
 }
 
 .precedent-research-workspace {
@@ -3864,17 +4278,24 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 }
 
 .petition-linked-case-card {
-  background: #f7fafc;
-  border: 1px solid var(--line);
+  animation: petitionReveal 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: linear-gradient(135deg, rgba(31, 79, 122, 0.06), rgba(255, 255, 255, 0.9));
+  border: 1px solid rgba(31, 79, 122, 0.14);
   border-radius: 14px;
   display: grid;
   gap: 6px;
   padding: 14px 16px;
 }
 
+.petition-linked-case-card strong {
+  font-size: 17px;
+}
+
 .petition-linked-case-card span,
 .petition-linked-case-card small {
   color: var(--muted);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -3893,11 +4314,51 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   display: grid;
   gap: 4px;
   padding: 12px 14px;
+  transition: border-color 0.18s ease, transform 0.18s ease;
 }
 
-.petition-linked-precedents li span {
-  color: var(--muted);
-  font-size: 0.92rem;
+.petition-linked-precedents li:hover {
+  border-color: rgba(31, 79, 122, 0.22);
+  transform: translateY(-1px);
+}
+
+body[data-theme="dark"] .petition-hero {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(126, 170, 212, 0.12), transparent 30%),
+    linear-gradient(180deg, var(--panel) 0%, #101925 100%);
+}
+
+body[data-theme="dark"] .petition-section {
+  background: linear-gradient(180deg, rgba(18, 27, 39, 0.92) 0%, rgba(15, 23, 35, 0.98) 100%);
+}
+
+body[data-theme="dark"] .petition-draft-surface.is-empty {
+  background: linear-gradient(180deg, rgba(16, 25, 37, 0.92) 0%, rgba(12, 17, 24, 0.98) 100%);
+  border-color: rgba(126, 170, 212, 0.18);
+}
+
+body[data-theme="dark"] .petition-draft-surface.is-filled {
+  background: #0f1723;
+}
+
+body[data-theme="dark"] .petition-linked-case-card {
+  background: linear-gradient(135deg, rgba(126, 170, 212, 0.08), rgba(15, 23, 35, 0.95));
+  border-color: var(--line);
+}
+
+body[data-theme="dark"] .petition-linked-precedents li,
+body[data-theme="dark"] .petition-draft-panel .citations article,
+body[data-theme="dark"] .petition-export-chip {
+  background: #101925;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .petition-assistant-workspace *,
+  .petition-assistant-workspace::before,
+  .petition-assistant-workspace::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .petition-sync-case-row {
@@ -4911,7 +5372,7 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 }
 
 @media (max-width: 900px) {
-  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
+  .app-shell, .tool-grid, .pdf-upload-layout, .cases-layout, .dashboard-stats, .dashboard-panels, .smart-notes-header, .smart-notes-layout, .petition-hero, .petition-assistant-layout, .petition-model-grid, .petition-form-grid, .petition-context-options, .precedent-research-layout, .admin-header, .admin-status-grid, .admin-grid, .admin-actions {
     grid-template-columns: 1fr;
   }
 
@@ -4942,10 +5403,16 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 
   .petition-draft-panel {
     min-height: 0;
+    position: static;
+    top: auto;
+  }
+
+  .petition-draft-surface {
+    min-height: 420px;
   }
 
   .petition-draft-textarea {
-    min-height: 420px;
+    min-height: 360px;
   }
 
   .smart-notes-actions {

@@ -16,7 +16,7 @@
     "passwordHash" : "$2a$10$5DRF9JIGL7nfwUnKC804uuKWJSY5mXDiG87iQduqbN1baWTIXcsyu",
     "role" : "USER",
     "createdAt" : "2026-06-08T21:34:24.0566826Z",
-    "lastLoginAt" : "2026-06-08T21:46:01.654376Z",
+    "lastLoginAt" : "2026-06-09T10:40:07.081628Z",
     "verified" : true,
     "verifiedAt" : "2026-06-08T21:35:11.9888545Z"
   }, {
@@ -60,6 +60,11 @@
     "userId" : "52a32f78-c0ee-4b52-a6d2-9ed095fae40b",
     "expiresAt" : "2026-07-08T06:54:48.2714381Z",
     "createdAt" : "2026-06-08T06:54:48.2714381Z"
+  }, {
+    "tokenHash" : "$2a$10$4pFXFHC47NFbJ/lpM37nruZ6fipADZHSMLS2cvyO.JTZfaMPmMVNu",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "expiresAt" : "2026-07-09T10:40:07.081628Z",
+    "createdAt" : "2026-06-09T10:40:07.081628Z"
   } ],
   "passwordResets" : [ {
     "tokenHash" : "$2a$10$KJYXTRdM79Oq6kWzQsB3E.RDBABpaglDiMspuWoEQZzIAidrGYB9y",

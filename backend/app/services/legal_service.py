@@ -1,4 +1,5 @@
 import hashlib
+import re
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -27,6 +28,164 @@ from app.settings import settings
 
 DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
 AI_REQUEST_TIMEOUT_SECONDS = 90
+
+PETITION_META_LINE_PATTERNS = (
+    r"(?i)\bai\s*model",
+    r"(?i)olusturma\s*yontem",
+    r"(?i)baglam\s*ekleme",
+    r"(?i)premium\s*model",
+    r"(?i)standart\s*model",
+    r"(?i)dilekce\s*kalitesi",
+    r"(?i)hizli\s*form",
+    r"(?i)detayli\s*form",
+    r"(?i)mevcut\s*belgeler",
+    r"(?i)belge\s*yukle",
+)
+
+
+def _strip_petition_metadata_lines(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        if any(re.search(pattern, line) for pattern in PETITION_META_LINE_PATTERNS):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _strip_markdown(text: str) -> str:
+    cleaned = text.replace("**", "").replace("__", "")
+    cleaned = re.sub(r"^#{1,6}\s*", "", cleaned, flags=re.MULTILINE)
+    return cleaned.strip()
+
+
+def _format_court_line(court: str) -> str:
+    court_text = court.strip()
+    if not court_text:
+        return "İLGİLİ MAHKEMEYE"
+    upper = court_text.upper()
+    if "MAHKEMES" in upper:
+        return upper
+    return f"{upper} MAHKEMESİNE"
+
+
+def _format_parties_block(parties: str) -> str:
+    raw = parties.strip()
+    if not raw:
+        return "DAVACI      : ...\n             ...\n\nDAVALI      : ...\n             ..."
+
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    davaci: list[str] = []
+    davali: list[str] = []
+    current: list[str] | None = None
+
+    for line in lines:
+        lowered = line.lower()
+        if lowered.startswith(("davac", "basvuru", "müvekkil", "muvekkil", "başvuru")):
+            current = davaci
+            cleaned = re.sub(r"^(davac[ıi]|basvuru sahibi|müvekkil|muvekkil|başvuru sahibi)\s*:\s*", "", line, flags=re.IGNORECASE).strip()
+            if cleaned:
+                davaci.append(cleaned)
+            continue
+        if lowered.startswith(("daval", "karsi taraf", "karşı taraf")):
+            current = davali
+            cleaned = re.sub(r"^(daval[ıi]|karsi taraf|karşı taraf)\s*:\s*", "", line, flags=re.IGNORECASE).strip()
+            if cleaned:
+                davali.append(cleaned)
+            continue
+        if current is not None:
+            current.append(line)
+        else:
+            davaci.append(line)
+
+    if not davali and len(davaci) > 1:
+        davali = davaci[1:]
+        davaci = davaci[:1]
+
+    blocks: list[str] = []
+    if davaci:
+        blocks.append("DAVACI      : " + davaci[0])
+        for extra in davaci[1:]:
+            blocks.append("             " + extra)
+    else:
+        blocks.append("DAVACI      : ...")
+        blocks.append("             ...")
+
+    blocks.append("")
+    if davali:
+        blocks.append("DAVALI      : " + davali[0])
+        for extra in davali[1:]:
+            blocks.append("             " + extra)
+    else:
+        blocks.append("DAVALI      : ...")
+        blocks.append("             ...")
+
+    return "\n".join(blocks)
+
+
+def _format_numbered_facts(facts: str) -> str:
+    text = facts.strip()
+    if not text:
+        return "1- Olaylar kullanıcı tarafından henüz detaylandırılmamıştır."
+    if re.search(r"(?m)^\s*\d+[\).\-]\s+", text):
+        return text
+    chunks = [chunk.strip() for chunk in re.split(r"\n\s*\n", text) if chunk.strip()]
+    if len(chunks) <= 1:
+        chunks = [line.strip() for line in text.splitlines() if line.strip()]
+    if not chunks:
+        return "1- Olaylar kullanıcı tarafından henüz detaylandırılmamıştır."
+    return "\n\n".join(f"{index}- {chunk}" for index, chunk in enumerate(chunks, start=1))
+
+
+def _format_demands_block(demands: str | None) -> str:
+    text = (demands or "").strip()
+    if not text:
+        return (
+            "1- Davanın kabulüne,\n"
+            "2- Yargılama giderleri ve vekalet ücretinin davalı üzerinde bırakılmasına,"
+        )
+    if re.search(r"(?m)^\s*\d+[\).\-]\s+", text):
+        return text
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) <= 1:
+        return f"1- {text}\n2- Yargılama giderleri ve vekalet ücretinin davalı üzerinde bırakılmasına,"
+    return "\n".join(f"{index}- {line}" for index, line in enumerate(lines, start=1))
+
+
+def _format_precedent_legal_grounds(precedent_context: str | None) -> str:
+    if not precedent_context or not precedent_context.strip():
+        return ""
+    return f"; dosyaya eklenen emsal değerlendirmeleri:\n{precedent_context.strip()}"
+
+
+def _normalize_petition_body(body: str) -> str:
+    cleaned = _strip_markdown(_strip_petition_metadata_lines(body))
+    replacements = {
+        r"(?i)^\s*sonuc\s+ve\s+talep\s*:?\s*$": "NETİCE VE TALEP :",
+        r"(?i)^\s*netice\s+ve\s+talep\s*:?\s*$": "NETİCE VE TALEP :",
+        r"(?i)^\s*hukuki\s+nedenler\s*:?\s*$": "HUKUKİ SEBEPLER :",
+        r"(?i)^\s*hukuki\s+sebepler\s*:?\s*$": "HUKUKİ SEBEPLER :",
+        r"(?i)^\s*aciklamalar\s*:?\s*$": "AÇIKLAMALAR :",
+        r"(?i)^\s*açıklamalar\s*:?\s*$": "AÇIKLAMALAR :",
+        r"(?i)^\s*deliller\s*:?\s*$": "DELİLLER :",
+        r"(?i)^\s*konu\s*:?\s*$": "KONU :",
+        r"(?i)^\s*taraflar\s*:?\s*$": "",
+        r"(?i)^\s*mahkeme\s*:?\s*$": "",
+    }
+    lines = []
+    for line in cleaned.splitlines():
+        updated = line
+        for pattern, replacement in replacements.items():
+            if re.match(pattern, updated.strip()):
+                updated = replacement
+                break
+        if updated == "":
+            continue
+        lines.append(updated.rstrip())
+    normalized = "\n".join(lines)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized).strip()
+    if not normalized.startswith("T.C."):
+        normalized = f"T.C.\n{normalized}"
+    return normalized
 
 SAMPLE_PRECEDENTS = [
     PrecedentDto(court="Yargitay", chamber="9. Hukuk Dairesi", docketNo="2022/1845", decisionNo="2022/7281", date="2022-06-14", topic="Ise iade", summary="Fesih nedeninin somut delillerle ispatlanamamasi halinde ise iade kosullari degerlendirilir."),
@@ -160,13 +319,13 @@ class LegalService:
 
         if self.chat_model:
             try:
-                body = self._petition_with_ai(request, citations)
+                body = self._petition_with_ai(request)
             except Exception as exc:
                 body += f"\n\nNOT: AI saglayicisi su anda yanit vermedigi icin yerel taslak modu kullanildi. Detay: {exc}"
 
         return PetitionResponse(
             title=f"{request.petitionType} Dilekcesi",
-            body=body,
+            body=_normalize_petition_body(body),
             citedPrecedents=citations,
         )
 
@@ -251,20 +410,42 @@ class LegalService:
         response = self.chat_model.invoke(prompt)
         return str(response.content).strip() or self._local_answer(request, citations)
 
-    def _petition_with_ai(self, request: PetitionRequest, citations: list[PrecedentDto]) -> str:
+    def _petition_with_ai(self, request: PetitionRequest) -> str:
+        precedent_context = (request.precedentContext or "").strip()
+        supplementary_context = (request.supplementaryContext or "").strip()
         prompt = (
-            "Turk hukuk uygulamasina uygun, avukat tarafindan kontrol edilecek tam bir dilekce taslagi hazirla.\n"
-            "Kullanicinin verdigi bilgileri esas al; bilgi eksikse makul basliklar kullan ama olay, taraf, tarih, karar veya mevzuat uydurma.\n"
-            "Uydurma mahkeme karari veya emsal atfi yapma. Emsal baglami varsa sadece onu kullan; yoksa emsal atfi ekleme.\n"
-            "Markdown kullanma. Ciktiyi yalnizca dilekce metni olarak ver.\n"
-            "Basliklari sadece su sirayla ve birer kez kullan: MAHKEME, TARAFLAR, KONU, ACIKLAMALAR, HUKUKI NEDENLER, DELILLER, SONUC VE TALEP.\n"
-            "Alacak, kira, tazminat veya hukuk davalarinda suc, ceza, sanik, magdur gibi ceza hukuku ifadeleri kullanma.\n"
-            "HUKUKI NEDENLER bolumunde yalnizca genel ve guvenli dayanaklari yaz: ilgili Turk Borclar Kanunu, HMK ve sair mevzuat.\n"
-            "Vakialar veya baglam bolumunde davaya bagli emsal/atif metni varsa HUKUKI NEDENLER bolumune ayni dosyayla tutarli sekilde aktar; uydurma emsal ekleme.\n"
-            "SONUC VE TALEP bolumunde talebi davalidan tahsil, yargilama gideri ve vekalet ucreti seklinde dogru taraf yonuyle kur.\n"
-            "ACIKLAMALAR bolumunu kullanicinin vakialarina gore somut ve maddeli yaz. SONUC VE TALEP bolumunu verilen taleplere gore netlestir.\n\n"
-            f"Dilekce turu: {request.petitionType}\nMahkeme: {request.court}\nTaraflar: {request.parties}\n"
-            f"Vakialar: {request.facts}\nTalepler: {request.demands or ''}\n\nEmsal baglami:\n{self._format_citations(citations)}"
+            "Sen Türkiye'de avukatlarin mahkemeye sundugu HMK m.119 uyarınca dava dilekçesi taslagı hazırlayan bir hukuk asistanısın.\n"
+            "Çıktı gerçek bir dava dilekçesi gibi olmalı; özet, genel tavsiye, sistem notu veya kullanıcı arayüzü metni yazma.\n"
+            "Markdown, tablo, kod bloğu veya madde işareti dışı süslü biçim kullanma.\n"
+            "Olay, tarih, tutar, karar numarası, taraf adresi veya emsal uydurma. Yalnızca kullanıcı verisini kullan; eksik alanları '...' ile bırak.\n"
+            "Emsal bağlamı verilmişse yalnızca o metni kullan; verilmemişse Yargıtay/Danıştay kararı uydurma.\n"
+            "Hukuk davalarında ceza hukuku dili (sanık, mağdur, suç unsuru vb.) kullanma.\n"
+            "AÇIKLAMALAR bölümünü numaralı paragraflar halinde yaz (1-, 2-, 3-).\n"
+            "NETİCE VE TALEP bölümünde talepleri numaralı yaz; yargılama gideri ve vekalet ücretinin davalıya yükletilmesini ekle.\n"
+            "Metni tam olarak şu yapıda üret:\n\n"
+            "T.C.\n"
+            "[MAHKEME ADI] MAHKEMESİNE\n\n"
+            "DAVACI      : ...\n"
+            "             ...\n\n"
+            "DAVALI      : ...\n"
+            "             ...\n\n"
+            "KONU          : ... (HMK m.119 uyarınca)\n\n"
+            "AÇIKLAMALAR   :\n\n"
+            "1- ...\n\n"
+            "HUKUKİ SEBEPLER : ...\n\n"
+            "DELİLLER      : ...\n\n"
+            "NETİCE VE TALEP :\n\n"
+            "Yukarıda arz ve izah edilen nedenlerle;\n\n"
+            "1- ...\n"
+            "2- Yargılama giderleri ve vekalet ücretinin davalı üzerinde bırakılmasına,\n\n"
+            "Karar verilmesini saygılarımla arz ve talep ederim.\n\n"
+            f"Dilekçe türü: {request.petitionType}\n"
+            f"Mahkeme: {request.court}\n"
+            f"Taraflar:\n{request.parties}\n"
+            f"Vakıalar:\n{request.facts}\n"
+            f"Talepler:\n{request.demands or ''}\n"
+            f"Ek dosya/emsal bağlamı:\n{precedent_context or 'Yok'}\n"
+            f"Ek dosya özeti (yalnızca içerik için, metne aynen kopyalama):\n{supplementary_context or 'Yok'}"
         )
         response = self.chat_model.invoke(prompt)
         return str(response.content).strip() or self._local_petition(request)
@@ -520,16 +701,23 @@ class LegalService:
         )
 
     def _local_petition(self, request: PetitionRequest) -> str:
-        demands = request.demands or "Yukarida aciklanan nedenlerle taleplerimizin kabulune karar verilmesini arz ve talep ederiz."
+        court_line = _format_court_line(request.court)
+        parties_block = _format_parties_block(request.parties)
+        facts_block = _format_numbered_facts(request.facts)
+        demands_block = _format_demands_block(request.demands)
+        precedent_block = _format_precedent_legal_grounds(request.precedentContext)
         return (
-            f"{request.petitionType.upper()}\n\n"
-            f"SAYIN {request.court.upper()}'NE\n\n"
-            f"TARAFLAR\n{request.parties}\n\n"
-            f"KONU\n{request.petitionType} konulu dilekce taslagimizin sunulmasindan ibarettir.\n\n"
-            f"ACIKLAMALAR\n{request.facts}\n\n"
-            "HUKUKI NEDENLER\nIlgili mevzuat, yargisal ictihatlar ve her turlu yasal delil.\n\n"
-            "DELILLER\nSozlesmeler, yazismalar, ihtarnameler, odeme kayitlari, tanik beyanlari, bilirkisi incelemesi ve sair deliller.\n\n"
-            f"SONUC VE TALEP\n{demands}\n\nSaygilarimizla."
+            f"T.C.\n{court_line}\n\n"
+            f"{parties_block}\n\n"
+            f"KONU          : {request.petitionType} (HMK m.119 uyarınca)\n\n"
+            f"AÇIKLAMALAR   :\n\n{facts_block}\n\n"
+            "HUKUKİ SEBEPLER : Türk Borçlar Kanunu, Hukuk Muhakemeleri Kanunu ve sair ilgili mevzuat hükümleri"
+            f"{precedent_block}\n\n"
+            "DELİLLER      : Sözleşmeler, yazışmalar, ihtarnameler, ödeme kayıtları, tanık beyanları, bilirkişi incelemesi ve sair her türlü yasal delil.\n\n"
+            "NETİCE VE TALEP :\n\n"
+            "Yukarıda arz ve izah edilen nedenlerle;\n\n"
+            f"{demands_block}\n\n"
+            "Karar verilmesini saygılarımla arz ve talep ederim."
         )
 
 

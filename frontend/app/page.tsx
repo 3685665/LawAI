@@ -1735,33 +1735,29 @@ export default function Home() {
 
   function submitPetition(event: FormEvent) {
     event.preventDefault();
-    const selectedSources = [
-      petitionContextSources.upload ? t.tools.petitionUploadContext : null,
-      petitionContextSources.existing ? t.tools.petitionExistingDocs : null
-    ].filter(Boolean).join(", ");
-    const modelInstruction = petitionModel === "premium"
-      ? t.tools.petitionPremiumDesc
-      : t.tools.petitionStandardDesc;
-    const methodInstruction = {
-      case: t.tools.petitionFromCase,
-      quick: t.tools.petitionQuick,
-      detailed: t.tools.petitionDetailed
-    }[petitionMethod];
+    const linkedPrecedents = petitionPrecedentBlocks.filter((block) => block.caseId === petitionLinkedCaseId);
+    const precedentContext = [
+      linkedPrecedents.length ? buildPetitionContextFromBlocks(linkedPrecedents) : "",
+      petitionContext.trim()
+    ].filter(Boolean).join("\n\n---\n\n").trim();
+    const supplementaryContext = [
+      linkedPetitionCase
+        ? [
+            `${t.tools.petitionLinkedCase}: ${linkedPetitionCase.caseLabel}`,
+            linkedPetitionCase.subject ? `${t.tools.petitionCaseContext}: ${linkedPetitionCase.subject}` : "",
+            linkedPetitionCase.summary ? linkedPetitionCase.summary : ""
+          ].filter(Boolean).join("\n")
+        : "",
+      petitionContextSources.upload ? `${t.tools.petitionUploadContext}: evet` : "",
+      petitionContextSources.existing ? `${t.tools.petitionExistingDocs}: evet` : "",
+      petitionModel === "premium" ? t.tools.petitionPremiumDesc : ""
+    ].filter(Boolean).join("\n\n").trim();
     const enrichedPetition = {
       ...petition,
-      facts: [
-        linkedPetitionCase
-          ? `\n\n${t.tools.petitionLinkedCase}: ${linkedPetitionCase.caseLabel} — ${linkedPetitionCase.subject}`
-          : "",
-        petition.facts,
-        petitionContext.trim() ? `\n\n${t.tools.petitionCaseContext}:\n${petitionContext.trim()}` : "",
-        selectedSources ? `\n\n${t.tools.petitionContext}: ${selectedSources}` : "",
-        `\n\n${t.tools.petitionMethod}: ${methodInstruction}`,
-        `${t.tools.petitionModel}: ${petitionModel === "premium" ? t.tools.petitionPremiumModel : t.tools.petitionStandardModel} - ${modelInstruction}`
-      ].join("").trim(),
-      demands: petitionModel === "premium"
-        ? `${petition.demands}\n\n${t.tools.petitionQualityHint}`
-        : petition.demands
+      facts: petition.facts.trim(),
+      demands: petition.demands.trim(),
+      precedentContext: precedentContext || null,
+      supplementaryContext: supplementaryContext || null
     };
     run("petition", async () => {
       setPetitionEditPreview(null);
@@ -2725,129 +2721,174 @@ export default function Home() {
 
         {activeTab === "petition" && (
           <section className="petition-assistant-workspace">
-            <header className="panel smart-notes-header">
-              <div>
-                <span className="eyebrow">{t.tabs.petition}</span>
+            <header className="petition-hero panel">
+              <div className="petition-hero-copy petition-animate-in">
+                <div className="petition-brand-mark">
+                  <ScrollText size={20} />
+                  <span>{t.tabs.petition}</span>
+                </div>
                 <h1>{t.tools.petitionAssistantTitle}</h1>
+                <p>{t.tools.petitionAssistantSubtitle}</p>
+              </div>
+              <div className="petition-hero-side petition-animate-in" style={{ animationDelay: "0.08s" }}>
+                <div className="petition-stat-card">
+                  <span>{t.tools.petitionLinkedCase}</span>
+                  <strong>{linkedPetitionCase?.caseLabel ?? t.tools.petitionCaseNotSelected}</strong>
+                </div>
+                <div className="petition-stat-card">
+                  <span>{t.tools.petitionLinkedPrecedents}</span>
+                  <strong>{petitionPrecedentBlocks.filter((block) => block.caseId === petitionLinkedCaseId).length}</strong>
+                </div>
               </div>
             </header>
 
             <section className="petition-assistant-layout">
-              <form className="panel petition-builder-panel" onSubmit={submitPetition}>
-                <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
-
-                <div className="petition-form-grid">
-                  <label className="field-label">
-                    {t.tools.petitionLinkedCase}
-                    <select
-                      value={petitionLinkedCaseId ?? ""}
-                      onChange={(event) => setPetitionLinkedCaseId(event.target.value || null)}
-                    >
-                      <option value="">{t.tools.petitionSelectCase}</option>
-                      {savedPetitionCases.map((caseRecord) => (
-                        <option key={caseRecord.id} value={caseRecord.id}>
-                          {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="petition-sync-case-row">
-                    <button
-                      className="secondary-button"
-                      disabled={!linkedPetitionCase}
-                      type="button"
-                      onClick={() => linkedPetitionCase && syncPetitionFromCase(linkedPetitionCase)}
-                    >
-                      {t.tools.petitionSyncCase}
-                    </button>
-                  </div>
+              <form className="panel petition-builder-panel petition-animate-in" style={{ animationDelay: "0.12s" }} onSubmit={submitPetition}>
+                <div className="petition-panel-head">
+                  <PanelTitle icon={<FileText size={20} />} title={t.tools.petitionTitle} />
+                  <p>{t.tools.petitionBuilderHint}</p>
                 </div>
 
-                {linkedPetitionCase ? (
-                  <div className="petition-linked-case-card">
-                    <strong>{linkedPetitionCase.caseLabel}</strong>
-                    <span>{linkedPetitionCase.subject}</span>
-                    <small>{linkedPetitionCase.clientName} / {linkedPetitionCase.opponentName} — {linkedPetitionCase.courtName}</small>
+                <section className="petition-section">
+                  <div className="petition-section-head">
+                    <BriefcaseBusiness size={18} />
+                    <h3>{t.tools.petitionCaseSection}</h3>
                   </div>
-                ) : null}
 
-                <div className="petition-linked-precedents">
-                  <span className="section-label">{t.tools.petitionLinkedPrecedents}</span>
-                  {petitionPrecedentBlocks.filter((block) => block.caseId === petitionLinkedCaseId).length ? (
-                    <ul>
-                      {petitionPrecedentBlocks
-                        .filter((block) => block.caseId === petitionLinkedCaseId)
-                        .map((block) => (
-                          <li key={block.id}>
-                            <strong>{block.precedentTitle}</strong>
-                            <span>{block.citationLine}</span>
-                          </li>
+                  <div className="petition-form-grid">
+                    <label className="field-label">
+                      {t.tools.petitionLinkedCase}
+                      <select
+                        value={petitionLinkedCaseId ?? ""}
+                        onChange={(event) => setPetitionLinkedCaseId(event.target.value || null)}
+                      >
+                        <option value="">{t.tools.petitionSelectCase}</option>
+                        {savedPetitionCases.map((caseRecord) => (
+                          <option key={caseRecord.id} value={caseRecord.id}>
+                            {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
+                          </option>
                         ))}
-                    </ul>
-                  ) : (
-                    <p>{t.tools.petitionLinkedPrecedentsEmpty}</p>
-                  )}
-                </div>
+                      </select>
+                    </label>
+                    <div className="petition-sync-case-row">
+                      <button
+                        className="secondary-button"
+                        disabled={!linkedPetitionCase}
+                        type="button"
+                        onClick={() => linkedPetitionCase && syncPetitionFromCase(linkedPetitionCase)}
+                      >
+                        {t.tools.petitionSyncCase}
+                      </button>
+                    </div>
+                  </div>
 
-                <label className="field-label">
-                  {t.tools.petitionCaseContext}
-                  <textarea
-                    rows={5}
-                    value={petitionContext}
-                    onChange={(event) => setPetitionContext(event.target.value)}
-                    placeholder={t.tools.petitionCaseContextPlaceholder}
-                  />
-                </label>
+                  {linkedPetitionCase ? (
+                    <div className="petition-linked-case-card">
+                      <strong>{linkedPetitionCase.caseLabel}</strong>
+                      <span>{linkedPetitionCase.subject}</span>
+                      <small>{linkedPetitionCase.clientName} / {linkedPetitionCase.opponentName} — {linkedPetitionCase.courtName}</small>
+                    </div>
+                  ) : null}
 
-                <div className="petition-form-grid">
+                  <div className="petition-linked-precedents">
+                    <span className="section-label">{t.tools.petitionLinkedPrecedents}</span>
+                    {petitionPrecedentBlocks.filter((block) => block.caseId === petitionLinkedCaseId).length ? (
+                      <ul>
+                        {petitionPrecedentBlocks
+                          .filter((block) => block.caseId === petitionLinkedCaseId)
+                          .map((block) => (
+                            <li key={block.id}>
+                              <strong>{block.precedentTitle}</strong>
+                              <span>{block.citationLine}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    ) : (
+                      <p className="petition-muted-copy">{t.tools.petitionLinkedPrecedentsEmpty}</p>
+                    )}
+                  </div>
+
                   <label className="field-label">
-                    {t.tools.petitionType}
-                    <input value={petition.petitionType} onChange={(event) => setPetition({ ...petition, petitionType: event.target.value })} />
+                    {t.tools.petitionCaseContext}
+                    <textarea
+                      rows={5}
+                      value={petitionContext}
+                      onChange={(event) => setPetitionContext(event.target.value)}
+                      placeholder={t.tools.petitionCaseContextPlaceholder}
+                    />
+                  </label>
+                </section>
+
+                <section className="petition-section">
+                  <div className="petition-section-head">
+                    <ScrollText size={18} />
+                    <h3>{t.tools.petitionDetailsSection}</h3>
+                  </div>
+
+                  <div className="petition-form-grid">
+                    <label className="field-label">
+                      {t.tools.petitionType}
+                      <input value={petition.petitionType} onChange={(event) => setPetition({ ...petition, petitionType: event.target.value })} />
+                    </label>
+                    <label className="field-label">
+                      {t.tools.petitionCourt}
+                      <input value={petition.court} onChange={(event) => setPetition({ ...petition, court: event.target.value })} />
+                    </label>
+                  </div>
+
+                  <label className="field-label">
+                    {t.tools.petitionApplicant} / {t.tools.petitionOpponent}
+                    <textarea rows={3} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
+                  </label>
+
+                  <label className="field-label">
+                    {t.tools.petitionDescription}
+                    <textarea rows={6} value={petition.facts} onChange={(event) => setPetition({ ...petition, facts: event.target.value })} />
                   </label>
                   <label className="field-label">
-                    {t.tools.petitionCourt}
-                    <input value={petition.court} onChange={(event) => setPetition({ ...petition, court: event.target.value })} />
+                    {t.tools.petitionDemands}
+                    <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
                   </label>
+                </section>
+
+                <div className="petition-submit-row">
+                  <button className="petition-submit-button" disabled={loading === "petition"} type="submit">
+                    {loading === "petition" ? <LoaderCircle className="spin" size={17} /> : <Sparkles size={17} />}
+                    {t.tools.petitionSubmit}
+                  </button>
                 </div>
-
-                <label className="field-label">
-                  {t.tools.petitionApplicant} / {t.tools.petitionOpponent}
-                  <textarea rows={3} value={petition.parties} onChange={(event) => setPetition({ ...petition, parties: event.target.value })} />
-                </label>
-
-                <label className="field-label">
-                  {t.tools.petitionDescription}
-                  <textarea rows={6} value={petition.facts} onChange={(event) => setPetition({ ...petition, facts: event.target.value })} />
-                </label>
-                <label className="field-label">
-                  {t.tools.petitionDemands}
-                  <textarea rows={4} value={petition.demands} onChange={(event) => setPetition({ ...petition, demands: event.target.value })} />
-                </label>
-
-                <button disabled={loading === "petition"} type="submit">
-                  {loading === "petition" ? <LoaderCircle className="spin" size={17} /> : <FileText size={17} />}
-                  {t.tools.petitionSubmit}
-                </button>
               </form>
 
-              <section className="panel petition-draft-panel">
-                <div className="section-head">
-                  <div>
+              <section className="panel petition-draft-panel petition-animate-in" style={{ animationDelay: "0.18s" }}>
+                <div className="petition-draft-toolbar">
+                  <div className="petition-draft-heading">
                     <span className="section-label">{t.tools.petitionDraft}</span>
                     <h3>{petitionResult?.title ?? t.tools.petitionDraft}</h3>
                   </div>
                   <div className="petition-export-actions">
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
-                    <button className="secondary-button" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
+                    <span className="petition-export-label">{t.tools.petitionExport}</span>
+                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
+                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
+                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
                   </div>
                 </div>
-                {petitionResult ? (
-                  <>
-                    <textarea className="petition-draft-textarea" value={petitionResult.body} onChange={(event) => setPetitionResult({ ...petitionResult, body: event.target.value })} onSelect={selectedTextFromEvent} />
-                    <CitationList citations={petitionResult.citedPrecedents} />
-                  </>
-                ) : <EmptyState text={t.tools.petitionEmpty} />}
+
+                <div className={`petition-draft-surface ${petitionResult ? "is-filled" : "is-empty"}`}>
+                  {petitionResult ? (
+                    <>
+                      <textarea className="petition-draft-textarea" value={petitionResult.body} onChange={(event) => setPetitionResult({ ...petitionResult, body: event.target.value })} onSelect={selectedTextFromEvent} />
+                      <CitationList citations={petitionResult.citedPrecedents} />
+                    </>
+                  ) : (
+                    <div className="petition-empty-state">
+                      <div className="petition-empty-icon" aria-hidden="true">
+                        <ScrollText size={34} />
+                      </div>
+                      <strong>{t.tools.petitionDraft}</strong>
+                      <p>{t.tools.petitionEmpty}</p>
+                    </div>
+                  )}
+                </div>
               </section>
             </section>
           </section>

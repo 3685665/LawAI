@@ -126,6 +126,49 @@ def test_precedent_apply_to_petition() -> None:
     assert body["factsLinkSnippet"]
 
 
+def test_petition_local_uses_standard_petition_format() -> None:
+    response = client.post(
+        "/api/petitions",
+        json={
+            "petitionType": "Alacak",
+            "court": "Ankara 5. Asliye Hukuk Mahkemesi",
+            "parties": "Davaci: Ali Veli\nAdres: Ankara\nDavali: Beta Ltd. Sti.",
+            "facts": "Davaci, sozlesmeye dayali alacagin odenmedigini belirtmektedir.",
+            "demands": "Alacagin davalidan tahsiline karar verilmesini talep ederiz.",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()["body"]
+    assert "T.C." in body
+    assert "MAHKEMES" in body.upper()
+    assert "DAVACI" in body.upper()
+    assert "DAVALI" in body.upper()
+    assert "ACIKLAMALAR" in body.upper() or "AÇIKLAMALAR" in body
+    assert "HUKUK" in body.upper()
+    assert "NET" in body.upper() and "TALEP" in body.upper()
+    assert "ai model" not in body.lower()
+
+
+def test_petition_strips_ui_metadata_from_output() -> None:
+    response = client.post(
+        "/api/petitions",
+        json={
+            "petitionType": "Kira alacagi",
+            "court": "Istanbul Anadolu 2. Asliye Hukuk Mahkemesi",
+            "parties": "Davaci: Ayse Yilmaz\nDavali: Mehmet Demir",
+            "facts": "Kira bedeli odememis, ihtar gonderilmistir.",
+            "demands": "Kira alacaginin tahsiline karar verilsin.",
+            "supplementaryContext": "AI modeli: Premium model - daha detayli yaz.",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()["body"]
+    assert "premium model" not in body.lower()
+    assert "ai model" not in body.lower()
+
+
 def test_precedent_summarize_uses_decision_text() -> None:
     response = client.post(
         "/api/precedents/summarize",

@@ -98,6 +98,8 @@ class PetitionRequest(BaseModel):
     parties: str
     facts: str
     demands: str | None = None
+    precedentContext: str | None = None
+    supplementaryContext: str | None = None
 
 
 class PetitionResponse(BaseModel):
