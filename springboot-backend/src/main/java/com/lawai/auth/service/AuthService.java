@@ -1,53 +1,63 @@
 package com.lawai.auth.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
 import com.lawai.auth.dto.AuthPasswordResetResponse;
 import com.lawai.auth.dto.AuthProfileUpdateRequest;
 import com.lawai.auth.dto.AuthRegisterRequest;
-import com.lawai.auth.dto.AuthSessionResponse;
 import com.lawai.auth.dto.AuthRegisterResponse;
+import com.lawai.auth.dto.AuthSessionResponse;
 import com.lawai.auth.dto.AuthUserDto;
-import com.lawai.auth.model.AuthStorePayload;
 import com.lawai.auth.model.AuthenticatedUser;
-import com.lawai.auth.model.PasswordResetRecord;
 import com.lawai.auth.model.EmailVerificationRecord;
+import com.lawai.auth.model.PasswordResetRecord;
 import com.lawai.auth.model.SessionRecord;
 import com.lawai.auth.model.UserRecord;
-import org.springframework.security.authentication.BadCredentialsException;
+import com.lawai.persistence.entity.AuthSessionEntity;
+import com.lawai.persistence.entity.EmailVerificationEntity;
+import com.lawai.persistence.entity.PasswordResetEntity;
+import com.lawai.persistence.entity.UserEntity;
+import com.lawai.persistence.repository.AuthSessionRepository;
+import com.lawai.persistence.repository.EmailVerificationRepository;
+import com.lawai.persistence.repository.PasswordResetRepository;
+import com.lawai.persistence.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
-import com.lawai.auth.service.EmailService;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
 
+  private static final String PASSWORD_RESET_ACK_MESSAGE =
+      "E-posta adresi sistemde bulunuyorsa sifirlama baglantisi gonderildi.";
+
   private final ObjectMapper objectMapper;
+  private final UserRepository userRepository;
+  private final AuthSessionRepository authSessionRepository;
+  private final PasswordResetRepository passwordResetRepository;
+  private final EmailVerificationRepository emailVerificationRepository;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-  private final Path storagePath;
   private final HttpClient httpClient = HttpClient.newHttpClient();
   private final boolean previewResetToken;
   private final String resetPasswordUrlBase;
@@ -59,6 +69,10 @@ public class AuthService {
 
   public AuthService(
       ObjectMapper objectMapper,
+      UserRepository userRepository,
+      AuthSessionRepository authSessionRepository,
+      PasswordResetRepository passwordResetRepository,
+      EmailVerificationRepository emailVerificationRepository,
       EmailService emailService,
       @Value("${app.auth.preview-reset-token:false}") boolean previewResetToken,
       @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase,
@@ -68,20 +82,25 @@ public class AuthService {
       @Value("${app.auth.google-client-id:}") String googleClientId
   ) {
     this.objectMapper = objectMapper;
-    this.storagePath = Path.of(System.getProperty("user.dir"), "data", "auth-store.json");
+    this.userRepository = userRepository;
+    this.authSessionRepository = authSessionRepository;
+    this.passwordResetRepository = passwordResetRepository;
+    this.emailVerificationRepository = emailVerificationRepository;
+    this.emailService = emailService;
     this.previewResetToken = previewResetToken;
     this.resetPasswordUrlBase = resetPasswordUrlBase;
     this.previewVerificationToken = previewVerificationToken;
     this.verificationUrlBase = verificationUrlBase == null ? "" : verificationUrlBase.trim();
-    this.emailService = emailService;
     this.bootstrapEmail = normalizeEmail(bootstrapEmail);
     this.googleClientId = googleClientId == null ? "" : googleClientId.trim();
   }
 
+  @Transactional
   public AuthRegisterResponse register(AuthRegisterRequest request) {
     return registerInternal(request, "USER");
   }
 
+  @Transactional
   public AuthRegisterResponse registerAdmin(AuthRegisterRequest request) {
     return registerInternal(request, "ADMIN");
   }
@@ -104,11 +123,8 @@ public class AuthService {
         false,
         null
     );
-    AuthStorePayload payload = load();
-    List<UserRecord> users = new ArrayList<>(safeList(payload.users()));
-    users.add(user);
+    userRepository.save(UserEntity.fromRecord(user));
 
-    // create verification token
     String verificationToken = generateToken();
     EmailVerificationRecord verification = new EmailVerificationRecord(
         hash(verificationToken),
@@ -117,18 +133,13 @@ public class AuthService {
         false,
         now
     );
-    List<EmailVerificationRecord> verifications = new ArrayList<>(safeList(payload.verifications()));
-    // Remove previous unused tokens for this user
-    verifications.removeIf(item -> item.userId().equals(user.id()) && !item.used());
-    verifications.add(verification);
-
-    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets()), verifications));
+    emailVerificationRepository.deleteByUserIdAndUsedFalse(user.id());
+    emailVerificationRepository.save(EmailVerificationEntity.fromRecord(verification));
 
     String link = buildVerificationLink(verificationToken);
     try {
       emailService.sendVerificationEmail(user.email(), link);
     } catch (Exception ex) {
-      // fall back to preview behavior if mail sending fails
       System.out.println("[AuthService] Failed to send verification email: " + ex.getMessage());
     }
     return new AuthRegisterResponse(
@@ -139,6 +150,7 @@ public class AuthService {
     );
   }
 
+  @Transactional
   public AuthSessionResponse login(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
         .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
@@ -147,11 +159,11 @@ public class AuthService {
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    UserRecord updatedUser = user.withLastLoginAt(now);
-    replaceUser(updatedUser);
-    return new AuthSessionResponse(toDto(updatedUser));
+    replaceUser(user.withLastLoginAt(now));
+    return new AuthSessionResponse(toDto(user.withLastLoginAt(now)));
   }
 
+  @Transactional
   public AuthUserDto loginWithGoogle(String credential) {
     GoogleTokenPayload googleUser = verifyGoogleCredential(credential);
     Optional<UserRecord> existingUser = findUserByEmail(googleUser.email());
@@ -161,37 +173,41 @@ public class AuthService {
       return toDto(updatedUser);
     }
     UserRecord createdUser = createGoogleUser(googleUser);
-    addUser(createdUser);
+    userRepository.save(UserEntity.fromRecord(createdUser));
     return toDto(createdUser);
   }
 
+  @Transactional
   public void logout(String sessionToken) {
     if (!StringUtils.hasText(sessionToken)) {
       return;
     }
-    AuthStorePayload payload = load();
-    List<SessionRecord> sessions = safeList(payload.sessions()).stream()
-        .filter(item -> !passwordEncoder.matches(sessionToken, item.tokenHash()))
-        .toList();
-    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets()), safeList(payload.verifications())));
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    authSessionRepository.deleteByExpiresAtBefore(now);
+    for (AuthSessionEntity session : authSessionRepository.findByExpiresAtAfter(now)) {
+      if (passwordEncoder.matches(sessionToken, session.getTokenHash())) {
+        authSessionRepository.delete(session);
+        return;
+      }
+    }
   }
 
+  @Transactional(readOnly = true)
   public AuthUserDto currentUser(String sessionToken) {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
     return toDto(user);
   }
 
+  @Transactional
   public AuthUserDto updateProfile(String sessionToken, AuthProfileUpdateRequest request) {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
     String nextName = request.name().trim();
     String nextEmail = normalizeEmail(request.email());
 
-    safeList(load().users()).stream()
-        .filter(item -> !item.id().equals(user.id()))
-        .filter(item -> item.email().equalsIgnoreCase(nextEmail))
-        .findFirst()
+    userRepository.findByEmailIgnoreCase(nextEmail)
+        .filter(item -> !item.getId().equals(user.id()))
         .ifPresent(item -> {
           throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
         });
@@ -201,9 +217,7 @@ public class AuthService {
     return toDto(updatedUser);
   }
 
-  private static final String PASSWORD_RESET_ACK_MESSAGE =
-      "E-posta adresi sistemde bulunuyorsa sifirlama baglantisi gonderildi.";
-
+  @Transactional
   public AuthPasswordResetResponse requestPasswordReset(AuthForgotPasswordRequest request) {
     String email = normalizeEmail(request.email());
     Optional<UserRecord> userOptional = findUserByEmail(email);
@@ -222,11 +236,8 @@ public class AuthService {
         now
     );
 
-    AuthStorePayload payload = load();
-    List<PasswordResetRecord> resets = new ArrayList<>(safeList(payload.passwordResets()));
-    resets.removeIf(item -> item.userId().equals(user.id()) && !item.used());
-    resets.add(resetRecord);
-    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets, safeList(payload.verifications())));
+    passwordResetRepository.deleteByUserIdAndUsedFalse(user.id());
+    passwordResetRepository.save(PasswordResetEntity.fromRecord(resetRecord));
     String resetLink = buildResetLink(resetToken);
     try {
       emailService.sendPasswordResetEmail(user.email(), resetLink);
@@ -241,6 +252,7 @@ public class AuthService {
     );
   }
 
+  @Transactional
   public AuthUserDto verifyEmail(String token) {
     EmailVerificationRecord verification = requireVerificationToken(token);
     UserRecord user = requireUser(verification.userId());
@@ -248,15 +260,16 @@ public class AuthService {
     UserRecord updated = user.withVerified(true, now).withLastLoginAt(user.lastLoginAt());
     replaceUser(updated);
 
-    // mark verification used
-    AuthStorePayload payload = load();
-    List<EmailVerificationRecord> verifications = safeList(payload.verifications()).stream()
-        .map(item -> item.userId().equals(user.id()) && !item.used() ? item.withUsed(true) : item)
-        .toList();
-    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), safeList(payload.passwordResets()), verifications));
+    emailVerificationRepository.findAll().stream()
+        .filter(item -> item.getUserId().equals(user.id()) && !item.isUsed())
+        .forEach(item -> {
+          item.setUsed(true);
+          emailVerificationRepository.save(item);
+        });
     return toDto(updated);
   }
 
+  @Transactional
   public AuthRegisterResponse resendVerification(String email) {
     String normalized = normalizeEmail(email);
     Optional<UserRecord> userOptional = findUserByEmail(normalized);
@@ -273,11 +286,8 @@ public class AuthService {
         false,
         now
     );
-    AuthStorePayload payload = load();
-    List<EmailVerificationRecord> verifications = new ArrayList<>(safeList(payload.verifications()));
-    verifications.removeIf(item -> item.userId().equals(user.id()) && !item.used());
-    verifications.add(verification);
-    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), safeList(payload.passwordResets()), verifications));
+    emailVerificationRepository.deleteByUserIdAndUsedFalse(user.id());
+    emailVerificationRepository.save(EmailVerificationEntity.fromRecord(verification));
 
     String link = buildVerificationLink(verificationToken);
     try {
@@ -288,6 +298,7 @@ public class AuthService {
     return new AuthRegisterResponse("Dogrulama baglantisi gonderildi.", previewVerificationToken ? verificationToken : null, verification.expiresAt(), previewVerificationToken ? link : null);
   }
 
+  @Transactional
   public AuthUserDto resetPassword(String token, String newPassword) {
     PasswordResetRecord reset = requireResetToken(token);
     UserRecord user = requireUser(reset.userId());
@@ -298,6 +309,7 @@ public class AuthService {
     return toDto(updatedUser);
   }
 
+  @Transactional
   public AuthUserDto changePassword(String sessionToken, AuthChangePasswordRequest request) {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
@@ -310,23 +322,28 @@ public class AuthService {
     return toDto(updatedUser);
   }
 
+  @Transactional(readOnly = true)
   public List<AuthUserDto> listUsers(String sessionToken) {
     requireAdmin(sessionToken);
-    return safeList(load().users()).stream()
+    return userRepository.findAll().stream()
+        .map(UserEntity::toRecord)
+        .map(this::normalizeUserRole)
         .sorted(Comparator.comparing(UserRecord::createdAt).reversed())
         .map(this::toDto)
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public AuthUserDto getUser(String sessionToken, String userId) {
     requireAdmin(sessionToken);
-    return safeList(load().users()).stream()
-        .filter(item -> item.id().equals(userId))
-        .findFirst()
+    return userRepository.findById(userId)
+        .map(UserEntity::toRecord)
+        .map(this::normalizeUserRole)
         .map(this::toDto)
         .orElseThrow(() -> new IllegalArgumentException("Kullanici bulunamadi."));
   }
 
+  @Transactional
   public String issueSessionToken(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
         .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
@@ -335,7 +352,6 @@ public class AuthService {
     }
 
     UserRecord verifiedUser = requireVerifiedUser(user);
-
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     String token = generateToken();
     SessionRecord session = new SessionRecord(
@@ -349,6 +365,7 @@ public class AuthService {
     return token;
   }
 
+  @Transactional
   public String issueSessionTokenForUser(String userId, boolean rememberMe) {
     UserRecord user = requireVerifiedUser(requireUser(userId));
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -364,6 +381,18 @@ public class AuthService {
     return token;
   }
 
+  @Transactional(readOnly = true)
+  public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {
+    SessionRecord session = requireSession(sessionToken);
+    UserRecord user = requireUser(session.userId());
+    return new AuthenticatedUser(user.id(), user.name(), user.email(), effectiveRole(user));
+  }
+
+  @Transactional(readOnly = true)
+  public boolean hasUsers() {
+    return userRepository.count() > 0;
+  }
+
   private UserRecord requireVerifiedUser(UserRecord user) {
     if (Boolean.TRUE.equals(user.verified())) {
       return user;
@@ -377,21 +406,11 @@ public class AuthService {
     throw new BadCredentialsException("E-posta adresi dogrulanmadi. Lutfen e-posta onayinizi gerceklestirin.");
   }
 
-  public AuthenticatedUser requireAuthenticatedUser(String sessionToken) {
-    SessionRecord session = requireSession(sessionToken);
-    UserRecord user = requireUser(session.userId());
-    return new AuthenticatedUser(user.id(), user.name(), user.email(), effectiveRole(user));
-  }
-
   private void requireAdmin(String sessionToken) {
     AuthUserDto user = currentUser(sessionToken);
     if (!"ADMIN".equalsIgnoreCase(user.role())) {
-      throw new org.springframework.security.access.AccessDeniedException("Yonetici yetkisi gerekli.");
+      throw new AccessDeniedException("Yonetici yetkisi gerekli.");
     }
-  }
-
-  public boolean hasUsers() {
-    return !safeList(load().users()).isEmpty();
   }
 
   private AuthUserDto toDto(UserRecord user) {
@@ -399,9 +418,9 @@ public class AuthService {
   }
 
   private UserRecord requireUser(String userId) {
-    return safeList(load().users()).stream()
-        .filter(item -> item.id().equals(userId))
-        .findFirst()
+    return userRepository.findById(userId)
+        .map(UserEntity::toRecord)
+        .map(this::normalizeUserRole)
         .orElseThrow(() -> new BadCredentialsException("Oturum gecersiz."));
   }
 
@@ -410,20 +429,13 @@ public class AuthService {
       throw new BadCredentialsException("Oturum bulunamadi.");
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    AuthStorePayload payload = load();
-    List<SessionRecord> active = new ArrayList<>();
+    authSessionRepository.deleteByExpiresAtBefore(now);
     SessionRecord found = null;
-    for (SessionRecord session : safeList(payload.sessions())) {
-      if (session.expiresAt().isBefore(now)) {
-        continue;
+    for (AuthSessionEntity session : authSessionRepository.findByExpiresAtAfter(now)) {
+      if (passwordEncoder.matches(sessionToken, session.getTokenHash())) {
+        found = session.toRecord();
+        break;
       }
-      active.add(session);
-      if (passwordEncoder.matches(sessionToken, session.tokenHash())) {
-        found = session;
-      }
-    }
-    if (active.size() != safeList(payload.sessions()).size()) {
-      save(new AuthStorePayload(safeList(payload.users()), active, safeList(payload.passwordResets()), safeList(payload.verifications())));
     }
     if (found == null) {
       throw new BadCredentialsException("Oturum gecersiz veya suresi dolmus.");
@@ -436,17 +448,14 @@ public class AuthService {
       throw new IllegalArgumentException("Sifirlama tokeni gerekli.");
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    AuthStorePayload payload = load();
-    List<PasswordResetRecord> nextResets = new ArrayList<>();
     PasswordResetRecord found = null;
-    for (PasswordResetRecord reset : safeList(payload.passwordResets())) {
-      if (reset.expiresAt().isBefore(now) || reset.used()) {
-        nextResets.add(reset);
+    for (PasswordResetEntity reset : passwordResetRepository.findAll()) {
+      if (reset.getExpiresAt().isBefore(now) || reset.isUsed()) {
         continue;
       }
-      nextResets.add(reset);
-      if (passwordEncoder.matches(token, reset.tokenHash())) {
-        found = reset;
+      if (passwordEncoder.matches(token, reset.getTokenHash())) {
+        found = reset.toRecord();
+        break;
       }
     }
     if (found == null) {
@@ -455,48 +464,53 @@ public class AuthService {
     return found;
   }
 
-  private void replaceUser(UserRecord updatedUser) {
-    AuthStorePayload payload = load();
-    List<UserRecord> users = safeList(payload.users()).stream()
-        .map(item -> item.id().equals(updatedUser.id()) ? updatedUser : item)
-        .toList();
-    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets()), safeList(payload.verifications())));
+  private EmailVerificationRecord requireVerificationToken(String token) {
+    if (!StringUtils.hasText(token)) {
+      throw new IllegalArgumentException("Dogrulama tokeni gerekli.");
+    }
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    EmailVerificationRecord found = null;
+    for (EmailVerificationEntity rec : emailVerificationRepository.findAll()) {
+      if (rec.getExpiresAt().isBefore(now) || rec.isUsed()) {
+        continue;
+      }
+      if (passwordEncoder.matches(token, rec.getTokenHash())) {
+        found = rec.toRecord();
+        break;
+      }
+    }
+    if (found == null) {
+      throw new IllegalArgumentException("Dogrulama tokeni gecersiz veya suresi dolmus.");
+    }
+    return found;
   }
 
-  private void addUser(UserRecord user) {
-    AuthStorePayload payload = load();
-    List<UserRecord> users = new ArrayList<>(safeList(payload.users()));
-    users.add(user);
-    save(new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets()), safeList(payload.verifications())));
+  private void replaceUser(UserRecord updatedUser) {
+    UserEntity entity = userRepository.findById(updatedUser.id())
+        .orElseGet(() -> UserEntity.fromRecord(updatedUser));
+    entity.applyRecord(updatedUser);
+    userRepository.save(entity);
   }
 
   private void addSession(SessionRecord session) {
-    AuthStorePayload payload = load();
-    List<SessionRecord> sessions = new ArrayList<>(safeList(payload.sessions()));
-    sessions.add(session);
-    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets()), safeList(payload.verifications())));
+    authSessionRepository.save(AuthSessionEntity.fromRecord(session));
   }
 
   private void invalidateSessionsForUser(String userId) {
-    AuthStorePayload payload = load();
-    List<SessionRecord> sessions = safeList(payload.sessions()).stream()
-        .filter(item -> !item.userId().equals(userId))
-        .toList();
-    save(new AuthStorePayload(safeList(payload.users()), sessions, safeList(payload.passwordResets()), safeList(payload.verifications())));
+    authSessionRepository.deleteByUserId(userId);
   }
 
   private void markResetUsed(String userId) {
-    AuthStorePayload payload = load();
-    List<PasswordResetRecord> resets = safeList(payload.passwordResets()).stream()
-        .map(item -> item.userId().equals(userId) && !item.used() ? item.withUsed(true) : item)
-        .toList();
-    save(new AuthStorePayload(safeList(payload.users()), safeList(payload.sessions()), resets, safeList(payload.verifications())));
+    passwordResetRepository.findByUserIdAndUsedFalse(userId).forEach(entity -> {
+      entity.setUsed(true);
+      passwordResetRepository.save(entity);
+    });
   }
 
   private Optional<UserRecord> findUserByEmail(String email) {
-    return safeList(load().users()).stream()
-        .filter(item -> item.email().equalsIgnoreCase(email))
-        .findFirst();
+    return userRepository.findByEmailIgnoreCase(email)
+        .map(UserEntity::toRecord)
+        .map(this::normalizeUserRole);
   }
 
   private UserRecord createGoogleUser(GoogleTokenPayload googleUser) {
@@ -559,30 +573,6 @@ public class AuthService {
     return user.email().equalsIgnoreCase(bootstrapEmail) ? "ADMIN" : "USER";
   }
 
-  private AuthStorePayload load() {
-    if (!Files.exists(storagePath)) {
-      return new AuthStorePayload(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-    }
-    try {
-      AuthStorePayload payload = objectMapper.readValue(Files.readString(storagePath), AuthStorePayload.class);
-      List<UserRecord> users = safeList(payload.users()).stream()
-          .map(this::normalizeUserRole)
-          .toList();
-      return new AuthStorePayload(users, safeList(payload.sessions()), safeList(payload.passwordResets()), safeList(payload.verifications()));
-    } catch (IOException exception) {
-      throw new IllegalStateException("Auth verisi yuklenemedi: " + exception.getMessage(), exception);
-    }
-  }
-
-  private void save(AuthStorePayload payload) {
-    try {
-      Files.createDirectories(storagePath.getParent());
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(storagePath.toFile(), payload);
-    } catch (IOException exception) {
-      throw new IllegalStateException("Auth verisi kaydedilemedi: " + exception.getMessage(), exception);
-    }
-  }
-
   private String normalizeEmail(String email) {
     return email == null ? "" : email.trim().toLowerCase();
   }
@@ -605,34 +595,6 @@ public class AuthService {
     return baseUrl + "/verify?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
   }
 
-  private EmailVerificationRecord requireVerificationToken(String token) {
-    if (!StringUtils.hasText(token)) {
-      throw new IllegalArgumentException("Dogrulama tokeni gerekli.");
-    }
-    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    AuthStorePayload payload = load();
-    List<EmailVerificationRecord> next = new ArrayList<>();
-    EmailVerificationRecord found = null;
-    for (EmailVerificationRecord rec : safeList(payload.verifications())) {
-      if (rec.expiresAt().isBefore(now) || rec.used()) {
-        next.add(rec);
-        continue;
-      }
-      next.add(rec);
-      if (passwordEncoder.matches(token, rec.tokenHash())) {
-        found = rec;
-      }
-    }
-    if (found == null) {
-      throw new IllegalArgumentException("Dogrulama tokeni gecersiz veya suresi dolmus.");
-    }
-    return found;
-  }
-
-  private <T> List<T> safeList(List<T> items) {
-    return items == null ? List.of() : new ArrayList<>(items);
-  }
-
   private UserRecord normalizeUserRole(UserRecord user) {
     String role = StringUtils.hasText(user.role())
         ? user.role().trim().toUpperCase()
@@ -640,7 +602,6 @@ public class AuthService {
     UserRecord withRole = StringUtils.hasText(user.role()) && role.equals(user.role().trim().toUpperCase())
         ? user
         : user.withRole(role);
-    // ensure verified is not null for legacy records
     if (withRole.verified() == null) {
       return withRole.withVerified(Boolean.FALSE, null);
     }
@@ -650,5 +611,3 @@ public class AuthService {
   private record GoogleTokenPayload(String email, String name) {
   }
 }
-
-

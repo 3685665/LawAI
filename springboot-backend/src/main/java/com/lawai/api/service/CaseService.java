@@ -1,6 +1,5 @@
 package com.lawai.api.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.api.dto.CaseCreateRequest;
 import com.lawai.api.dto.CaseDocumentDto;
 import com.lawai.api.dto.CaseDocumentPatchResponse;
@@ -8,12 +7,12 @@ import com.lawai.api.dto.CaseDocumentUpdateRequest;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplateDto;
 import com.lawai.api.dto.CaseTemplatesResponse;
+import com.lawai.persistence.entity.LegalCaseEntity;
+import com.lawai.persistence.repository.LegalCaseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -114,12 +113,10 @@ public class CaseService {
       )
   );
 
-  private final Path storagePath;
-  private final ObjectMapper objectMapper;
+  private final LegalCaseRepository legalCaseRepository;
 
-  public CaseService(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-    this.storagePath = Path.of(System.getProperty("user.dir"), "data", "cases.json");
+  public CaseService(LegalCaseRepository legalCaseRepository) {
+    this.legalCaseRepository = legalCaseRepository;
   }
 
   public CaseTemplatesResponse templates() {
@@ -131,6 +128,7 @@ public class CaseService {
     );
   }
 
+  @Transactional(readOnly = true)
   public List<CaseRecordResponse> listCases() {
     return load().stream()
         .sorted(Comparator.comparing(CaseRecordSnapshot::updatedAt).reversed())
@@ -138,6 +136,7 @@ public class CaseService {
         .toList();
   }
 
+  @Transactional
   public List<CaseRecordResponse> seedSamples() {
     List<CaseRecordSnapshot> existing = load();
     boolean alreadySeeded = existing.stream().anyMatch(item -> item.clientName().startsWith("Ornek "));
@@ -181,6 +180,7 @@ public class CaseService {
     return listCasesFromSnapshots(samples);
   }
 
+  @Transactional
   public CaseRecordResponse createCase(CaseCreateRequest request) {
     CaseTemplateDefinition template = requireTemplate(request.caseType());
     Map<String, Boolean> completedDocumentIds = request.completedDocumentIds() == null
@@ -211,12 +211,11 @@ public class CaseService {
         now,
         now
     );
-    List<CaseRecordSnapshot> cases = new ArrayList<>(load());
-    cases.add(snapshot);
-    save(cases);
+    legalCaseRepository.save(LegalCaseEntity.fromSnapshot(snapshot));
     return toResponse(snapshot);
   }
 
+  @Transactional(readOnly = true)
   public CaseRecordResponse getCase(String id) {
     return load().stream()
         .filter(item -> item.id().equals(id))
@@ -225,64 +224,33 @@ public class CaseService {
         .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
   }
 
+  @Transactional
   public List<CaseRecordResponse> deleteCase(String id) {
-    List<CaseRecordSnapshot> cases = load();
-    List<CaseRecordSnapshot> remaining = cases.stream()
-        .filter(item -> !item.id().equals(id))
-        .toList();
-    if (remaining.size() == cases.size()) {
+    if (!legalCaseRepository.existsById(id)) {
       throw new IllegalArgumentException("Dava bulunamadi.");
     }
-    save(remaining);
-    return listCasesFromSnapshots(remaining);
+    legalCaseRepository.deleteById(id);
+    return listCases();
   }
 
+  @Transactional
   public CaseDocumentPatchResponse updateDocument(String caseId, String documentId, CaseDocumentUpdateRequest request) {
-    List<CaseRecordSnapshot> cases = load();
-    boolean updated = false;
-    List<CaseRecordSnapshot> nextCases = new ArrayList<>();
-    CaseRecordSnapshot updatedCase = null;
-
-    for (CaseRecordSnapshot snapshot : cases) {
-      if (!snapshot.id().equals(caseId)) {
-        nextCases.add(snapshot);
-        continue;
+    LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    boolean documentFound = false;
+    for (var document : legalCase.getDocuments()) {
+      if (document.getId().equals(documentId)) {
+        document.setCompleted(request.completed());
+        documentFound = true;
+        break;
       }
-
-      boolean documentFound = false;
-      List<CaseDocumentSnapshot> documents = new ArrayList<>();
-      for (CaseDocumentSnapshot document : snapshot.documents()) {
-        if (document.id().equals(documentId)) {
-          documentFound = true;
-          documents.add(new CaseDocumentSnapshot(
-              document.id(),
-              document.title(),
-              document.detail(),
-              document.required(),
-              document.group(),
-              request.completed()
-          ));
-        } else {
-          documents.add(document);
-        }
-      }
-
-      if (!documentFound) {
-        throw new IllegalArgumentException("Belge bulunamadi.");
-      }
-
-      updated = true;
-      updatedCase = snapshot.withDocuments(documents).withUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
-      nextCases.add(updatedCase);
-      continue;
     }
-
-    if (!updated || updatedCase == null) {
-      throw new IllegalArgumentException("Dava bulunamadi.");
+    if (!documentFound) {
+      throw new IllegalArgumentException("Belge bulunamadi.");
     }
-
-    save(nextCases);
-    return new CaseDocumentPatchResponse(toResponse(updatedCase), listCasesFromSnapshots(nextCases));
+    legalCase.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+    LegalCaseEntity saved = legalCaseRepository.save(legalCase);
+    return new CaseDocumentPatchResponse(toResponse(saved.toSnapshot()), listCases());
   }
 
   private List<CaseRecordResponse> listCasesFromSnapshots(List<CaseRecordSnapshot> snapshots) {
@@ -340,25 +308,13 @@ public class CaseService {
   }
 
   private List<CaseRecordSnapshot> load() {
-    if (!Files.exists(storagePath)) {
-      return new ArrayList<>();
-    }
-    try {
-      CaseStorePayload payload = objectMapper.readValue(Files.readString(storagePath), CaseStorePayload.class);
-      return payload.cases() == null ? new ArrayList<>() : new ArrayList<>(payload.cases());
-    } catch (IOException exception) {
-      throw new IllegalStateException("Dava kayitlari yuklenemedi: " + exception.getMessage(), exception);
-    }
+    return legalCaseRepository.findAll().stream()
+        .map(LegalCaseEntity::toSnapshot)
+        .toList();
   }
 
   private void save(List<CaseRecordSnapshot> cases) {
-    try {
-      Files.createDirectories(storagePath.getParent());
-      objectMapper.writerWithDefaultPrettyPrinter()
-          .writeValue(storagePath.toFile(), new CaseStorePayload(cases));
-    } catch (IOException exception) {
-      throw new IllegalStateException("Dava kayitlari kaydedilemedi: " + exception.getMessage(), exception);
-    }
+    legalCaseRepository.saveAll(cases.stream().map(LegalCaseEntity::fromSnapshot).toList());
   }
 
   private static CaseDocumentSnapshot doc(String id, String title, String detail, boolean required, String group) {

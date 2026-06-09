@@ -1,23 +1,20 @@
 package com.lawai.api.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.api.dto.FeedbackCreateRequest;
 import com.lawai.api.dto.FeedbackRecordDto;
-import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.dto.FeedbackStatusUpdateRequest;
+import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.model.FeedbackRecord;
-import com.lawai.api.model.FeedbackStorePayload;
 import com.lawai.auth.model.AuthenticatedUser;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import com.lawai.persistence.entity.FeedbackEntity;
+import com.lawai.persistence.repository.FeedbackRepository;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -26,14 +23,13 @@ import java.util.UUID;
 @Service
 public class FeedbackService {
 
-  private final ObjectMapper objectMapper;
-  private final Path storagePath;
+  private final FeedbackRepository feedbackRepository;
 
-  public FeedbackService(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-    this.storagePath = Path.of(System.getProperty("user.dir"), "data", "feedback-store.json");
+  public FeedbackService(FeedbackRepository feedbackRepository) {
+    this.feedbackRepository = feedbackRepository;
   }
 
+  @Transactional
   public FeedbackRecordDto submit(AuthenticatedUser user, FeedbackCreateRequest request) {
     String type = normalize(request.type());
     if (!StringUtils.hasText(type)) {
@@ -48,7 +44,7 @@ public class FeedbackService {
       throw new IllegalArgumentException("Mesaj gerekli.");
     }
 
-    FeedbackRecord record = new FeedbackRecord(
+    FeedbackEntity entity = FeedbackEntity.fromRecord(new FeedbackRecord(
         UUID.randomUUID().toString(),
         user.id(),
         user.name(),
@@ -58,31 +54,31 @@ public class FeedbackService {
         message,
         "received",
         OffsetDateTime.now(ZoneOffset.UTC)
-    );
-    List<FeedbackRecord> items = new ArrayList<>(load());
-    items.add(record);
-    save(items);
-    return toDto(record);
+    ));
+    return toDto(feedbackRepository.save(entity).toRecord());
   }
 
+  @Transactional(readOnly = true)
   public List<FeedbackRecordDto> listForUser(AuthenticatedUser user) {
-    return load().stream()
-        .filter(item -> item.userId().equals(user.id()))
-        .sorted(Comparator.comparing(FeedbackRecord::createdAt).reversed())
+    return feedbackRepository.findByUserIdOrderByCreatedAtDesc(user.id()).stream()
+        .map(FeedbackEntity::toRecord)
         .map(this::toDto)
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<FeedbackRecordDto> listVisible(AuthenticatedUser user) {
     if (user.isAdmin()) {
-      return load().stream()
-          .sorted(Comparator.comparing(FeedbackRecord::createdAt).reversed())
+      return feedbackRepository.findAll().stream()
+          .sorted(Comparator.comparing(FeedbackEntity::getCreatedAt).reversed())
+          .map(FeedbackEntity::toRecord)
           .map(this::toDto)
           .toList();
     }
     return listForUser(user);
   }
 
+  @Transactional
   public FeedbackRecordDto updateStatus(AuthenticatedUser user, String feedbackId, FeedbackStatusUpdateRequest request) {
     if (!user.isAdmin()) {
       throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
@@ -91,41 +87,13 @@ public class FeedbackService {
     if (!StringUtils.hasText(status)) {
       throw new IllegalArgumentException("Durum gerekli.");
     }
-
-    List<FeedbackRecord> items = new ArrayList<>(load());
-    boolean updated = false;
-    List<FeedbackRecord> rewritten = new ArrayList<>(items.size());
-    for (FeedbackRecord item : items) {
-      if (item.id().equals(feedbackId)) {
-        rewritten.add(new FeedbackRecord(
-            item.id(),
-            item.userId(),
-            item.userName(),
-            item.userEmail(),
-            item.type(),
-            item.subject(),
-            item.message(),
-            status,
-            item.createdAt()
-        ));
-        updated = true;
-      } else {
-        rewritten.add(item);
-      }
-    }
-
-    if (!updated) {
-      throw new IllegalArgumentException("Geri bildirim bulunamadi.");
-    }
-
-    save(rewritten);
-    return rewritten.stream()
-        .filter(item -> item.id().equals(feedbackId))
-        .findFirst()
-        .map(this::toDto)
-        .orElseThrow(() -> new IllegalStateException("Geri bildirim guncellenemedi."));
+    FeedbackEntity entity = feedbackRepository.findById(feedbackId)
+        .orElseThrow(() -> new IllegalArgumentException("Geri bildirim bulunamadi."));
+    entity.setStatus(status);
+    return toDto(feedbackRepository.save(entity).toRecord());
   }
 
+  @Transactional
   public FeedbackRecordDto update(AuthenticatedUser user, String feedbackId, FeedbackUpdateRequest request) {
     if (!user.isAdmin()) {
       throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
@@ -147,77 +115,25 @@ public class FeedbackService {
       throw new IllegalArgumentException("Durum gerekli.");
     }
 
-    List<FeedbackRecord> items = new ArrayList<>(load());
-    boolean updated = false;
-    List<FeedbackRecord> rewritten = new ArrayList<>(items.size());
-    for (FeedbackRecord item : items) {
-      if (item.id().equals(feedbackId)) {
-        rewritten.add(new FeedbackRecord(
-            item.id(),
-            item.userId(),
-            item.userName(),
-            item.userEmail(),
-            type,
-            subject,
-            message,
-            status,
-            item.createdAt()
-        ));
-        updated = true;
-      } else {
-        rewritten.add(item);
-      }
-    }
-
-    if (!updated) {
-      throw new IllegalArgumentException("Geri bildirim bulunamadi.");
-    }
-
-    save(rewritten);
-    return rewritten.stream()
-        .filter(item -> item.id().equals(feedbackId))
-        .findFirst()
-        .map(this::toDto)
-        .orElseThrow(() -> new IllegalStateException("Geri bildirim guncellenemedi."));
+    FeedbackEntity entity = feedbackRepository.findById(feedbackId)
+        .orElseThrow(() -> new IllegalArgumentException("Geri bildirim bulunamadi."));
+    entity.update(type, subject, message, status);
+    return toDto(feedbackRepository.save(entity).toRecord());
   }
 
+  @Transactional
   public void delete(AuthenticatedUser user, String feedbackId) {
     if (!user.isAdmin()) {
       throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
     }
-    List<FeedbackRecord> items = new ArrayList<>(load());
-    List<FeedbackRecord> rewritten = items.stream()
-        .filter(item -> !item.id().equals(feedbackId))
-        .toList();
-    if (rewritten.size() == items.size()) {
+    if (!feedbackRepository.existsById(feedbackId)) {
       throw new IllegalArgumentException("Geri bildirim bulunamadi.");
     }
-    save(rewritten);
+    feedbackRepository.deleteById(feedbackId);
   }
 
   private FeedbackRecordDto toDto(FeedbackRecord record) {
     return new FeedbackRecordDto(record.id(), record.userName(), record.userEmail(), record.type(), record.subject(), record.message(), record.status(), record.createdAt());
-  }
-
-  private List<FeedbackRecord> load() {
-    if (!Files.exists(storagePath)) {
-      return new ArrayList<>();
-    }
-    try {
-      FeedbackStorePayload payload = objectMapper.readValue(Files.readString(storagePath), FeedbackStorePayload.class);
-      return payload.feedbackItems() == null ? new ArrayList<>() : new ArrayList<>(payload.feedbackItems());
-    } catch (IOException exception) {
-      throw new IllegalStateException("Geri bildirim verisi yuklenemedi: " + exception.getMessage(), exception);
-    }
-  }
-
-  private void save(List<FeedbackRecord> items) {
-    try {
-      Files.createDirectories(storagePath.getParent());
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(storagePath.toFile(), new FeedbackStorePayload(items));
-    } catch (IOException exception) {
-      throw new IllegalStateException("Geri bildirim verisi kaydedilemedi: " + exception.getMessage(), exception);
-    }
   }
 
   private String normalize(String value) {

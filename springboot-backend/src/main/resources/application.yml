@@ -9,6 +9,14 @@ spring:
     url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
     username: ${DATABASE_USERNAME:lawai}
     password: ${DATABASE_PASSWORD:lawai}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   servlet:
     multipart:
       resolve-lazily: true

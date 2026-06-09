@@ -1,15 +1,12 @@
-import json
 import math
 import unicodedata
 from dataclasses import dataclass
-from pathlib import Path
 
 import psycopg
 
 from app.models.schemas import KnowledgeDocumentRequest, PrecedentDto
 from app.settings import settings
 
-STORE_PATH = Path(__file__).resolve().parents[2] / "data" / "vector_store.json"
 STOPWORDS = {
     "bir", "bu", "su", "şu", "ve", "veya", "ile", "icin", "için", "gibi", "daha", "kisa", "kısa",
     "cevap", "ver", "nedir", "nelerdir", "hangi", "hakkinda", "hakkında", "merhaba", "selam",
@@ -48,14 +45,15 @@ class VectorEntry:
     embedding: list[float]
 
 
-class JsonVectorStore:
+class InMemoryVectorStore:
+    """Test/dev icin bellek ici vektor deposu; dosya sistemi kullanmaz."""
+
     def __init__(self) -> None:
-        self._entries: list[VectorEntry] = self._load()
+        self._entries: list[VectorEntry] = []
 
     def save_all(self, documents: list[KnowledgeDocumentRequest], embeddings: list[list[float]]) -> int:
         for document, embedding in zip(documents, embeddings):
             self._entries.append(VectorEntry(document=document, embedding=embedding))
-        self._persist()
         return len(documents)
 
     def has_entries(self) -> bool:
@@ -63,7 +61,6 @@ class JsonVectorStore:
 
     def clear(self) -> None:
         self._entries = []
-        STORE_PATH.unlink(missing_ok=True)
 
     def search(
         self,
@@ -106,32 +103,6 @@ class JsonVectorStore:
             summary=doc.summary,
             content=doc.content,
         )
-
-    def _load(self) -> list[VectorEntry]:
-        if not STORE_PATH.exists():
-            return []
-        try:
-            raw_entries = json.loads(STORE_PATH.read_text(encoding="utf-8"))
-            return [
-                VectorEntry(
-                    document=KnowledgeDocumentRequest.model_validate(item["document"]),
-                    embedding=[float(value) for value in item["embedding"]],
-                )
-                for item in raw_entries
-            ]
-        except Exception:
-            return []
-
-    def _persist(self) -> None:
-        STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        payload = [
-            {
-                "document": entry.document.model_dump(),
-                "embedding": entry.embedding,
-            }
-            for entry in self._entries
-        ]
-        STORE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
 class PgVectorStore:
@@ -286,9 +257,10 @@ class PgVectorStore:
 
 
 def create_vector_store():
-    if settings.vector_store.lower() == "pgvector":
-        return PgVectorStore()
-    return JsonVectorStore()
+    mode = settings.vector_store.lower()
+    if mode in {"memory", "json"}:
+        return InMemoryVectorStore()
+    return PgVectorStore()
 
 
 vector_store = create_vector_store()

@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     ai_provider: str = Field(default="local", validation_alias=AliasChoices("LAWAI_AI_PROVIDER", "AI_PROVIDER"))
-    vector_store: str = Field(default="json", validation_alias=AliasChoices("LAWAI_VECTOR_STORE", "VECTOR_STORE"))
+    vector_store: str = Field(default="pgvector", validation_alias=AliasChoices("LAWAI_VECTOR_STORE", "VECTOR_STORE"))
     database_url: str = Field(
         default="postgresql://lawai:lawai@localhost:5433/lawai",
         validation_alias=AliasChoices("DATABASE_URL", "LAWAI_DATABASE_URL"),

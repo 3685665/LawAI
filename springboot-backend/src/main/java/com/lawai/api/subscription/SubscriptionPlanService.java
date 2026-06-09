@@ -1,22 +1,25 @@
 package com.lawai.api.subscription;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.api.subscription.dto.SubscriptionPlanDto;
 import com.lawai.api.subscription.dto.SubscriptionPlanRequest;
 import com.lawai.api.subscription.dto.UserSubscriptionDto;
 import com.lawai.api.subscription.dto.UserSubscriptionRequest;
+import com.lawai.api.subscription.model.BillingEventRecord;
 import com.lawai.api.subscription.model.SubscriptionPlanRecord;
 import com.lawai.api.subscription.model.SubscriptionStorePayload;
 import com.lawai.api.subscription.model.UserSubscriptionRecord;
-import com.lawai.api.subscription.model.BillingEventRecord;
 import com.lawai.auth.model.AuthenticatedUser;
+import com.lawai.persistence.entity.BillingEventEntity;
+import com.lawai.persistence.entity.SubscriptionPlanEntity;
+import com.lawai.persistence.entity.UserSubscriptionEntity;
+import com.lawai.persistence.repository.BillingEventRepository;
+import com.lawai.persistence.repository.SubscriptionPlanRepository;
+import com.lawai.persistence.repository.UserSubscriptionRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -29,12 +32,18 @@ import java.util.UUID;
 @Service
 public class SubscriptionPlanService {
 
-  private final ObjectMapper objectMapper;
-  private final Path storagePath;
+  private final SubscriptionPlanRepository subscriptionPlanRepository;
+  private final UserSubscriptionRepository userSubscriptionRepository;
+  private final BillingEventRepository billingEventRepository;
 
-  public SubscriptionPlanService(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-    this.storagePath = Path.of(System.getProperty("user.dir"), "data", "subscription-store.json");
+  public SubscriptionPlanService(
+      SubscriptionPlanRepository subscriptionPlanRepository,
+      UserSubscriptionRepository userSubscriptionRepository,
+      BillingEventRepository billingEventRepository
+  ) {
+    this.subscriptionPlanRepository = subscriptionPlanRepository;
+    this.userSubscriptionRepository = userSubscriptionRepository;
+    this.billingEventRepository = billingEventRepository;
   }
 
   public List<SubscriptionPlanDto> listActive() {
@@ -88,13 +97,10 @@ public class SubscriptionPlanService {
 
   public void delete(AuthenticatedUser user, String id) {
     requireAdmin(user);
-    SubscriptionStorePayload store = loadStore();
-    List<SubscriptionPlanRecord> plans = new ArrayList<>(store.plans());
-    List<SubscriptionPlanRecord> rewritten = plans.stream().filter(item -> !item.id().equals(id)).toList();
-    if (rewritten.size() == plans.size()) {
+    if (!subscriptionPlanRepository.existsById(id)) {
       throw new IllegalArgumentException("Abonelik plani bulunamadi.");
     }
-    saveStore(new SubscriptionStorePayload(rewritten, store.userSubscriptions(), store.billingEvents()));
+    subscriptionPlanRepository.deleteById(id);
   }
 
   public UserSubscriptionDto mySubscription(AuthenticatedUser user) {
@@ -232,18 +238,16 @@ public class SubscriptionPlanService {
     return toDto(result);
   }
 
+  @Transactional(readOnly = true)
   public boolean hasProcessedBillingEvent(String provider, String eventId) {
-    return loadStore().billingEvents().stream()
-        .anyMatch(item -> item.provider().equalsIgnoreCase(provider) && item.eventId().equals(eventId));
+    return billingEventRepository.existsByProviderAndEventId(provider, eventId);
   }
 
+  @Transactional
   public void recordBillingEvent(String provider, String eventId, String eventType) {
-    SubscriptionStorePayload store = loadStore();
-    List<BillingEventRecord> events = new ArrayList<>(store.billingEvents());
-    if (events.stream().noneMatch(item -> item.provider().equalsIgnoreCase(provider) && item.eventId().equals(eventId))) {
-      events.add(new BillingEventRecord(provider, eventId, eventType, OffsetDateTime.now(ZoneOffset.UTC)));
+    if (!billingEventRepository.existsByProviderAndEventId(provider, eventId)) {
+      billingEventRepository.save(new BillingEventEntity(provider, eventId, eventType, OffsetDateTime.now(ZoneOffset.UTC)));
     }
-    saveStore(new SubscriptionStorePayload(store.plans(), store.userSubscriptions(), events));
   }
 
   public void activateStripeSubscription(String checkoutSessionId, String customerId, String subscriptionId, String paymentStatus) {
@@ -340,31 +344,26 @@ public class SubscriptionPlanService {
   }
 
   private SubscriptionStorePayload loadStore() {
-    if (!Files.exists(storagePath)) {
-      List<SubscriptionPlanRecord> defaults = defaults();
-      SubscriptionStorePayload store = new SubscriptionStorePayload(defaults, List.of(), List.of());
-      saveStore(store);
-      return store;
+    List<SubscriptionPlanRecord> plans = subscriptionPlanRepository.findAll().stream()
+        .map(SubscriptionPlanEntity::toRecord)
+        .toList();
+    if (plans.isEmpty()) {
+      plans = defaults();
+      subscriptionPlanRepository.saveAll(plans.stream().map(SubscriptionPlanEntity::fromRecord).toList());
     }
-    try {
-      SubscriptionStorePayload payload = objectMapper.readValue(Files.readString(storagePath), SubscriptionStorePayload.class);
-      return new SubscriptionStorePayload(
-          payload.plans() == null ? new ArrayList<>() : new ArrayList<>(payload.plans()),
-          payload.userSubscriptions() == null ? new ArrayList<>() : new ArrayList<>(payload.userSubscriptions()),
-          payload.billingEvents() == null ? new ArrayList<>() : new ArrayList<>(payload.billingEvents())
-      );
-    } catch (IOException exception) {
-      throw new IllegalStateException("Abonelik verisi yuklenemedi: " + exception.getMessage(), exception);
-    }
+    List<UserSubscriptionRecord> subscriptions = userSubscriptionRepository.findAll().stream()
+        .map(UserSubscriptionEntity::toRecord)
+        .toList();
+    List<BillingEventRecord> events = billingEventRepository.findAll().stream()
+        .map(BillingEventEntity::toRecord)
+        .toList();
+    return new SubscriptionStorePayload(new ArrayList<>(plans), new ArrayList<>(subscriptions), new ArrayList<>(events));
   }
 
   private void saveStore(SubscriptionStorePayload store) {
-    try {
-      Files.createDirectories(storagePath.getParent());
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(storagePath.toFile(), store);
-    } catch (IOException exception) {
-      throw new IllegalStateException("Abonelik verisi kaydedilemedi: " + exception.getMessage(), exception);
-    }
+    subscriptionPlanRepository.saveAll(store.plans().stream().map(SubscriptionPlanEntity::fromRecord).toList());
+    userSubscriptionRepository.saveAll(store.userSubscriptions().stream().map(UserSubscriptionEntity::fromRecord).toList());
+    billingEventRepository.saveAll(store.billingEvents().stream().map(BillingEventEntity::fromRecord).toList());
   }
 
   private List<SubscriptionPlanRecord> defaults() {

@@ -1,7 +1,7 @@
 import os
 
 os.environ["LAWAI_AI_PROVIDER"] = "local"
-os.environ["LAWAI_VECTOR_STORE"] = "json"
+os.environ["LAWAI_VECTOR_STORE"] = "memory"
 
 import pytest
 from fastapi.testclient import TestClient
