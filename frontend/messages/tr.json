@@ -16,8 +16,46 @@
   "auth": {
     "loading": "Oturum bilgisi kontrol ediliyor...",
     "heroEyebrow": "Kurumsal erisim",
-    "heroTitle": "Avukat ofisi icin guvenli oturum.",
-    "heroDescription": "Oturumlar HttpOnly cookie ile korunur. Hesap yonetimi, sifre kurtarma ve ilk kullanim akisi tek bir resmi panelde sunulur.",
+    "divider": "veya",
+    "google": {
+      "login": "Google ile giris yap",
+      "register": "Google ile kaydol"
+    },
+    "heroTitle": {
+      "login": "Hukuk calismaniza giris yapin.",
+      "register": "LawAI ile hemen kaydolun.",
+      "forgot": "Sifrenizi sifirlayin."
+    },
+    "heroDescription": {
+      "login": "Dosyalar, dilekceler ve emsal arama icin tek calisma alani.",
+      "register": "Kurum e-posta adresinizle guvenli bir hesap olusturun ve hukuki analizlere hizlica erisin.",
+      "forgot": "E-posta adresinizi girin, size bir sifirlama baglantisi gonderelim."
+    },
+    "tabs": {
+      "login": "Giris",
+      "register": "Kaydol",
+      "forgot": "Sifremi unuttum"
+    },
+    "registerSteps": [
+      {
+        "title": "1. Bilgilerinizi girin",
+        "text": "Kurum adinizi, e-postanizi ve guvenli parolanizi belirleyin."
+      },
+      {
+        "title": "2. Hesabinizi dogrulayin",
+        "text": "Gelen kutunuza gonderilen baglanti ile kaydinizi onaylayin."
+      },
+      {
+        "title": "3. LawAI ile calismaya baslayin",
+        "text": "Emsal arama, dilekce taslaklari ve dosya yonetimine erisin."
+      }
+    ],
+    "recovery": {
+      "resetTitle": "Sifirlama istegi alindi",
+      "resetHint": "E-posta kutunuzu kontrol edin. Baglanti birkac dakika icinde ulasir.",
+      "registerTitle": "Kaydiniz alindi",
+      "registerHint": "Kayit tamamlanmasi icin e-posta kutunuzu kontrol edin. Dogrulama baglantisi birkac dakika icinde ulasir."
+    },
     "points": {
       "cookieTitle": "HttpOnly cookie",
       "cookieText": "Parola tarayicida tutulmaz, oturum sunucu tarafinda dogrulanir.",

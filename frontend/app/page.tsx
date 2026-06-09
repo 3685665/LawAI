@@ -670,13 +670,14 @@ export default function Home() {
         client_id: googleClientId,
         callback: (response) => void handleGoogleCredential(response)
       });
+      const buttonWidth = Math.min(googleButtonRef.current.parentElement?.clientWidth ?? 360, 400);
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         theme: "outline",
         size: "large",
         type: "standard",
         shape: "rectangular",
-        text: "continue_with",
-        width: 320
+        text: authMode === "register" ? "signup_with" : "signin_with",
+        width: buttonWidth
       });
     };
 
@@ -2032,14 +2033,28 @@ export default function Home() {
     }
   }
 
+  const authTabIndex = authMode === "login" ? 0 : authMode === "register" ? 1 : 2;
+
   if (!authReady) {
     return (
       <main className="auth-shell">
-        <section className="auth-card panel">
-          <LoaderCircle className="spin" size={32} />
-          <h1>LawAI Studio</h1>
-          <p>{t.auth.loading}</p>
-        </section>
+        <div className="auth-ambient" aria-hidden="true">
+          <span className="auth-orb auth-orb-1" />
+          <span className="auth-orb auth-orb-2" />
+          <span className="auth-orb auth-orb-3" />
+        </div>
+        <div className="auth-page-wrap auth-page-wrap-centered">
+          <section className="auth-card auth-loading-card panel auth-card-animated">
+            <div className="auth-brand-icon auth-brand-icon-loading">
+              <Scale size={28} />
+            </div>
+            <LoaderCircle className="spin" size={28} />
+            <div>
+              <h1>LawAI Studio</h1>
+              <p>{t.auth.loading}</p>
+            </div>
+          </section>
+        </div>
       </main>
     );
   }
@@ -2047,134 +2062,135 @@ export default function Home() {
   if (!authUser) {
     return (
       <main className="auth-shell">
-        <section className="auth-card auth-card-split">
-          <div className="auth-hero" aria-hidden="true">
-            <div className="auth-brand-mark">
-              <Scale size={30} />
-              <span>LawAI</span>
-            </div>
-            <h1>
-              {authMode === "register"
-                ? "LawAI ile hemen kaydolun."
-                : authMode === "forgot"
-                ? "Şifrenizi sıfırlayın."
-                : "Hukuk çalışmanıza giriş yapın."}
-            </h1>
-            <p>
-              {authMode === "register"
-                ? "Kurum e-posta adresinizle güvenli bir hesap oluşturun ve hukuki analizlere hızlıca erişin."
-                : authMode === "forgot"
-                ? "E-posta adresinizi girin, size bir sıfırlama bağlantısı gönderelim."
-                : "Dosyalar, dilekçeler ve emsal arama için tek çalışma alanı."}
-            </p>
-          </div>
+        <div className="auth-ambient" aria-hidden="true">
+          <span className="auth-orb auth-orb-1" />
+          <span className="auth-orb auth-orb-2" />
+          <span className="auth-orb auth-orb-3" />
+          <span className="auth-grid-glow" />
+        </div>
 
-          <form className="auth-form" onSubmit={submitAuth}>
-            <div className="auth-form-head">
-              <span className="eyebrow">LawAI Studio</span>
-              <h2>{authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : "Sifremi unuttum"}</h2>
-              <p>{authMode === "login" ? "Devam etmek icin hesabinizla oturum acin." : authMode === "register" ? "Yeni kullanici bilgilerini girin." : "Sifre yenileme baglantisi isteyin."}</p>
-            </div>
-            <div className="auth-switch">
-              <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Giriş</button>
-              <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>Kaydol</button>
-              <button type="button" className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>Şifremi unuttum</button>
-            </div>
-
-            {authMode === "register" ? (
-              <div className="auth-register-flow">
-                <div className="auth-flow-step">
-                  <strong>1. Bilgilerinizi girin</strong>
-                  <span>Kurum adınızı, e-postanızı ve güvenli parolanızı belirleyin.</span>
+        <div className="auth-page-wrap auth-page-wrap-centered">
+          <section className="auth-card auth-card-centered panel auth-card-animated">
+            <div className="auth-card-header auth-animate-in" style={{ animationDelay: "0.05s" }}>
+              <div className="auth-topbar-brand">
+                <div className="auth-brand-icon">
+                  <Scale size={22} />
                 </div>
-                <div className="auth-flow-step">
-                  <strong>2. Hesabınızı doğrulayın</strong>
-                  <span>Gelen kutunuza gönderilen bağlantı ile kaydınızı onaylayın.</span>
-                </div>
-                <div className="auth-flow-step">
-                  <strong>3. LawAI ile çalışmaya başlayın</strong>
-                  <span>Emsal arama, dilekçe taslakları ve dosya yönetimine erişin.</span>
+                <div>
+                  <strong>LawAI Studio</strong>
+                  <span>{t.auth.heroEyebrow}</span>
                 </div>
               </div>
-            ) : null}
-
-            {authMode !== "forgot" ? (
-              <div className="google-auth-panel">
-                {googleClientId ? (
-                  <div className="google-auth-button" ref={googleButtonRef} />
-                ) : (
-                  <p className="auth-note auth-note-compact">Google ile kayit icin NEXT_PUBLIC_GOOGLE_CLIENT_ID ayarlayin.</p>
-                )}
-                {googleAuthError ? <div className="inline-error">{googleAuthError}</div> : null}
-                <div className="auth-divider"><span>veya</span></div>
-              </div>
-            ) : null}
-
-            <div className="auth-fields">
-              {authMode === "register" && (
-                <label className="field-label">
-                  Ad soyad
-                  <input autoComplete="name" value={authForm.name} onChange={(event) => setAuthForm({ ...authForm, name: event.target.value })} />
-                </label>
-              )}
-              {(authMode === "login" || authMode === "register" || authMode === "forgot") && (
-                <label className="field-label">
-                  E-posta
-                  <input autoComplete="email" type="email" placeholder="ornek@firma.com" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} />
-                </label>
-              )}
-              {(authMode === "login" || authMode === "register") && (
-                <label className="field-label">
-                  Sifre
-                  <input autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="En az 10 karakter" type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
-                </label>
-              )}
-              {authMode === "register" && (
-                <label className="field-label">
-                  Sifre tekrar
-                  <input autoComplete="new-password" type="password" value={authForm.confirmPassword} onChange={(event) => setAuthForm({ ...authForm, confirmPassword: event.target.value })} />
-                </label>
-              )}
-              {authMode === "login" && (
-                <label className="remember-row">
-                  <input type="checkbox" checked={authForm.rememberMe} onChange={(event) => setAuthForm({ ...authForm, rememberMe: event.target.checked })} />
-                  <span>Beni hatirla</span>
-                </label>
-              )}
             </div>
 
-            {authPreview ? (
-              <div className="auth-recovery-card">
-                <strong>Sifirlama istegi alindi</strong>
-                <span>{authPreview.message}</span>
-                <span>E-posta kutunuzu kontrol edin. Baglanti birkaç dakika icinde ulasir.</span>
+            <form className="auth-form" onSubmit={submitAuth}>
+              <div className="auth-form-head auth-animate-in" style={{ animationDelay: "0.12s" }}>
+                <h2 key={authMode}>{t.auth.title[authMode]}</h2>
+                <p>{t.auth.description[authMode]}</p>
               </div>
-            ) : null}
-            {registerResult ? (
-              <div className="auth-recovery-card">
-                <strong>Kaydınız alındı</strong>
-                <span>{registerResult.message}</span>
-                <span>Kayit tamamlanmasi icin e-posta kutunuzu kontrol edin. Dogrulama baglantisi birkaç dakika icinde ulasir.</span>
+
+              <div
+                className="auth-switch auth-animate-in"
+                role="tablist"
+                aria-label="LawAI Studio"
+                style={{ "--auth-tab-index": authTabIndex, animationDelay: "0.18s" } as React.CSSProperties}
+              >
+                <span aria-hidden="true" className="auth-switch-indicator" />
+                <button type="button" role="tab" aria-selected={authMode === "login"} className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>
+                  {t.auth.tabs.login}
+                </button>
+                <button type="button" role="tab" aria-selected={authMode === "register"} className={authMode === "register" ? "active" : ""} onClick={() => setAuthMode("register")}>
+                  {t.auth.tabs.register}
+                </button>
+                <button type="button" role="tab" aria-selected={authMode === "forgot"} className={authMode === "forgot" ? "active" : ""} onClick={() => setAuthMode("forgot")}>
+                  {t.auth.tabs.forgot}
+                </button>
               </div>
-            ) : null}
-            {authError ? <div className="error">{authError}</div> : null}
 
-            <div className="auth-actions">
-              <button disabled={authLoading} type="submit">
-                {authLoading ? <LoaderCircle className="spin" size={17} /> : null}
-                {authMode === "login" ? "Giris yap" : authMode === "register" ? "Hesap olustur" : "Sifirlama baglantisi iste"}
-              </button>
-            </div>
+              <div key={authMode} className="auth-mode-panel">
+                {authMode !== "forgot" ? (
+                  <div className="google-auth-panel">
+                    <span className="auth-google-label">
+                      {authMode === "register" ? t.auth.google.register : t.auth.google.login}
+                    </span>
+                    {googleClientId ? (
+                      <div className="google-auth-button" ref={googleButtonRef} />
+                    ) : (
+                      <p className="auth-note auth-note-compact">Google girisi icin NEXT_PUBLIC_GOOGLE_CLIENT_ID ayarlayin.</p>
+                    )}
+                    {googleAuthError ? <div className="inline-error">{googleAuthError}</div> : null}
+                    <div className="auth-divider"><span>{t.auth.divider}</span></div>
+                  </div>
+                ) : null}
 
-            <p className="auth-note">
-              {authMode === "forgot"
-                ? "E-posta adresiniz eşleşirse bir sıfırlama bağlantısı gönderilir."
-                : authMode === "register"
-                ? "Kaydolarak kullanım koşullarını ve gizlilik politikasını kabul etmiş olursunuz."
-                : "Bilgilerinizi girerek güvenli şekilde devam edin."}
-            </p>
-          </form>
-        </section>
+                <div className="auth-fields">
+                  {authMode === "register" && (
+                    <label className="field-label auth-field-animate" style={{ animationDelay: "0.04s" }}>
+                      {t.auth.labels.name}
+                      <input autoComplete="name" value={authForm.name} onChange={(event) => setAuthForm({ ...authForm, name: event.target.value })} />
+                    </label>
+                  )}
+                  {(authMode === "login" || authMode === "register" || authMode === "forgot") && (
+                    <label className="field-label auth-field-animate" style={{ animationDelay: authMode === "register" ? "0.08s" : "0.04s" }}>
+                      {t.auth.labels.email}
+                      <input autoComplete="email" type="email" placeholder="ornek@firma.com" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} />
+                    </label>
+                  )}
+                  {(authMode === "login" || authMode === "register") && (
+                    <label className="field-label auth-field-animate" style={{ animationDelay: "0.12s" }}>
+                      {t.auth.labels.password}
+                      <input autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="En az 10 karakter" type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} />
+                    </label>
+                  )}
+                  {authMode === "register" && (
+                    <label className="field-label auth-field-animate" style={{ animationDelay: "0.16s" }}>
+                      {t.auth.labels.confirm}
+                      <input autoComplete="new-password" type="password" value={authForm.confirmPassword} onChange={(event) => setAuthForm({ ...authForm, confirmPassword: event.target.value })} />
+                    </label>
+                  )}
+                  {authMode === "login" && (
+                    <div className="auth-form-meta auth-field-animate" style={{ animationDelay: "0.18s" }}>
+                      <label className="remember-row">
+                        <input type="checkbox" checked={authForm.rememberMe} onChange={(event) => setAuthForm({ ...authForm, rememberMe: event.target.checked })} />
+                        <span>{t.auth.labels.remember}</span>
+                      </label>
+                      <button className="auth-inline-link" type="button" onClick={() => setAuthMode("forgot")}>
+                        {t.auth.tabs.forgot}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {authPreview ? (
+                <div className="auth-recovery-card auth-status-animate">
+                  <CheckCircle2 size={18} />
+                  <div>
+                    <strong>{t.auth.recovery.resetTitle}</strong>
+                    <span>{t.auth.recovery.resetHint}</span>
+                  </div>
+                </div>
+              ) : null}
+              {registerResult ? (
+                <div className="auth-recovery-card auth-status-animate">
+                  <CheckCircle2 size={18} />
+                  <div>
+                    <strong>{t.auth.recovery.registerTitle}</strong>
+                    <span>{t.auth.recovery.registerHint}</span>
+                  </div>
+                </div>
+              ) : null}
+              {authError ? <div className="error auth-status-animate">{authError}</div> : null}
+
+              <div className="auth-actions auth-animate-in" style={{ animationDelay: "0.24s" }}>
+                <button className="auth-submit-button" disabled={authLoading} type="submit">
+                  {authLoading ? <LoaderCircle className="spin" size={17} /> : null}
+                  <span>{t.auth.labels[authMode]}</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       </main>
     );
   }

@@ -16,8 +16,46 @@
   "auth": {
     "loading": "Checking session...",
     "heroEyebrow": "Corporate access",
-    "heroTitle": "Secure sign-in for a law office.",
-    "heroDescription": "Sessions are protected with HttpOnly cookies. Account management, password recovery and onboarding are kept in one formal panel.",
+    "divider": "or",
+    "google": {
+      "login": "Sign in with Google",
+      "register": "Sign up with Google"
+    },
+    "heroTitle": {
+      "login": "Sign in to your legal workspace.",
+      "register": "Join LawAI in minutes.",
+      "forgot": "Reset your password."
+    },
+    "heroDescription": {
+      "login": "One workspace for cases, petitions and precedent research.",
+      "register": "Create a secure firm account and access legal analysis tools quickly.",
+      "forgot": "Enter your email and we will send you a secure reset link."
+    },
+    "tabs": {
+      "login": "Sign in",
+      "register": "Register",
+      "forgot": "Forgot password"
+    },
+    "registerSteps": [
+      {
+        "title": "1. Enter your details",
+        "text": "Provide your name, firm email and a secure password."
+      },
+      {
+        "title": "2. Verify your account",
+        "text": "Confirm your registration with the link sent to your inbox."
+      },
+      {
+        "title": "3. Start working with LawAI",
+        "text": "Access precedent search, petition drafts and case management."
+      }
+    ],
+    "recovery": {
+      "resetTitle": "Reset request received",
+      "resetHint": "Check your inbox. The link should arrive within a few minutes.",
+      "registerTitle": "Registration received",
+      "registerHint": "Check your inbox to complete registration. The verification link should arrive within a few minutes."
+    },
     "points": {
       "cookieTitle": "HttpOnly cookie",
       "cookieText": "Passwords are not stored in the browser; sessions are verified on the server.",
