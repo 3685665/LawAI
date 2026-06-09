@@ -60,9 +60,9 @@ public class AuthService {
   public AuthService(
       ObjectMapper objectMapper,
       EmailService emailService,
-      @Value("${app.auth.preview-reset-token:true}") boolean previewResetToken,
+      @Value("${app.auth.preview-reset-token:false}") boolean previewResetToken,
       @Value("${app.auth.reset-password-url-base:http://localhost:3000}") String resetPasswordUrlBase,
-      @Value("${app.auth.preview-verification-token:true}") boolean previewVerificationToken,
+      @Value("${app.auth.preview-verification-token:false}") boolean previewVerificationToken,
       @Value("${app.auth.verification-url-base:http://localhost:3000}") String verificationUrlBase,
       @Value("${app.auth.bootstrap-email:admin@lawai.local}") String bootstrapEmail,
       @Value("${app.auth.google-client-id:}") String googleClientId

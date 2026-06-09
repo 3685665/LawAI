@@ -6383,5 +6383,41 @@
     "detail" : "Dilekce taslagi olusturuldu.",
     "path" : "/api/petitions",
     "createdAt" : "2026-06-09T00:28:29.7552031Z"
+  }, {
+    "id" : "895c5bc9-9111-455f-8b8a-3a600eb2ff7b",
+    "userId" : "71c389dd-c170-4e1b-963f-be557ae92eb8",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Davalar",
+    "detail" : "Davalar ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-09T00:29:33.8124339Z"
+  }, {
+    "id" : "9e0b3994-ad5f-4d69-b4ff-c8d6cc38b4c8",
+    "userId" : "71c389dd-c170-4e1b-963f-be557ae92eb8",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-09T00:30:05.3271042Z"
+  }, {
+    "id" : "f3cb01a7-322c-4361-ad96-b83888cafc98",
+    "userId" : "71c389dd-c170-4e1b-963f-be557ae92eb8",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "uluveyuceceylanavci@gmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "auth-logout",
+    "screen" : "Oturum",
+    "detail" : "Kullanici cikis yapti.",
+    "path" : "/api/auth/logout",
+    "createdAt" : "2026-06-09T00:30:07.7367204Z"
   } ]
 }

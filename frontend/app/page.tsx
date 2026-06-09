@@ -2147,30 +2147,14 @@ export default function Home() {
               <div className="auth-recovery-card">
                 <strong>Sifirlama istegi alindi</strong>
                 <span>{authPreview.message}</span>
-                {authPreview.resetLinkPreview ? (
-                  <span>
-                    Gelistirme onizlemesi:{" "}
-                    <a href={authPreview.resetLinkPreview}>{authPreview.resetLinkPreview}</a>
-                  </span>
-                ) : (
-                  <span>E-posta kutunuzu kontrol edin. Baglanti birkaç dakika icinde ulasir.</span>
-                )}
+                <span>E-posta kutunuzu kontrol edin. Baglanti birkaç dakika icinde ulasir.</span>
               </div>
             ) : null}
             {registerResult ? (
               <div className="auth-recovery-card">
                 <strong>Kaydınız alındı</strong>
                 <span>{registerResult.message}</span>
-                {registerResult.verificationLinkPreview ? (
-                  <span>
-                    Doğrulama bağlantısı: <a href={registerResult.verificationLinkPreview}>{registerResult.verificationLinkPreview}</a>
-                  </span>
-                ) : registerResult.verificationTokenPreview ? (
-                  <span>
-                    Doğrulama token (geliştirme): {registerResult.verificationTokenPreview} — <a href={`/verify?token=${encodeURIComponent(registerResult.verificationTokenPreview)}`}>Doğrula</a>
-                  </span>
-                ) : null}
-                <p>Kayıt tamamlanması için e-posta kutunuzu kontrol edin.</p>
+                <span>Kayit tamamlanmasi icin e-posta kutunuzu kontrol edin. Dogrulama baglantisi birkaç dakika icinde ulasir.</span>
               </div>
             ) : null}
             {authError ? <div className="error">{authError}</div> : null}
