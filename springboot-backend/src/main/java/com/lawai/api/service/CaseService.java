@@ -404,7 +404,4 @@ public class CaseService {
       return new CaseRecordSnapshot(id, caseType, clientName, opponentName, courtName, subject, summary, documents, createdAt, updatedAt);
     }
   }
-
-  public record CaseStorePayload(List<CaseRecordSnapshot> cases) {
-  }
 }
