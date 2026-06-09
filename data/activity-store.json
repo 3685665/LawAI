@@ -6695,5 +6695,41 @@
     "detail" : "Dilekce taslagi olusturuldu.",
     "path" : "/api/petitions",
     "createdAt" : "2026-06-09T10:53:52.1045805Z"
+  }, {
+    "id" : "7cebb0bb-e4f0-4474-a048-3578e0a907bb",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Asistan",
+    "detail" : "Asistan ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-09T11:03:54.9948895Z"
+  }, {
+    "id" : "b0df184c-b04f-4045-97fe-da5710356dff",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "frontend",
+    "action" : "screen-view",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce Taslak ekrani goruntulendi.",
+    "path" : "/",
+    "createdAt" : "2026-06-09T11:04:20.2663843Z"
+  }, {
+    "id" : "f9d7258a-6479-4e3e-9f69-0320646f60d2",
+    "userId" : "e2f18917-ce9b-40d2-885b-5326b0c32c6e",
+    "userName" : "Ceylan Avci",
+    "userEmail" : "ceylan__avci@hotmail.com",
+    "role" : "USER",
+    "source" : "backend",
+    "action" : "petition-create",
+    "screen" : "Dilekce Taslak",
+    "detail" : "Dilekce taslagi olusturuldu.",
+    "path" : "/api/petitions",
+    "createdAt" : "2026-06-09T11:05:14.880436Z"
   } ]
 }

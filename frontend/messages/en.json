@@ -302,6 +302,7 @@
     "petitionReject": "Reject",
     "petitionExport": "Export",
     "petitionWord": "Word (.DOCX)",
+    "petitionExportFailed": "Could not create the Word file.",
     "petitionPdf": "PDF",
     "petitionUdf": "UDF",
     "petitionQualityHint": "If the petition is too short, switch to Premium or give more detailed smart editing instructions.",

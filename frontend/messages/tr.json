@@ -302,6 +302,7 @@
     "petitionReject": "Reddet",
     "petitionExport": "Disa aktarma",
     "petitionWord": "Word (.DOCX)",
+    "petitionExportFailed": "Word dosyasi olusturulamadi.",
     "petitionPdf": "PDF",
     "petitionUdf": "UDF",
     "petitionQualityHint": "Dilekceniz kisa veya yetersizse Premium modele gecin ya da akilli duzenleme ile daha detayli talimat verin.",

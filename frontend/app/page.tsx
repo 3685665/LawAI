@@ -40,6 +40,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { getMessages, isLocale, type Locale } from "@/lib/i18n";
+import { buildPetitionDocxBlob, sanitizePetitionFileName } from "@/lib/petitionExport";
 import {
   authChangePassword,
   authForgotPassword,
@@ -1799,19 +1800,24 @@ export default function Home() {
     setSelectedPetitionText("");
   }
 
-  function exportPetition(format: "docx" | "udf") {
+  async function exportPetition(format: "docx" | "udf") {
     if (!petitionResult) return;
-    const extension = format === "docx" ? "docx" : "udf";
-    const type = format === "docx"
-      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      : "text/plain;charset=utf-8";
-    const blob = new Blob([petitionResult.body], { type });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${petitionResult.title || "dilekce"}.${extension}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    const fileName = sanitizePetitionFileName(petitionResult.title || "dilekce");
+    try {
+      const blob =
+        format === "docx"
+          ? await buildPetitionDocxBlob(petitionResult.body)
+          : new Blob([petitionResult.body], { type: "text/plain;charset=utf-8" });
+      const extension = format === "docx" ? "docx" : "udf";
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${fileName}.${extension}`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t.tools.petitionExportFailed);
+    }
   }
 
   function printPetitionPdf() {
