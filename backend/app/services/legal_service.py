@@ -22,6 +22,9 @@ from app.models.schemas import (
     PrecedentApplyResponse,
     PrecedentSummarizeRequest,
     PrecedentSummarizeResponse,
+    LegalResearchSynthesizeRequest,
+    LegalResearchSynthesizeResponse,
+    ResearchSourceFinding,
 )
 from app.services.vector_store import normalize, vector_store
 from app.settings import settings
@@ -373,6 +376,21 @@ class LegalService:
         ]
         return self.ingest_knowledge(KnowledgeIngestRequest(documents=documents))
 
+    def synthesize_research(self, request: LegalResearchSynthesizeRequest) -> LegalResearchSynthesizeResponse:
+        context = self._format_research_findings(request.sourceResults)
+        if self.chat_model:
+            try:
+                answer = self._synthesize_research_with_ai(request.query, context)
+                return LegalResearchSynthesizeResponse(answer=answer, disclaimer=DISCLAIMER)
+            except Exception as exc:
+                fallback = self._local_research_synthesis(request.query, context)
+                fallback += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel sentez modu kullanildi. Detay: {exc}"
+                return LegalResearchSynthesizeResponse(answer=fallback, disclaimer=DISCLAIMER)
+        return LegalResearchSynthesizeResponse(
+            answer=self._local_research_synthesis(request.query, context),
+            disclaimer=DISCLAIMER,
+        )
+
     def search(self, query: str, court: str | None, chamber: str | None, limit: int, use_samples: bool = True) -> list[PrecedentDto]:
         if self.embeddings:
             try:
@@ -670,6 +688,43 @@ class LegalService:
             f"Metin uzunlugu: {len(content)} karakter.\n"
             f"Metinden alinti:\n{excerpt}\n\n"
             "Tam AI ozeti icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin."
+        )
+
+    def _format_research_findings(self, source_results: list[ResearchSourceFinding]) -> str:
+        labels = {
+            "LEGISLATION": "Mevzuat",
+            "CASE_LAW": "Ictihat",
+            "WEB": "Web/Kaynak",
+        }
+        blocks: list[str] = []
+        for item in source_results:
+            label = labels.get(item.source, item.source)
+            if item.findings:
+                findings = "\n".join(f"- {finding}" for finding in item.findings)
+            else:
+                findings = "- Sonuc bulunamadi."
+            blocks.append(f"[{label}]\n{findings}")
+        return "\n\n".join(blocks)
+
+    def _synthesize_research_with_ai(self, query: str, context: str) -> str:
+        prompt = (
+            "Turk hukuku odakli bir hukuki arastirma asistanisin.\n"
+            f"Kullanici sorusu:\n{query}\n\n"
+            f"Arastirma bulgulari:\n{context}\n\n"
+            "Yalnizca verilen bulgulara dayanarak kapsamli bir hukuki analiz yaz. "
+            "Basliklar halinde duzenle: Genel Degerlendirme, Mevzuat, Ictihat, Web Kaynaklari, Sonuc ve Oneriler. "
+            "Kaynak uydurma; bulgu yoksa acikca belirt. En fazla 600 kelime."
+        )
+        response = self.chat_model.invoke(prompt)
+        content = str(response.content).strip()
+        return content or self._local_research_synthesis(query, context)
+
+    def _local_research_synthesis(self, query: str, context: str) -> str:
+        return (
+            f"## Hukuki Arastirma Ozeti: {query}\n\n"
+            f"### Arastirma Bulgulari\n{context}\n\n"
+            "### Not\n"
+            "Tam LLM sentezi icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin."
         )
 
     def _format_citations(self, citations: list[PrecedentDto]) -> str:

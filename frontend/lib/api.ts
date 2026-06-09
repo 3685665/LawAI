@@ -470,3 +470,119 @@ async function readError(response: Response): Promise<string> {
     return `API istegi basarisiz: ${response.status}`;
   }
 }
+
+export type ResearchStepStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
+
+export type ResearchStep = {
+  type: string;
+  label: string;
+  status: ResearchStepStatus;
+};
+
+export type ResearchSourceResult = {
+  source: "LEGISLATION" | "CASE_LAW" | "WEB";
+  findings: string[];
+};
+
+export type LegalResearchResponse = {
+  plan: {
+    query: string;
+    sources: Array<"LEGISLATION" | "CASE_LAW" | "WEB">;
+  };
+  steps: ResearchStep[];
+  sourceResults: ResearchSourceResult[];
+  answer: string;
+  disclaimer: string;
+  sessionId?: string | null;
+};
+
+export type ResearchProgressEvent = {
+  event: "step" | "complete";
+  stepType?: string;
+  label?: string;
+  status?: ResearchStepStatus;
+  response?: LegalResearchResponse;
+};
+
+export async function runLegalResearch(query: string, sessionId?: string | null): Promise<LegalResearchResponse> {
+  return postJson<LegalResearchResponse>("/research/run", { query, sessionId: sessionId ?? null });
+}
+
+export async function streamLegalResearch(
+  query: string,
+  sessionId: string | null,
+  onStep: (step: ResearchStep) => void
+): Promise<LegalResearchResponse> {
+  const response = await fetch(`${API_BASE}/research/run/stream`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream"
+    },
+    body: JSON.stringify({ query, sessionId })
+  });
+
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  if (!response.body) {
+    throw new Error("SSE yanit akisi alinamadi.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed: LegalResearchResponse | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    buffer = consumeSseBuffer(buffer, (eventName, payload) => {
+      if (eventName === "error") {
+        const errorBody = JSON.parse(payload) as { detail?: string };
+        throw new Error(errorBody.detail ?? "Hukuki arastirma basarisiz.");
+      }
+      const event = JSON.parse(payload) as ResearchProgressEvent;
+      if (event.event === "step" && event.stepType && event.label && event.status) {
+        onStep({ type: event.stepType, label: event.label, status: event.status });
+      }
+      if (event.event === "complete" && event.response) {
+        completed = event.response;
+      }
+    });
+  }
+
+  if (!completed) {
+    throw new Error("Arastirma tamamlanmadi.");
+  }
+  return completed;
+}
+
+function consumeSseBuffer(buffer: string, onEvent: (eventName: string, payload: string) => void): string {
+  let working = buffer;
+  while (true) {
+    const boundary = working.indexOf("\n\n");
+    if (boundary < 0) {
+      return working;
+    }
+    const rawEvent = working.slice(0, boundary);
+    working = working.slice(boundary + 2);
+
+    let eventName = "message";
+    const dataLines: string[] = [];
+    for (const line of rawEvent.split("\n")) {
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trim());
+      }
+    }
+    if (dataLines.length) {
+      onEvent(eventName, dataLines.join("\n"));
+    }
+  }
+}

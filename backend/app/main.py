@@ -15,6 +15,8 @@ from app.models.schemas import (
     PrecedentApplyResponse,
     PrecedentSummarizeRequest,
     PrecedentSummarizeResponse,
+    LegalResearchSynthesizeRequest,
+    LegalResearchSynthesizeResponse,
 )
 from app.services.document_service import document_service
 from app.services.legal_service import legal_service
@@ -83,3 +85,8 @@ def ingest_knowledge(request: KnowledgeIngestRequest) -> KnowledgeIngestResponse
 @app.post("/api/knowledge/seed-precedents", response_model=KnowledgeIngestResponse)
 def seed_precedents() -> KnowledgeIngestResponse:
     return legal_service.seed_precedents()
+
+
+@app.post("/api/research/synthesize", response_model=LegalResearchSynthesizeResponse)
+def synthesize_research(request: LegalResearchSynthesizeRequest) -> LegalResearchSynthesizeResponse:
+    return legal_service.synthesize_research(request)

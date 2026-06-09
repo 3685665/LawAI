@@ -75,7 +75,10 @@ import {
   submitFeedback as postFeedback,
   type FeedbackStatus,
   type FeedbackRecord,
-  uploadMultipart
+  uploadMultipart,
+  runLegalResearch,
+  streamLegalResearch,
+  type ResearchStep
 } from "@/lib/api";
 
 type Tab = "chat" | "search" | "caseLaw" | "petition" | "cases" | "document" | "feedback" | "profile" | "settings" | "admin";
@@ -416,6 +419,8 @@ export default function Home() {
   const [chatAttachmentLoading, setChatAttachmentLoading] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState("");
+  const [researchMode, setResearchMode] = useState(true);
+  const [researchSteps, setResearchSteps] = useState<ResearchStep[]>([]);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseDraftRef = useRef("");
@@ -1096,8 +1101,102 @@ export default function Home() {
     return parts.join("\n");
   }
 
+  function buildResearchStepTemplate(): ResearchStep[] {
+    return [
+      { type: "PLAN_CREATED", label: t.tools.legalResearchStepPlan, status: "PENDING" },
+      { type: "LEGISLATION_IN_PROGRESS", label: t.tools.legalResearchStepLegislationIn, status: "PENDING" },
+      { type: "LEGISLATION_COMPLETED", label: t.tools.legalResearchStepLegislationDone, status: "PENDING" },
+      { type: "CASE_LAW_IN_PROGRESS", label: t.tools.legalResearchStepCaseLawIn, status: "PENDING" },
+      { type: "CASE_LAW_COMPLETED", label: t.tools.legalResearchStepCaseLawDone, status: "PENDING" },
+      { type: "WEB_IN_PROGRESS", label: t.tools.legalResearchStepWebIn, status: "PENDING" },
+      { type: "WEB_COMPLETED", label: t.tools.legalResearchStepWebDone, status: "PENDING" },
+      { type: "FINAL_ANSWER", label: t.tools.legalResearchStepFinal, status: "PENDING" }
+    ];
+  }
+
+  function updateResearchStep(step: ResearchStep) {
+    setResearchSteps((current) => {
+      const base = current.length ? current : buildResearchStepTemplate();
+      const stepIndex = base.findIndex((item) => item.type === step.type);
+      return base.map((item, index) => {
+        if (item.type === step.type) {
+          return { ...item, label: step.label, status: step.status };
+        }
+        if (stepIndex >= 0 && index < stepIndex && item.status !== "COMPLETED") {
+          return { ...item, status: "COMPLETED" };
+        }
+        return item;
+      });
+    });
+  }
+
+  function submitLegalResearch() {
+    const query = smartNoteDraft.trim();
+    if (!query) {
+      setError(t.tools.legalResearchEmpty);
+      return;
+    }
+
+    const userMessage = query;
+    setChatMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: "user", text: userMessage }
+    ]);
+    setSmartNoteDraft("");
+    setChatAttachment(null);
+    setResearchSteps(buildResearchStepTemplate());
+
+    void (async () => {
+      setLoading("legal-research");
+      setError("");
+      try {
+        const response = await streamLegalResearch(query, activeChatSessionId, updateResearchStep).catch(async () => {
+          return runLegalResearch(query, activeChatSessionId);
+        });
+        setResearchSteps(response.steps.map((step) => ({
+          type: step.type,
+          label: step.label,
+          status: step.status
+        })));
+        setChatResponse({
+          answer: response.answer,
+          citations: [],
+          disclaimer: response.disclaimer,
+          sessionId: response.sessionId ?? undefined
+        });
+        if (response.sessionId) {
+          setActiveChatSessionId(response.sessionId);
+        }
+        setChatMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: response.answer,
+            citations: [],
+            disclaimer: response.disclaimer
+          }
+        ]);
+        await loadChatSessions();
+      } catch (err) {
+        setResearchSteps([]);
+        const message = err instanceof Error ? err.message : "Beklenmeyen hata";
+        if (message.toLowerCase().includes("oturum") || message.includes("401")) {
+          setAuthUser(null);
+        }
+        setError(message);
+      } finally {
+        setLoading("");
+      }
+    })();
+  }
+
   function submitChat(event: FormEvent) {
     event.preventDefault();
+    if (researchMode) {
+      submitLegalResearch();
+      return;
+    }
     const draft = smartNoteDraft.trim();
     const notesForPrompt = draft
       ? [{ id: "draft", text: draft, createdAt: new Date().toISOString() }]
@@ -1180,6 +1279,7 @@ export default function Home() {
   }
 
   function startNewChat() {
+    setResearchSteps([]);
     setActiveChatSessionId(null);
     setChatMessages([]);
     setChatResponse(null);
@@ -2380,13 +2480,13 @@ export default function Home() {
                   </div>
                   <p className="law-chat-kicker">
                     <Sparkles size={16} />
-                    Belgeli, hizli ve izlenebilir hukuk analizi
+                    {researchMode ? "Planli arastirma, coklu kaynak, kapsamli hukuki analiz" : "Belgeli, hizli ve izlenebilir hukuk analizi"}
                   </p>
-                  <h1>Hos geldiniz, ne yapmak istersiniz?</h1>
+                  <h1>{researchMode ? "Hukuki arastirma asistanina sorun" : "Hos geldiniz, ne yapmak istersiniz?"}</h1>
                   <div className="law-chat-signals" aria-label="Asistan ozellikleri">
                     <span><ShieldCheck size={16} /> Gizli calisma modu</span>
-                    <span><Clock3 size={16} /> Dakikalar icinde on analiz</span>
-                    <span><FileSearch size={16} /> Belge destekli yanit</span>
+                    <span><Clock3 size={16} /> {researchMode ? "Adim adim arastirma akisi" : "Dakikalar icinde on analiz"}</span>
+                    <span><FileSearch size={16} /> {researchMode ? "Mevzuat, ictihat ve web" : "Belge destekli yanit"}</span>
                   </div>
                 </header>
 
@@ -2410,6 +2510,22 @@ export default function Home() {
                         </p>
                       </article>
                     ) : null}
+                    {loading === "legal-research" && researchSteps.length ? (
+                      <section className="law-research-steps" aria-live="polite" aria-label={t.tools.legalResearchRunning}>
+                        <header>
+                          <LoaderCircle className="spin" size={18} />
+                          <strong>{t.tools.legalResearchRunning}</strong>
+                        </header>
+                        <ol>
+                          {researchSteps.map((step) => (
+                            <li key={step.type} className={`law-research-step ${step.status.toLowerCase()}`}>
+                              {step.status === "COMPLETED" ? <CheckCircle2 size={16} /> : <LoaderCircle className={step.status === "IN_PROGRESS" ? "spin" : ""} size={16} />}
+                              <span>{step.label}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </section>
+                    ) : null}
                     {chatResponse ? (
                       <button className="law-chat-download" type="button" onClick={downloadSmartNotesPdf}>
                         <FileText size={17} />
@@ -2420,24 +2536,37 @@ export default function Home() {
                 ) : (
                   <section className="law-chat-prompts" aria-label="Ornek asistan kullanimlari">
                     <article>
-                      <FileText size={20} />
-                      <strong>Belgeyi ozetle</strong>
-                      <p>Dilekce, sozlesme veya tutanaktaki hukuki riskleri hizlica cikar.</p>
+                      <Scale size={20} />
+                      <strong>Agir cezalar</strong>
+                      <p>Mevzuat, ictihat ve web kaynaklarinda planli arastirma yap.</p>
                     </article>
                     <article>
-                      <Scale size={20} />
-                      <strong>Dava stratejisi kur</strong>
-                      <p>Eksik delilleri, durusma notlarini ve sonraki adimlari planla.</p>
+                      <FileText size={20} />
+                      <strong>Kira artis orani</strong>
+                      <p>Guncel mevzuat ve Yargitay kararlarini birlikte incele.</p>
                     </article>
                     <article>
                       <MessageSquareMore size={20} />
-                      <strong>Net soru sor</strong>
-                      <p>Kisa bir olay anlat, uygulanabilir cevap ve kontrol listesi al.</p>
+                      <strong>Ise iade davasi</strong>
+                      <p>Is hukuku konusunda kapsamli hukuki arastirma baslat.</p>
                     </article>
                   </section>
                 )}
 
                 <form className="law-chat-composer" onSubmit={submitChat}>
+                  <div className="law-research-mode-toggle">
+                    <button
+                      className={`law-chat-tool ${researchMode ? "active" : ""}`}
+                      type="button"
+                      onClick={() => setResearchMode((current) => !current)}
+                      title={t.tools.legalResearchModeHint}
+                    >
+                      <Search size={18} />
+                      <span>{t.tools.legalResearchMode}</span>
+                    </button>
+                    {researchMode ? <small>{t.tools.legalResearchModeHint}</small> : null}
+                  </div>
+                  {!researchMode ? (
                   <input
                     ref={chatFileInputRef}
                     accept={acceptedExtensions.join(",")}
@@ -2445,13 +2574,14 @@ export default function Home() {
                     onChange={(event) => void attachChatDocument(event.target.files?.[0] ?? null)}
                     type="file"
                   />
+                  ) : null}
                   <textarea
                     value={smartNoteDraft}
                     onChange={(event) => setSmartNoteDraft(event.target.value)}
-                    placeholder="Bana bir soru sor..."
+                    placeholder={researchMode ? "Orn: agir cezalar, nitelikli dolandiricilik, ise iade davasi..." : "Bana bir soru sor..."}
                     rows={4}
                   />
-                  {chatAttachment ? (
+                  {chatAttachment && !researchMode ? (
                     <div className="law-chat-attachment">
                       <FileText size={17} />
                       <span>{chatAttachment.filename}</span>
@@ -2463,17 +2593,28 @@ export default function Home() {
                   ) : null}
                   <div className="law-chat-composer-tools">
                     <div>
+                      {!researchMode ? (
                       <button className="law-chat-tool" type="button" onClick={() => chatFileInputRef.current?.click()} disabled={chatAttachmentLoading} title="Belge ekle">
                         {chatAttachmentLoading ? <LoaderCircle className="spin" size={18} /> : <Upload size={18} />}
                         <span>Belge ekle</span>
                       </button>
+                      ) : null}
                       <button className={`law-chat-tool ${voiceListening ? "active" : ""}`} type="button" onClick={() => void startVoiceInput()} title="Sesli ara">
                         <Mic size={18} />
                         <span>{voiceListening ? "Dinleniyor" : "Sesli ara"}</span>
                       </button>
                     </div>
-                    <button className="law-chat-send" disabled={loading === "chat" || chatAttachmentLoading || (!smartNoteDraft.trim() && !chatAttachment)} type="submit">
-                      {loading === "chat" ? <LoaderCircle className="spin" size={22} /> : <Send size={22} />}
+                    <button
+                      className="law-chat-send"
+                      disabled={
+                        loading === "chat"
+                        || loading === "legal-research"
+                        || chatAttachmentLoading
+                        || (researchMode ? !smartNoteDraft.trim() : (!smartNoteDraft.trim() && !chatAttachment))
+                      }
+                      type="submit"
+                    >
+                      {loading === "chat" || loading === "legal-research" ? <LoaderCircle className="spin" size={22} /> : <Send size={22} />}
                     </button>
                   </div>
                   {voiceNotice ? <p className="law-chat-voice-notice">{voiceNotice}</p> : null}

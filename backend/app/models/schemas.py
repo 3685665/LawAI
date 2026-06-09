@@ -155,3 +155,18 @@ class PdfTextExtractionResponse(BaseModel):
     filename: str
     extractedCharacters: int
     text: str
+
+
+class ResearchSourceFinding(BaseModel):
+    source: str
+    findings: list[str]
+
+
+class LegalResearchSynthesizeRequest(BaseModel):
+    query: str = Field(min_length=1)
+    sourceResults: list[ResearchSourceFinding]
+
+
+class LegalResearchSynthesizeResponse(BaseModel):
+    answer: str
+    disclaimer: str

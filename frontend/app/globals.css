@@ -2591,6 +2591,71 @@ body[data-theme="dark"] .auth-card-animated {
   margin: -4px 0 0;
 }
 
+.law-research-mode-toggle {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.law-research-mode-toggle small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.law-research-steps {
+  background: color-mix(in srgb, var(--panel) 92%, var(--accent) 8%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 1500px;
+  padding: 18px 20px;
+  width: 100%;
+}
+
+.law-research-steps header {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  font-size: 14px;
+  gap: 10px;
+}
+
+.law-research-steps ol {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.law-research-step {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 14px;
+  gap: 10px;
+}
+
+.law-research-step.in_progress {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.law-research-step.completed {
+  color: var(--text);
+}
+
+.law-research-step svg {
+  flex-shrink: 0;
+}
+
+.law-research-step.completed svg {
+  color: #16a34a;
+}
+
 .law-chat-thread {
   background: var(--panel);
   border: 1px solid var(--line);

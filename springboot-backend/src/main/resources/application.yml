@@ -38,6 +38,11 @@ server:
 
 app:
   ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
+  research:
+    mock-enabled: ${RESEARCH_MOCK_ENABLED:false}
+    legislation-search-limit: ${RESEARCH_LEGISLATION_LIMIT:5}
+    case-law-search-limit: ${RESEARCH_CASE_LAW_LIMIT:5}
+    web-search-limit: ${RESEARCH_WEB_LIMIT:3}
   max-upload-mb: ${MAX_UPLOAD_MB:25}
   document:
     upload-dir: ${DOCUMENT_UPLOAD_DIR:uploads/documents}

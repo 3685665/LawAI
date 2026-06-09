@@ -14,6 +14,8 @@ import com.lawai.api.dto.PrecedentApplyRequest;
 import com.lawai.api.dto.PrecedentApplyResponse;
 import com.lawai.api.dto.PrecedentSummarizeRequest;
 import com.lawai.api.dto.PrecedentSummarizeResponse;
+import com.lawai.api.research.dto.LegalResearchSynthesizeRequest;
+import com.lawai.api.research.dto.LegalResearchSynthesizeResponse;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
@@ -85,6 +87,11 @@ public class AiServiceClient {
   public KnowledgeIngestResponse seedPrecedents() {
     String response = send(post("/knowledge/seed-precedents", null));
     return fromJson(response, KnowledgeIngestResponse.class);
+  }
+
+  public LegalResearchSynthesizeResponse synthesizeResearch(LegalResearchSynthesizeRequest request) {
+    String response = send(post("/research/synthesize", toJson(request)));
+    return fromJson(response, LegalResearchSynthesizeResponse.class);
   }
 
   private String send(HttpUriRequestBase request) {

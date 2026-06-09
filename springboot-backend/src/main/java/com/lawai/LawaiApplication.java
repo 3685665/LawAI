@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties({AppProperties.class, DocumentProcessingProperties.class, OpenSearchProperties.class})
+@EnableConfigurationProperties({AppProperties.class, DocumentProcessingProperties.class, OpenSearchProperties.class, com.lawai.config.ResearchProperties.class})
 public class LawaiApplication {
 
   public static void main(String[] args) {
