@@ -19,6 +19,7 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
+  Printer,
   KeyRound,
   LoaderCircle,
   Mic,
@@ -2865,33 +2866,63 @@ export default function Home() {
                 </div>
               </form>
 
-              <section className="panel petition-draft-panel petition-animate-in" style={{ animationDelay: "0.18s" }}>
-                <div className="petition-draft-toolbar">
-                  <div className="petition-draft-heading">
-                    <span className="section-label">{t.tools.petitionDraft}</span>
-                    <h3>{petitionResult?.title ?? t.tools.petitionDraft}</h3>
+              <section className="petition-draft-panel petition-animate-in" style={{ animationDelay: "0.18s" }}>
+                <header className="petition-draft-header">
+                  <div className="petition-draft-identity">
+                    <div className="petition-draft-badge" aria-hidden="true">
+                      <ScrollText size={18} />
+                    </div>
+                    <div className="petition-draft-copy">
+                      <span className="petition-draft-eyebrow">{t.tools.petitionDraft}</span>
+                      <h3 className="petition-draft-title">{petitionResult?.title ?? t.tools.petitionDraftPlaceholder}</h3>
+                    </div>
                   </div>
-                  <div className="petition-export-actions">
-                    <span className="petition-export-label">{t.tools.petitionExport}</span>
-                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>{t.tools.petitionWord}</button>
-                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>{t.tools.petitionPdf}</button>
-                    <button className="petition-export-chip" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>{t.tools.petitionUdf}</button>
+                  <div className="petition-export-group" role="group" aria-label={t.tools.petitionExport}>
+                    <button className="petition-export-btn" disabled={!petitionResult} type="button" onClick={() => exportPetition("docx")}>
+                      <FileText size={15} />
+                      <span>{t.tools.petitionWord}</span>
+                    </button>
+                    <button className="petition-export-btn" disabled={!petitionResult} type="button" onClick={printPetitionPdf}>
+                      <Printer size={15} />
+                      <span>{t.tools.petitionPdf}</span>
+                    </button>
+                    <button className="petition-export-btn" disabled={!petitionResult} type="button" onClick={() => exportPetition("udf")}>
+                      <FileUp size={15} />
+                      <span>{t.tools.petitionUdf}</span>
+                    </button>
                   </div>
-                </div>
+                </header>
+
+                {petitionResult ? (
+                  <div className="petition-draft-stats" aria-live="polite">
+                    <span>
+                      <strong>{petitionResult.body.split(/\r?\n/).length}</strong> {t.tools.petitionLineCount}
+                    </span>
+                    <span>
+                      <strong>{petitionResult.body.length}</strong> {t.tools.petitionCharCount}
+                    </span>
+                  </div>
+                ) : null}
 
                 <div className={`petition-draft-surface ${petitionResult ? "is-filled" : "is-empty"}`}>
                   {petitionResult ? (
-                    <>
-                      <textarea className="petition-draft-textarea" value={petitionResult.body} onChange={(event) => setPetitionResult({ ...petitionResult, body: event.target.value })} onSelect={selectedTextFromEvent} />
-                      <CitationList citations={petitionResult.citedPrecedents} />
-                    </>
+                    <textarea
+                      className="petition-draft-textarea"
+                      value={petitionResult.body}
+                      onChange={(event) => setPetitionResult({ ...petitionResult, body: event.target.value })}
+                      onSelect={selectedTextFromEvent}
+                      spellCheck={false}
+                    />
                   ) : (
                     <div className="petition-empty-state">
-                      <div className="petition-empty-icon" aria-hidden="true">
-                        <ScrollText size={34} />
+                      <div className="petition-empty-visual" aria-hidden="true">
+                        <div className="petition-empty-sheet petition-empty-sheet-back" />
+                        <div className="petition-empty-sheet petition-empty-sheet-front">
+                          <ScrollText size={22} strokeWidth={1.6} />
+                        </div>
                       </div>
-                      <strong>{t.tools.petitionDraft}</strong>
-                      <p>{t.tools.petitionEmpty}</p>
+                      <p className="petition-empty-title">{t.tools.petitionDraft}</p>
+                      <p className="petition-empty-copy">{t.tools.petitionEmpty}</p>
                     </div>
                   )}
                 </div>
