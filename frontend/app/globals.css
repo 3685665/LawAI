@@ -3434,15 +3434,21 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 }
 
 .petition-assistant-layout {
-  align-items: start;
+  align-items: stretch;
   display: grid;
   gap: 20px;
   grid-template-columns: minmax(320px, 0.82fr) minmax(520px, 1.18fr);
 }
 
+.petition-assistant-layout > .petition-builder-panel,
+.petition-assistant-layout > .petition-draft-panel {
+  height: 100%;
+  min-height: 100%;
+}
+
 .petition-builder-panel {
-  align-content: start;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -3516,6 +3522,7 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 
 .petition-submit-row {
   display: grid;
+  margin-top: auto;
   padding-top: 4px;
 }
 
@@ -3555,11 +3562,10 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow-soft);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0;
   overflow: hidden;
-  position: sticky;
-  top: 24px;
   z-index: 1;
 }
 
@@ -3688,8 +3694,9 @@ body[data-theme="dark"] .law-chat-message.assistant p {
 
 .petition-draft-surface {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  min-height: 520px;
+  min-height: 0;
   padding: 16px;
   transition: background 0.24s ease;
 }
@@ -3935,9 +3942,9 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   font-size: 15px;
   font-weight: 400;
   line-height: 1.75;
-  min-height: 500px;
+  min-height: 0;
   padding: 28px 32px;
-  resize: vertical;
+  resize: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   width: 100%;
 }
@@ -5521,9 +5528,10 @@ body[data-theme="dark"] .petition-linked-precedents li {
     top: auto;
   }
 
-  .petition-draft-panel {
-    position: static;
-    top: auto;
+  .petition-assistant-layout > .petition-builder-panel,
+  .petition-assistant-layout > .petition-draft-panel {
+    height: auto;
+    min-height: 0;
   }
 
   .petition-draft-header {
@@ -5541,11 +5549,11 @@ body[data-theme="dark"] .petition-linked-precedents li {
   }
 
   .petition-draft-surface {
-    min-height: 380px;
+    min-height: 320px;
   }
 
   .petition-draft-textarea {
-    min-height: 340px;
+    min-height: 280px;
     padding: 22px 20px;
   }
 
