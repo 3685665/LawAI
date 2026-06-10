@@ -2785,7 +2785,6 @@ export default function Home() {
                 <span>LawAI Studio</span>
               </div>
               <div className="precedent-hero-copy">
-                <span className="eyebrow">{locale === "en" ? "Court of Cassation, Council of State and Constitutional Court" : "Yargitay, Danistay ve Anayasa Mahkemesi ictihat arama"}</span>
                 <h1>{locale === "en" ? "Case-Law Search" : "Ictihat Arama"}</h1>
                 <p>{locale === "en" ? "Enter the legal issue, fetch matching Court of Cassation, Council of State and Constitutional Court decisions, and open any record to read the full decision text." : "Aramaniza gore Yargitay, Danistay ve Anayasa Mahkemesi kararlarini getirir; listeden bir karara basinca tam karar metni acilir."}</p>
               </div>
