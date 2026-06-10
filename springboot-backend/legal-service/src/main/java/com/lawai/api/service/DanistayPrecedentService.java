@@ -63,12 +63,16 @@ public class DanistayPrecedentService {
     String normalizedDocumentId = normalizeDocumentId(documentId);
     try {
       String html = sendGetDocument(normalizedDocumentId, "");
-      String content = extractContent(html);
-      String cleanContent = cleanText(content);
-      Header header = parseHeader(cleanContent);
+      String rawContent = extractContent(html);
+      String contentHtml = PrecedentHtmlSupport.sanitizeHtml(rawContent);
+      String plainText = PrecedentHtmlSupport.toPlainText(contentHtml);
+      Header header = parseHeader(plainText);
       String topic = header.chamber().isBlank()
           ? "Danistay karari"
           : header.chamber() + " - " + docketLabel(header.docketNo(), header.decisionNo());
+      String subject = PrecedentTextSupport.extractSubject(plainText);
+      String outcome = PrecedentTextSupport.extractOutcome(plainText);
+      String summary = subject.isBlank() ? preview(plainText, 650) : subject;
       return new PrecedentDto(
           normalizedDocumentId,
           "Danistay",
@@ -77,8 +81,9 @@ public class DanistayPrecedentService {
           header.decisionNo(),
           null,
           topic,
-          preview(cleanContent, 650),
-          cleanContent
+          summary,
+          contentHtml.isBlank() ? plainText : contentHtml,
+          outcome.isBlank() ? null : outcome
       );
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Danistay karar detayi alinamadi: " + exception.getMessage(), exception);
@@ -149,7 +154,8 @@ public class DanistayPrecedentService {
           decisionNo,
           date.isBlank() ? null : date,
           topic,
-          "Karar metnini gormek icin listeden bu karara tiklayin.",
+          "",
+          null,
           null
       ));
     }

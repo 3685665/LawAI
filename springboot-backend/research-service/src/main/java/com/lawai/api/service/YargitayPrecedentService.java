@@ -65,8 +65,10 @@ public class YargitayPrecedentService {
     BasicCookieStore cookieStore = new BasicCookieStore();
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
-      String content = getDocumentText(client, normalizedId);
-      YargitayHeader header = parseHeader(content);
+      String rawHtml = repairMojibake(getDocumentHtml(client, normalizedId));
+      String contentHtml = PrecedentHtmlSupport.sanitizeHtml(rawHtml);
+      String plainText = repairMojibake(PrecedentHtmlSupport.toPlainText(contentHtml));
+      YargitayHeader header = parseHeader(plainText);
       return toDetailPrecedent(new YargitayRow(
           normalizedId,
           header.chamber(),
@@ -74,7 +76,7 @@ public class YargitayPrecedentService {
           header.decisionNo(),
           "",
           ""
-      ), content);
+      ), contentHtml, plainText);
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Yargitay karar detayi alinamadi: " + exception.getMessage(), exception);
     }
@@ -165,11 +167,10 @@ public class YargitayPrecedentService {
     return results;
   }
 
-  private String getDocumentText(CloseableHttpClient client, String documentId) throws IOException, ParseException {
+  private String getDocumentHtml(CloseableHttpClient client, String documentId) throws IOException, ParseException {
     String url = BASE_URL + "/getDokuman?id=" + URLEncoder.encode(documentId, StandardCharsets.UTF_8);
     String json = sendGet(client, url);
-    String html = objectMapper.readTree(json).path("data").asText("");
-    return htmlToText(html);
+    return objectMapper.readTree(json).path("data").asText("");
   }
 
   private PrecedentDto toListPrecedent(YargitayRow row) {
@@ -183,15 +184,20 @@ public class YargitayPrecedentService {
         docketLabel(row.decisionNo(), "K."),
         row.date().isBlank() ? null : row.date(),
         title,
-        "Karar metnini gormek icin listeden bu karara tiklayin.",
+        "",
+        null,
         null
     );
   }
 
-  private PrecedentDto toDetailPrecedent(YargitayRow row, String content) {
+  private PrecedentDto toDetailPrecedent(YargitayRow row, String contentHtml, String plainText) {
     String chamber = row.chamber().isBlank() ? "Yargitay" : row.chamber();
     String title = chamber + " - " + docketLabel(row.docketNo(), "E.") + " / " + docketLabel(row.decisionNo(), "K.");
-    String normalizedContent = content.isBlank() ? title : content;
+    String normalizedPlain = plainText.isBlank() ? title : plainText;
+    String displayHtml = contentHtml.isBlank() ? "" : contentHtml;
+    String subject = PrecedentTextSupport.extractSubject(normalizedPlain);
+    String outcome = PrecedentTextSupport.extractOutcome(normalizedPlain);
+    String summary = subject.isBlank() ? preview(normalizedPlain, 650) : subject;
     return new PrecedentDto(
         row.id(),
         "Yargitay",
@@ -200,8 +206,9 @@ public class YargitayPrecedentService {
         docketLabel(row.decisionNo(), "K."),
         row.date().isBlank() ? null : row.date(),
         title,
-        preview(normalizedContent, 650),
-        normalizedContent
+        summary,
+        displayHtml.isBlank() ? normalizedPlain : displayHtml,
+        outcome.isBlank() ? null : outcome
     );
   }
 
@@ -257,25 +264,6 @@ public class YargitayPrecedentService {
       throw new IllegalArgumentException("Gecersiz Yargitay karar ID.");
     }
     return normalized;
-  }
-
-  private String htmlToText(String html) {
-    if (html == null || html.isBlank()) {
-      return "";
-    }
-    String text = html
-        .replaceAll("(?is)<script.*?</script>", " ")
-        .replaceAll("(?is)<style.*?</style>", " ")
-        .replaceAll("(?i)<br\\s*/?>", "\n")
-        .replaceAll("(?i)</p>", "\n")
-        .replaceAll("(?i)</li>", "\n")
-        .replaceAll("(?s)<[^>]+>", " ");
-    text = HtmlUtils.htmlUnescape(text);
-    text = text.replace('\u00a0', ' ');
-    text = text.replaceAll("[ \\t\\x0B\\f\\r]+", " ");
-    text = text.replaceAll("\\n\\s+", "\n");
-    text = text.replaceAll("\\n{3,}", "\n\n");
-    return repairMojibake(text.trim());
   }
 
   private String docketLabel(String value, String suffix) {

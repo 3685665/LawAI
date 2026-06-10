@@ -48,6 +48,12 @@ import { findNavGroupForTab } from "@/lib/app-navigation";
 import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 import { buildPetitionDocxBlob, sanitizePetitionFileName } from "@/lib/petitionExport";
 import {
+  getPrecedentPlainContent,
+  isPrecedentHtmlContent,
+  isPrecedentSectionHeading,
+  splitPrecedentPlainSections
+} from "@/lib/precedentDocument";
+import {
   authChangePassword,
   authForgotPassword,
   authGoogle,
@@ -201,6 +207,46 @@ function getPrecedentKey(item: Precedent, index: number) {
     return `${item.court}:${item.sourceId}`;
   }
   return `${item.court}:${item.docketNo ?? ""}:${item.decisionNo ?? ""}:${index}`;
+}
+
+const PRECEDENT_SUMMARY_PLACEHOLDER = /karar metnini gormek|click (the|this) decision/i;
+
+function isPrecedentSummaryPlaceholder(value?: string | null) {
+  if (!value?.trim()) {
+    return true;
+  }
+  return PRECEDENT_SUMMARY_PLACEHOLDER.test(value);
+}
+
+function isConstitutionalCourt(court: string) {
+  const normalized = court.toLowerCase();
+  return normalized.includes("anayasa") || normalized.includes("aym");
+}
+
+function getPrecedentSubject(item: Precedent) {
+  const summary = item.summary?.trim() ?? "";
+  if (!isPrecedentSummaryPlaceholder(summary)) {
+    return summary;
+  }
+  const topic = item.topic?.trim() ?? "";
+  if (topic && !/ - \d{4}\/\d+/.test(topic)) {
+    return topic;
+  }
+  return "";
+}
+
+function getPrecedentOutcome(item: Precedent) {
+  const outcome = item.outcome?.trim() ?? "";
+  if (outcome) {
+    return outcome;
+  }
+  if (isConstitutionalCourt(item.court)) {
+    const legacyOutcome = item.decisionNo?.trim() ?? "";
+    if (legacyOutcome && !/^\d{4}\/\d+/.test(legacyOutcome)) {
+      return legacyOutcome;
+    }
+  }
+  return "";
 }
 type AdminSection = "feedback" | "users";
 type AdminUserView = "list" | "detail" | "create";
@@ -445,7 +491,7 @@ export default function Home() {
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceBaseDraftRef = useRef("");
-  const [searchQuery, setSearchQuery] = useState("Guncel kararlara gore bosanmada ziynet esyalari nasil paylasilir?");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchCourt, setSearchCourt] = useState("");
   const [caseLawSearchMode, setCaseLawSearchMode] = useState<CaseLawSearchMode>("simple");
   const [advancedSearch, setAdvancedSearch] = useState({
@@ -908,13 +954,17 @@ export default function Home() {
 
   const selectedPrecedentDetailRows = useMemo<PrecedentDetailRow[]>(() => {
     if (!selectedPrecedent) return [];
+    const subject = getPrecedentSubject(selectedPrecedent);
+    const outcome = getPrecedentOutcome(selectedPrecedent);
     return [
       { label: t.tools.researchCourt, value: selectedPrecedent.court },
       { label: t.tools.researchChamber, value: selectedPrecedent.chamber ?? "-" },
       { label: t.tools.researchDocket, value: [selectedPrecedent.docketNo, selectedPrecedent.decisionNo].filter(Boolean).join(" / ") || "-" },
-      { label: t.feedback.date, value: selectedPrecedent.date ?? "-" }
+      { label: t.feedback.date, value: selectedPrecedent.date ?? "-" },
+      { label: t.tools.researchSubject, value: subject || "-" },
+      { label: t.tools.researchOutcome, value: outcome || "-" }
     ];
-  }, [selectedPrecedent, t.feedback.date, t.tools.researchChamber, t.tools.researchCourt, t.tools.researchDocket]);
+  }, [selectedPrecedent, t.feedback.date, t.tools.researchChamber, t.tools.researchCourt, t.tools.researchDocket, t.tools.researchOutcome, t.tools.researchSubject]);
 
   const caseLawRows = useMemo<CaseLawGridRow[]>(() => precedents.map((item, index) => ({
     ...item,
@@ -964,6 +1014,33 @@ export default function Home() {
       renderCell: (params) => <span>{params.row.date ?? "-"}</span>
     },
     {
+      field: "summary",
+      headerName: t.tools.researchSubject,
+      minWidth: 280,
+      flex: 1.6,
+      cellClassName: "precedent-subject-cell",
+      renderCell: (params) => {
+        const subject = getPrecedentSubject(params.row);
+        return (
+          <div className="feedback-grid-cell precedent-grid-subject">
+            <span>{subject || t.tools.researchSubjectLoading}</span>
+          </div>
+        );
+      }
+    },
+    {
+      field: "outcome",
+      headerName: t.tools.researchOutcome,
+      minWidth: 180,
+      flex: 1,
+      renderCell: (params) => {
+        const outcome = getPrecedentOutcome(params.row);
+        return (
+          <span className="precedent-outcome-cell">{outcome || "-"}</span>
+        );
+      }
+    },
+    {
       field: "actions",
       headerName: locale === "en" ? "Open" : "Ac",
       width: 130,
@@ -979,7 +1056,7 @@ export default function Home() {
         </button>
       )
     }
-  ], [loading, locale, precedentDetailOpen, selectedPrecedentIndex]);
+  ], [loading, locale, precedentDetailOpen, selectedPrecedentIndex, t.tools.researchOutcome, t.tools.researchSubject, t.tools.researchSubjectLoading]);
 
   const precedentSources = useMemo(() => [
     { key: "all" as const, label: locale === "en" ? "All Decisions" : "Tum Kararlar", court: "" },
@@ -989,17 +1066,15 @@ export default function Home() {
   ], [locale]);
 
   const precedentExampleQueries = useMemo(() => locale === "en" ? [
-    "Determining child living standard and parent income in child support amount",
-    "Eviction in indefinite-term lease due to lessor's personal need",
-    "Event characteristics and party fault rates in moral compensation amount",
-    "Proof criteria for collusion claims in title cancellation and registration cases",
-    "Limitation period start for severance and notice pay based on termination date",
-    "Net income calculation and discount rates in loss of support compensation"
+    "Muris muvazaasi",
+    "Title cancellation",
+    "Reinstatement to work",
+    "Rent determination"
   ] : [
-    "Istirak nafakasinin miktarinin saptanmasinda cocugun yasam standardi ve ebeveyn gelirleri",
-    "Belirsiz sureli kira sozlesmesinde tahliye - kiraya verenin ihtiyac nedeniyle actigi davalar",
-    "Manevi tazminat miktarinin belirlenmesinde olayin niteligi ve taraf kusur oranlari",
-    "Tapu iptali ve tescil davalarinda muris muvazaasi iddiasinin ispat kriterleri"
+    "muris muvazaasi",
+    "tapu iptali",
+    "ise iade",
+    "kira tespit"
   ], [locale]);
 
   const feedbackColumns = useMemo<GridColDef<FeedbackGridRow>[]>(() => [
@@ -1637,6 +1712,7 @@ export default function Home() {
       });
       setPrecedents(data.results);
       setSelectedPrecedentIndex(data.results.length ? 0 : null);
+      void enrichPrecedentResults(data.results);
     });
   }
 
@@ -1694,14 +1770,42 @@ export default function Home() {
       date: detail.date || base.date,
       topic: detail.topic || base.topic,
       summary: detail.summary || base.summary,
-      content: detail.content || base.content
+      content: detail.content || base.content,
+      outcome: detail.outcome || base.outcome
     };
   }
 
+  function needsPrecedentListEnrichment(item: Precedent) {
+    return Boolean(item.sourceId) && (!getPrecedentSubject(item) || !getPrecedentOutcome(item));
+  }
+
+  async function enrichPrecedentResults(results: Precedent[]) {
+    for (const item of results) {
+      if (!needsPrecedentListEnrichment(item)) {
+        continue;
+      }
+      const detailPath = getPrecedentDetailPath(item);
+      if (!detailPath) {
+        continue;
+      }
+      try {
+        const detail = await getJson<Precedent>(detailPath);
+        setPrecedents((current) => current.map((entry) => (
+          entry.sourceId === item.sourceId && entry.court === item.court
+            ? mergePrecedentDetail(entry, detail)
+            : entry
+        )));
+      } catch {
+        // Skip rows that fail to load during background enrichment.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
+
   function hasPrecedentDetailText(item: Precedent) {
-    const content = item.content?.trim() ?? "";
+    const plainContent = getPrecedentPlainContent(item.content, item.summary);
     const summary = item.summary?.trim() ?? "";
-    return content.length >= 80 && content.length > summary.length + 40;
+    return plainContent.length >= 80 && plainContent.length > summary.length + 40;
   }
 
   async function ensurePrecedentDetailLoaded(index: number): Promise<Precedent | null> {
@@ -1714,7 +1818,7 @@ export default function Home() {
     }
     const detailPath = getPrecedentDetailPath(item);
     if (!detailPath) {
-      const fallbackContent = item.content?.trim() || item.summary?.trim() || "";
+      const fallbackContent = getPrecedentPlainContent(item.content, item.summary);
       return fallbackContent.length >= 20 ? item : null;
     }
     const detail = await getJson<Precedent>(detailPath);
@@ -1803,7 +1907,7 @@ export default function Home() {
       if (!item) {
         throw new Error(t.tools.researchSummaryNoContent);
       }
-      const content = item.content?.trim() || item.summary?.trim() || "";
+      const content = getPrecedentPlainContent(item.content, item.summary);
       if (content.length < 20) {
         throw new Error(t.tools.researchSummaryNoContent);
       }
@@ -1898,7 +2002,7 @@ export default function Home() {
       if (!item) {
         throw new Error(t.tools.researchSummaryNoContent);
       }
-      const content = item.content?.trim() || item.summary?.trim() || "";
+      const content = getPrecedentPlainContent(item.content, item.summary);
       if (content.length < 20) {
         throw new Error(t.tools.researchSummaryNoContent);
       }
@@ -2821,6 +2925,7 @@ export default function Home() {
                       rows={caseLawRows}
                       columns={caseLawColumns}
                       disableRowSelectionOnClick
+                      getRowHeight={() => "auto"}
                       onRowClick={(params) => openPrecedent(params.row.rowIndex)}
                       initialState={{ pagination: { paginationModel: { page: 0, pageSize: 10 } } }}
                       pageSizeOptions={[10, 20, 50]}
@@ -2831,7 +2936,9 @@ export default function Home() {
                           backgroundColor: "#f7f9fb"
                         },
                         "& .MuiDataGrid-cell": {
-                          borderBottom: "1px solid rgba(215, 222, 232, 0.7)"
+                          borderBottom: "1px solid rgba(215, 222, 232, 0.7)",
+                          alignItems: "flex-start",
+                          py: 1.25
                         },
                         "& .MuiDataGrid-row:hover": {
                           backgroundColor: "#f7fafc"
@@ -3091,7 +3198,11 @@ export default function Home() {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                <pre>{loading === "precedent-detail" && !selectedPrecedent.content ? (locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor...") : (selectedPrecedent.content || selectedPrecedent.summary)}</pre>
+                <PrecedentDocumentBody
+                  content={selectedPrecedent.content || selectedPrecedent.summary}
+                  loading={loading === "precedent-detail" && !selectedPrecedent.content}
+                  loadingText={locale === "en" ? "Loading decision text..." : "Karar metni yukleniyor..."}
+                />
               </section>
             ) : <EmptyState text={t.tools.searchEmpty} />}
 
@@ -4227,6 +4338,44 @@ function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
 
 function ResultPanel({ title, children }: { title: string; children: React.ReactNode }) {
   return <section className="panel result-panel"><h2>{title}</h2>{children}</section>;
+}
+
+function PrecedentDocumentBody({
+  content,
+  loading,
+  loadingText
+}: {
+  content?: string | null;
+  loading: boolean;
+  loadingText: string;
+}) {
+  if (loading) {
+    return <div className="precedent-document-body precedent-document-loading">{loadingText}</div>;
+  }
+
+  const value = content?.trim() ?? "";
+  if (!value) {
+    return null;
+  }
+
+  if (isPrecedentHtmlContent(value)) {
+    return (
+      <article
+        className="precedent-document-body precedent-document-html"
+        dangerouslySetInnerHTML={{ __html: value }}
+      />
+    );
+  }
+
+  return (
+    <article className="precedent-document-body precedent-document-plain">
+      {splitPrecedentPlainSections(value).map((block, index) => (
+        isPrecedentSectionHeading(block)
+          ? <h4 key={`${index}-${block.slice(0, 24)}`}>{block}</h4>
+          : <p key={`${index}-${block.slice(0, 24)}`}>{block}</p>
+      ))}
+    </article>
+  );
 }
 
 function CitationList({ citations = [] }: { citations: Precedent[] }) {

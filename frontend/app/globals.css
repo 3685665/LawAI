@@ -4379,6 +4379,38 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   white-space: nowrap;
 }
 
+.precedent-grid-subject span,
+.precedent-outcome-cell {
+  color: var(--ink);
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.precedent-grid-subject span {
+  display: block;
+  overflow: visible;
+}
+
+.precedent-outcome-cell {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 4;
+}
+
+.precedent-datagrid-wrap .MuiDataGrid-cell.precedent-subject-cell {
+  align-items: flex-start;
+  line-height: 1.45;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  white-space: normal;
+}
+
+.precedent-datagrid-wrap .MuiDataGrid-row {
+  max-height: none !important;
+}
+
 .precedent-detail-panel {
   position: sticky;
   top: 24px;
@@ -4427,6 +4459,11 @@ body[data-theme="dark"] .law-chat-message.assistant p {
   color: var(--muted);
   font-weight: 600;
   width: 42%;
+}
+
+.precedent-detail-table .MuiTableBody-root .MuiTableCell-root:last-of-type {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .petition-linked-case-card,
@@ -4690,6 +4727,73 @@ body[data-theme="dark"] .petition-linked-precedents li {
 .precedent-summary-box pre {
   line-height: 1.6;
   margin: 0;
+}
+
+.precedent-document-body {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 520px;
+  overflow: auto;
+  padding: 16px 18px;
+}
+
+.precedent-document-loading {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.precedent-document-plain p {
+  margin: 0 0 12px;
+  text-align: justify;
+}
+
+.precedent-document-plain p:last-child,
+.precedent-document-html p:last-child {
+  margin-bottom: 0;
+}
+
+.precedent-document-plain h4,
+.precedent-document-html h1,
+.precedent-document-html h2,
+.precedent-document-html h3,
+.precedent-document-html h4,
+.precedent-document-html h5,
+.precedent-document-html h6 {
+  color: var(--accent-strong);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 18px 0 10px;
+  text-transform: uppercase;
+}
+
+.precedent-document-html p {
+  margin: 0 0 12px;
+  text-align: justify;
+}
+
+.precedent-document-html strong,
+.precedent-document-html b {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.precedent-document-html table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: 100%;
+}
+
+.precedent-document-html th,
+.precedent-document-html td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  vertical-align: top;
 }
 
 .precedent-detail-box pre {

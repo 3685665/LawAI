@@ -9,6 +9,7 @@ public record PrecedentDto(
     String date,
     String topic,
     String summary,
-    String content
+    String content,
+    String outcome
 ) {
 }

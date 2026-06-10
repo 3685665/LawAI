@@ -10,6 +10,7 @@ class PrecedentDto(BaseModel):
     topic: str
     summary: str
     content: str | None = None
+    outcome: str | None = None
 
 
 class ChatRequest(BaseModel):

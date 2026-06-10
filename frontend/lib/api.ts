@@ -10,6 +10,7 @@ export type Precedent = {
   topic: string;
   summary: string;
   content?: string | null;
+  outcome?: string | null;
 };
 
 export type PrecedentSummarizeResponse = {
