@@ -1,8 +1,0 @@
-psycopg[binary]==3.2.13
-pydantic-settings==2.6.1
-pypdf==5.1.0
-langchain-openai==1.2.2
-langchain-ollama==1.1.0
-langchain-google-genai==4.2.4
-langchain-text-splitters==1.1.2
-pyspark==4.1.2
