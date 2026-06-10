@@ -6,29 +6,11 @@ import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
   AlertCircle,
   BarChart3,
-  Bot,
-  BriefcaseBusiness,
-  ChevronRight,
-  ClipboardList,
-  CreditCard,
-  FileUp,
-  FileSearch,
-  FileText,
-  FolderOpen,
-  KeyRound,
-  LoaderCircle,
-  MessageSquareMore,
-  Palette,
-  Scale,
-  Settings,
-  ShieldAlert,
-  ScrollText,
-  Upload,
-  UserRound,
-  UsersRound,
-  type LucideIcon
+  LoaderCircle
 } from "lucide-react";
-import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useRouteAppSidebar } from "@/hooks/use-route-app-sidebar";
+import { getMessages, localeToDateTag } from "@/lib/i18n";
 import {
   authLogout,
   authMe,
@@ -44,19 +26,6 @@ type ActivityLogRow = ActivityLogRecord & {
   createdAtLabel: string;
   sourceLabel: string;
   userLabel: string;
-};
-type NavGroup = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  href?: string;
-  children?: NavItem[];
-};
-type NavItem = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  href: string;
 };
 
 const dataGridSx = {
@@ -80,19 +49,22 @@ const dataGridSx = {
 
 export function ActivityLogPage({ mode }: { mode: Mode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [locale, setLocale] = useState<Locale>("tr");
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [openNavGroup, setOpenNavGroup] = useState<string | null>(mode === "admin" ? "admin" : "account");
   const [logs, setLogs] = useState<ActivityLogRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const {
+    locale,
+    groups: navGroups,
+    collapsed: sidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    openNavGroup,
+    toggleNavGroup,
+    pathname
+  } = useRouteAppSidebar(authUser);
 
   useEffect(() => {
-    const storedLocale = window.localStorage.getItem("lawai-locale");
-    setLocale(isLocale(storedLocale) ? storedLocale : "tr");
-
     let cancelled = false;
     authMe()
       .then((user) => {
@@ -247,85 +219,19 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
     );
   }
 
-  const navGroups = buildNavGroups(locale, authUser.role === "ADMIN");
-
   return (
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
-        <div className="brand">
-          <Scale size={28} />
-          <div>
-            <strong>LawAI Studio</strong>
-            <span>{t.dashboard.eyebrow}</span>
-          </div>
-        </div>
-        <button
-          aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          className="sidebar-toggle"
-          onClick={() => setSidebarCollapsed((current) => !current)}
-          title={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          type="button"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <div className="nav-label">{t.common.apps}</div>
-        <nav className="tabs">
-          {navGroups.map((group) => {
-            const GroupIcon = group.icon;
-            const isOpen = openNavGroup === group.id;
-            if (!group.children?.length) {
-              return (
-                <Link href={group.href ?? "/"} key={group.id} title={group.label}>
-                  <GroupIcon size={18} />
-                  <span>{group.label}</span>
-                </Link>
-              );
-            }
-            return (
-              <div className="sidebar-menu-group" key={group.id}>
-                <button
-                  aria-expanded={isOpen}
-                  className={isOpen ? "active" : ""}
-                  onClick={() => setOpenNavGroup((current) => current === group.id ? null : group.id)}
-                  title={group.label}
-                  type="button"
-                >
-                  <GroupIcon size={18} />
-                  <span>{group.label}</span>
-                  <ChevronRight className="sidebar-submenu-chevron" size={15} />
-                </button>
-                {isOpen && (
-                  <div className="sidebar-submenu">
-                    {group.children.map((item) => {
-                      const ItemIcon = item.icon;
-                      const active = isActiveRoute(item.href, mode);
-                      return (
-                        <Link className={active ? "active" : ""} href={item.href} key={item.id} title={item.label}>
-                          <ItemIcon size={15} />
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar" aria-hidden="true">{authUser.name.slice(0, 1).toUpperCase()}</div>
-          <div>
-            <strong>{authUser.name}</strong>
-            <span>{authUser.email}</span>
-            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
-          </div>
-          <div className="sidebar-user-actions">
-            <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
-              {t.common.logout}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AppSidebar
+        authUser={authUser}
+        collapsed={sidebarCollapsed}
+        groups={navGroups}
+        locale={locale}
+        onLogout={handleLogout}
+        onToggleCollapsed={toggleSidebarCollapsed}
+        onToggleNavGroup={toggleNavGroup}
+        openNavGroup={openNavGroup}
+        pathname={pathname}
+      />
 
       <section className="workspace">
         <section className="settings-workspace">
@@ -382,52 +288,4 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
     </main>
   );
 }
-
-function buildNavGroups(locale: Locale, isAdmin: boolean): NavGroup[] {
-  const groups: NavGroup[] = [
-    { id: "assistant", label: locale === "en" ? "Assistant" : "Asistan", icon: Bot, href: "/" },
-    { id: "case-law", label: locale === "en" ? "Case-Law Search" : "Ictihat Arama", icon: Scale, href: "/" },
-    { id: "petition", label: locale === "en" ? "Petition Draft" : "Dilekce Taslak", icon: ScrollText, href: "/" },
-    { id: "cases", label: locale === "en" ? "Cases" : "Davalar", icon: BriefcaseBusiness, href: "/" },
-    { id: "document", label: locale === "en" ? "Document Processing" : "Belge Isleme", icon: FileUp, href: "/" },
-    {
-      id: "account",
-      label: locale === "en" ? "Account" : "Hesap",
-      icon: UserRound,
-      children: [
-        { id: "profile", label: locale === "en" ? "Profile" : "Profil", icon: UserRound, href: "/" },
-        { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: ClipboardList, href: "/activity-logs" },
-        { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
-        { id: "feedback", label: locale === "en" ? "Feedback" : "Geri Bildirim", icon: MessageSquareMore, href: "/" },
-        { id: "settings-view", label: locale === "en" ? "Appearance" : "Gorunum", icon: Palette, href: "/" },
-        { id: "settings-account", label: locale === "en" ? "Change Password" : "Sifre Degistir", icon: KeyRound, href: "/" }
-      ]
-    }
-  ];
-
-  if (isAdmin) {
-    groups.push({
-      id: "admin",
-      label: locale === "en" ? "Management" : "Yonetim",
-      icon: ShieldAlert,
-      children: [
-        { id: "admin-feedback", label: locale === "en" ? "Feedback Management" : "Sikayet Yonetimi", icon: MessageSquareMore, href: "/feedback-management" },
-        { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UsersRound, href: "/" },
-        { id: "admin-subscriptions", label: locale === "en" ? "Subscription Plans" : "Abonelik Planlari", icon: CreditCard, href: "/admin/subscriptions" },
-        { id: "admin-user-subscriptions", label: locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri", icon: CreditCard, href: "/admin/user-subscriptions" },
-        { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: ClipboardList, href: "/admin/activity-logs" }
-      ]
-    });
-  }
-
-  return groups;
-}
-
-function isActiveRoute(href: string, mode: Mode) {
-  if (mode === "user") {
-    return href === "/activity-logs";
-  }
-  return href === "/admin/activity-logs";
-}
-
 

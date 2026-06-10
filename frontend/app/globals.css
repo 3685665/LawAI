@@ -440,7 +440,7 @@ pre {
   transition: transform 0.15s ease;
 }
 
-button[aria-expanded="false"] .sidebar-submenu-chevron {
+.sidebar-menu-group > button[aria-expanded="false"] .sidebar-submenu-chevron {
   transform: rotate(0deg);
 }
 

@@ -11,7 +11,6 @@ import {
   Bot,
   BriefcaseBusiness,
   CheckCircle2,
-  ChevronRight,
   ClipboardList,
   CreditCard,
   Clock3,
@@ -40,6 +39,9 @@ import {
   X,
   type LucideIcon
 } from "lucide-react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
+import { findNavGroupForTab } from "@/lib/app-navigation";
 import { getMessages, isLocale, type Locale } from "@/lib/i18n";
 import { buildPetitionDocxBlob, sanitizePetitionFileName } from "@/lib/petitionExport";
 import {
@@ -482,7 +484,7 @@ export default function Home() {
   const [selectedAdminUser, setSelectedAdminUser] = useState<AuthUser | null>(null);
   const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
   const [settingsSection, setSettingsSection] = useState<"view" | "account">("view");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { collapsed: sidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } = useSidebarCollapsed();
   const [openNavGroup, setOpenNavGroup] = useState<string | null>(null);
   const navigationGroups = useMemo<NavigationGroup[]>(() => {
     const groups: NavigationGroup[] = [
@@ -547,6 +549,10 @@ export default function Home() {
     }
     return groups;
   }, [authUser?.role, locale, t]);
+
+  useEffect(() => {
+    setOpenNavGroup(findNavGroupForTab(navigationGroups, activeTab));
+  }, [activeTab, navigationGroups]);
 
   useEffect(() => {
     const storedLocale = window.localStorage.getItem("lawai-locale");
@@ -2289,107 +2295,42 @@ export default function Home() {
 
   return (
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
-        <div className="brand">
-          <Scale size={28} />
-          <div>
-            <strong>LawAI Studio</strong>
-            <span>{t.dashboard.eyebrow}</span>
-          </div>
-        </div>
-        <button
-          aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          className="sidebar-toggle"
-          onClick={() => setSidebarCollapsed((current) => !current)}
-          title={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          type="button"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <div className="nav-label">{t.common.apps}</div>
-        <nav className="tabs">
-          {navigationGroups.map((group) => {
-            const Icon = group.icon;
-            const groupTabs = group.children?.map((item) => item.tab).filter(Boolean) ?? [];
-            const isChildActive = groupTabs.includes(activeTab);
-            const isDirectActive = group.tab === activeTab;
-            const isOpen = Boolean(group.children?.length) && (openNavGroup === group.id || isChildActive);
-            return (
-              <div className={group.children?.length ? "sidebar-menu-group" : ""} key={group.id}>
-                <button
-                  aria-expanded={group.children?.length ? isOpen : undefined}
-                  className={isDirectActive || isChildActive ? "active" : ""}
-                  onClick={() => {
-                    if (group.children?.length) {
-                      setOpenNavGroup((current) => (current === group.id ? null : group.id));
-                      return;
-                    }
-                    if (group.tab) {
-                      setActiveTab(group.tab);
-                    }
-                  }}
-                  type="button"
-                  title={group.label}
-                >
-                  <Icon size={18} />
-                  <span>{group.label}</span>
-                  {group.children?.length ? <ChevronRight className="sidebar-submenu-chevron" size={15} /> : null}
-                </button>
-                {isOpen && group.children?.length ? (
-                  <div className="sidebar-submenu">
-                    {group.children.map((item) => {
-                      const ChildIcon = item.icon;
-                      const isSettingsView = item.id === "settings-view" && activeTab === "settings" && settingsSection === "view";
-                      const isSettingsAccount = item.id === "settings-account" && activeTab === "settings" && settingsSection === "account";
-                      const isAdminUsers = item.id === "admin-users" && activeTab === "admin" && adminSection === "users";
-                      const isScopedChild = item.id.startsWith("settings-") || item.id.startsWith("admin-");
-                      const isActive = isScopedChild ? (isSettingsView || isSettingsAccount || isAdminUsers) : item.tab === activeTab;
-                      if (item.href) {
-                        return (
-                          <Link href={item.href} key={item.id} title={item.label}>
-                            <ChildIcon size={15} />
-                            <span>{item.label}</span>
-                          </Link>
-                        );
-                      }
-                      return (
-                        <button
-                          className={isActive ? "active" : ""}
-                          key={item.id}
-                          onClick={() => {
-                            item.onSelect?.();
-                            if (item.tab) {
-                              setActiveTab(item.tab);
-                            }
-                          }}
-                          type="button"
-                          title={item.label}
-                        >
-                          <ChildIcon size={15} />
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar" aria-hidden="true">{authUser.name.slice(0, 1).toUpperCase()}</div>
-          <div>
-            <strong>{authUser.name}</strong>
-            <span>{authUser.email}</span>
-            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
-          </div>
-          <div className="sidebar-user-actions">
-            <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
-              {t.common.logout}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AppSidebar
+        activeTab={activeTab}
+        authUser={authUser}
+        collapsed={sidebarCollapsed}
+        groups={navigationGroups}
+        isChildActive={(item) => {
+          if (item.id === "settings-view") {
+            return activeTab === "settings" && settingsSection === "view";
+          }
+          if (item.id === "settings-account") {
+            return activeTab === "settings" && settingsSection === "account";
+          }
+          if (item.id === "admin-users") {
+            return activeTab === "admin" && adminSection === "users";
+          }
+          return item.tab === activeTab;
+        }}
+        locale={locale}
+        onGroupNavigate={(group) => {
+          if (group.tab) {
+            setActiveTab(group.tab as Tab);
+          }
+        }}
+        onItemNavigate={(item) => {
+          item.onSelect?.();
+          if (item.tab) {
+            setActiveTab(item.tab as Tab);
+          }
+        }}
+        onLogout={handleLogout}
+        onToggleCollapsed={toggleSidebarCollapsed}
+        onToggleNavGroup={(groupId) => {
+          setOpenNavGroup((current) => (current === groupId ? null : groupId));
+        }}
+        openNavGroup={openNavGroup}
+      />
 
       <section className="workspace">
         {error && <div className="error">{error}</div>}

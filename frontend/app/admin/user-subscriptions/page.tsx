@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import { ArrowLeft, BriefcaseBusiness, Bot, ChevronRight, ClipboardList, CreditCard, FileSearch, FileUp, LoaderCircle, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, CreditCard, LoaderCircle } from "lucide-react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useRouteAppSidebar } from "@/hooks/use-route-app-sidebar";
 import { authLogout, authMe, listAdminUserSubscriptions, updateUserSubscriptionStatus, type AuthUser, type UserSubscription } from "@/lib/api";
 
 const dataGridSx = {
@@ -37,8 +39,15 @@ export default function AdminUserSubscriptionsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(true);
+  const {
+    locale,
+    groups,
+    collapsed: sidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    openNavGroup,
+    toggleNavGroup,
+    pathname
+  } = useRouteAppSidebar(authUser);
 
   const columns = useMemo<GridColDef<UserSubscription>[]>(() => [
     {
@@ -174,7 +183,17 @@ export default function AdminUserSubscriptionsPage() {
 
   return (
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <AdminSidebar authUser={authUser} adminMenuOpen={adminMenuOpen} onLogout={handleLogout} onToggleAdmin={() => setAdminMenuOpen((current) => !current)} onToggleSidebar={() => setSidebarCollapsed((current) => !current)} />
+      <AppSidebar
+        authUser={authUser}
+        collapsed={sidebarCollapsed}
+        groups={groups}
+        locale={locale}
+        onLogout={handleLogout}
+        onToggleCollapsed={toggleSidebarCollapsed}
+        onToggleNavGroup={toggleNavGroup}
+        openNavGroup={openNavGroup}
+        pathname={pathname}
+      />
       <section className="workspace admin-subscription-workspace">
         <div className="topbar">
           <div>
@@ -213,34 +232,6 @@ export default function AdminUserSubscriptionsPage() {
         </section>
       </section>
     </main>
-  );
-}
-
-function AdminSidebar({ authUser, adminMenuOpen, onLogout, onToggleAdmin, onToggleSidebar }: { authUser: AuthUser; adminMenuOpen: boolean; onLogout: () => void; onToggleAdmin: () => void; onToggleSidebar: () => void }) {
-  const base = [
-    { href: "/", label: "Asistan", icon: Bot },
-    { href: "/", label: "Ictihat Arama", icon: Scale },
-    { href: "/", label: "Dilekce", icon: ScrollText },
-    { href: "/", label: "Davalar", icon: BriefcaseBusiness },
-    { href: "/", label: "Belge Isleme", icon: FileUp },
-    { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
-    { href: "/subscriptions", label: "Abonelik", icon: CreditCard },
-    { href: "/", label: "Profil", icon: UserRound }
-  ];
-  return (
-    <aside className="sidebar">
-      <div className="brand"><Scale size={28} /><div><strong>LawAI Studio</strong><span>Hukuk AI Calisma Sistemi</span></div></div>
-      <button aria-label="Yan menuyu ac/kapat" className="sidebar-toggle" onClick={onToggleSidebar} type="button"><ChevronRight size={18} /></button>
-      <div className="nav-label">Uygulamalar</div>
-      <nav className="tabs">
-        {base.map((item) => { const Icon = item.icon; return <Link href={item.href} key={item.label} title={item.label}><Icon size={18} /><span>{item.label}</span></Link>; })}
-        <div className="sidebar-menu-group">
-          <button aria-expanded={adminMenuOpen} className="active" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-          {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Planlari</span></Link><Link className="active" href="/admin/user-subscriptions"><CreditCard size={15} /><span>Kullanici Abonelikleri</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
-        </div>
-      </nav>
-      <div className="sidebar-user"><div className="sidebar-user-avatar">{authUser.name.slice(0, 1).toUpperCase()}</div><div><strong>{authUser.name}</strong><span>{authUser.email}</span><span className="sidebar-user-role">Yonetici</span></div><div className="sidebar-user-actions"><button className="secondary-button" onClick={onLogout} type="button">Cikis</button></div></div>
-    </aside>
   );
 }
 

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BriefcaseBusiness, Check, ChevronRight, ClipboardList, CreditCard, FileSearch, FileText, FileUp, LoaderCircle, Lock, MessageSquareMore, Scale, ScrollText, ShieldAlert, UserRound, Bot } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, LoaderCircle, Lock, Scale } from "lucide-react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useRouteAppSidebar } from "@/hooks/use-route-app-sidebar";
 import { authLogout, authMe, cancelMySubscription, createBillingCheckout, getMySubscription, listSubscriptions, type AuthUser, type SubscriptionPlan, type UserSubscription } from "@/lib/api";
 
 type BillingCycle = "monthly" | "yearly";
@@ -18,8 +20,15 @@ export default function SubscriptionsPage() {
   const [error, setError] = useState("");
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [activeTab, setActiveTab] = useState<SubscriptionTab>("plans");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const {
+    locale,
+    groups,
+    collapsed: sidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    openNavGroup,
+    toggleNavGroup,
+    pathname
+  } = useRouteAppSidebar(authUser);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,7 +126,17 @@ export default function SubscriptionsPage() {
 
   return (
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <SubscriptionSidebar authUser={authUser} adminMenuOpen={adminMenuOpen} active="subscriptions" onLogout={handleLogout} onToggleAdmin={() => setAdminMenuOpen((current) => !current)} onToggleSidebar={() => setSidebarCollapsed((current) => !current)} />
+      <AppSidebar
+        authUser={authUser}
+        collapsed={sidebarCollapsed}
+        groups={groups}
+        locale={locale}
+        onLogout={handleLogout}
+        onToggleCollapsed={toggleSidebarCollapsed}
+        onToggleNavGroup={toggleNavGroup}
+        openNavGroup={openNavGroup}
+        pathname={pathname}
+      />
       <section className="workspace subscription-workspace">
         <div className="subscription-hero panel">
           <div className="subscription-logo" aria-hidden="true"><Scale size={34} /><span>LawAI</span></div>
@@ -209,39 +228,6 @@ function PlanCard({ plan, cycle, currentSubscription, loading, onSelect }: { pla
         {isCurrent ? "Mevcut plan" : plan.ctaLabel || `${plan.name} sec`}
       </button>
     </article>
-  );
-}
-
-function SubscriptionSidebar({ active, authUser, adminMenuOpen, onLogout, onToggleAdmin, onToggleSidebar }: { active: "subscriptions"; authUser: AuthUser; adminMenuOpen: boolean; onLogout: () => void; onToggleAdmin: () => void; onToggleSidebar: () => void }) {
-  const base = [
-    { href: "/", label: "Asistan", icon: Bot },
-    { href: "/", label: "Ictihat Arama", icon: Scale },
-    { href: "/", label: "Dilekce", icon: ScrollText },
-    { href: "/", label: "Davalar", icon: BriefcaseBusiness },
-    { href: "/", label: "Belge Isleme", icon: FileUp },
-    { href: "/", label: "Geri Bildirim", icon: MessageSquareMore },
-    { href: "/subscriptions", label: "Abonelik", icon: CreditCard, active: active === "subscriptions" },
-    { href: "/", label: "Profil", icon: UserRound }
-  ];
-  return (
-    <aside className="sidebar">
-      <div className="brand"><Scale size={28} /><div><strong>LawAI Studio</strong><span>Hukuk AI Calisma Sistemi</span></div></div>
-      <button aria-label="Yan menuyu ac/kapat" className="sidebar-toggle" onClick={onToggleSidebar} type="button"><ChevronRight size={18} /></button>
-      <div className="nav-label">Uygulamalar</div>
-      <nav className="tabs">
-        {base.map((item) => {
-          const Icon = item.icon;
-          return <Link className={item.active ? "active" : ""} href={item.href} key={item.label} title={item.label}><Icon size={18} /><span>{item.label}</span></Link>;
-        })}
-        {authUser.role === "ADMIN" ? (
-          <div className="sidebar-menu-group">
-            <button aria-expanded={adminMenuOpen} className="" onClick={onToggleAdmin} type="button"><ShieldAlert size={18} /><span>Yonetim</span><ChevronRight className="sidebar-submenu-chevron" size={15} /></button>
-        {adminMenuOpen ? <div className="sidebar-submenu"><Link href="/feedback-management"><MessageSquareMore size={15} /><span>Sikayet Yonetimi</span></Link><Link href="/admin/subscriptions"><CreditCard size={15} /><span>Abonelik Planlari</span></Link><Link href="/admin/user-subscriptions"><CreditCard size={15} /><span>Kullanici Abonelikleri</span></Link><Link href="/admin/activity-logs"><ClipboardList size={15} /><span>Islem Loglari</span></Link></div> : null}
-          </div>
-        ) : null}
-      </nav>
-      <div className="sidebar-user"><div className="sidebar-user-avatar">{authUser.name.slice(0, 1).toUpperCase()}</div><div><strong>{authUser.name}</strong><span>{authUser.email}</span><span className="sidebar-user-role">{authUser.role === "ADMIN" ? "Yonetici" : "Kullanici"}</span></div><div className="sidebar-user-actions"><button className="secondary-button" onClick={onLogout} type="button">Cikis</button></div></div>
-    </aside>
   );
 }
 

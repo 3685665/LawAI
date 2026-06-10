@@ -6,27 +6,12 @@ import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
   AlertCircle,
   ArrowLeft,
-  BarChart3,
-  Bot,
-  BriefcaseBusiness,
-  ChevronRight,
-  ClipboardList,
-  CreditCard,
-  FileUp,
-  FileSearch,
-  FileText,
-  FolderOpen,
   LoaderCircle,
-  MessageSquareMore,
-  Palette,
-  Scale,
-  ShieldAlert,
-  ScrollText,
-  Trash2,
-  Upload,
-  UserRound
+  Trash2
 } from "lucide-react";
-import { getMessages, isLocale, localeToDateTag, type Locale } from "@/lib/i18n";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useRouteAppSidebar } from "@/hooks/use-route-app-sidebar";
+import { getMessages, localeToDateTag } from "@/lib/i18n";
 import {
   authLogout,
   authMe,
@@ -62,7 +47,6 @@ function badgeClassStatus(value: string) {
 
 export default function FeedbackManagementPage() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [locale, setLocale] = useState<Locale>("tr");
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [items, setItems] = useState<FeedbackRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,8 +57,15 @@ export default function FeedbackManagementPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<FeedbackManagementView>("list");
   const [saving, setSaving] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(true);
+  const {
+    locale,
+    groups,
+    collapsed: sidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    openNavGroup,
+    toggleNavGroup,
+    pathname
+  } = useRouteAppSidebar(authUser);
   const [editForm, setEditForm] = useState({
     type: "genel" as FeedbackType,
     subject: "",
@@ -83,9 +74,6 @@ export default function FeedbackManagementPage() {
   });
 
   useEffect(() => {
-    const storedLocale = window.localStorage.getItem("lawai-locale");
-    setLocale(isLocale(storedLocale) ? storedLocale : "tr");
-
     let cancelled = false;
     authMe()
       .then((user) => {
@@ -103,22 +91,6 @@ export default function FeedbackManagementPage() {
   }, []);
 
   const t = getMessages(locale);
-  const tabs = useMemo(() => {
-    const baseTabs = [
-      { id: "chat", label: t.tabs.chat, icon: Bot },
-      { id: "caseLaw", label: t.tabs.caseLaw, icon: Scale },
-      { id: "petition", label: t.tabs.petition, icon: ScrollText },
-      { id: "cases", label: t.tabs.cases, icon: BriefcaseBusiness },
-      { id: "document", label: t.tabs.document, icon: FileUp },
-      { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore },
-      { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard },
-      { id: "profile", label: t.tabs.profile, icon: UserRound },
-      { id: "settings", label: t.tabs.settings, icon: Palette }
-    ];
-    return authUser?.role === "ADMIN"
-      ? [...baseTabs, { id: "admin", label: t.tabs.admin, icon: ShieldAlert }]
-      : baseTabs;
-  }, [authUser?.role, t]);
 
   useEffect(() => {
     if (!authUser || authUser.role !== "ADMIN") {
@@ -343,90 +315,17 @@ export default function FeedbackManagementPage() {
 
   return (
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
-        <div className="brand">
-          <Scale size={28} />
-          <div>
-            <strong>LawAI Studio</strong>
-            <span>{t.dashboard.eyebrow}</span>
-          </div>
-        </div>
-        <button
-          aria-label={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          className="sidebar-toggle"
-          onClick={() => setSidebarCollapsed((current) => !current)}
-          title={sidebarCollapsed ? "Yan menuyu ac" : "Yan menuyu kapat"}
-          type="button"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <div className="nav-label">{t.common.apps}</div>
-        <nav className="tabs">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isAdminTab = tab.id === "admin";
-            return (
-              <div className={isAdminTab ? "sidebar-menu-group" : ""} key={tab.id}>
-                {isAdminTab ? (
-                  <button
-                    aria-expanded={adminMenuOpen}
-                    className="active"
-                    onClick={() => setAdminMenuOpen((current) => !current)}
-                    title={tab.label}
-                    type="button"
-                  >
-                    <Icon size={18} />
-                    <span>{tab.label}</span>
-                    <ChevronRight className="sidebar-submenu-chevron" size={15} />
-                  </button>
-                ) : (
-                  <Link href={tab.id === "subscriptions" ? "/subscriptions" : "/"} title={tab.label}>
-                    <Icon size={18} />
-                    <span>{tab.label}</span>
-                  </Link>
-                )}
-                {isAdminTab && adminMenuOpen && (
-                  <div className="sidebar-submenu">
-                    <Link className="active" href="/feedback-management" title={t.adminFeedback.title}>
-                      <MessageSquareMore size={15} />
-                      <span>{t.adminFeedback.title}</span>
-                    </Link>
-                    <Link href="/" title={locale === "en" ? "User Management" : "Kullanici Yonetimi"}>
-                      <UserRound size={15} />
-                      <span>{locale === "en" ? "User Management" : "Kullanici Yonetimi"}</span>
-                    </Link>
-                    <Link href="/admin/subscriptions" title={locale === "en" ? "Subscription Plans" : "Abonelik Planlari"}>
-                      <CreditCard size={15} />
-                      <span>{locale === "en" ? "Subscription Plans" : "Abonelik Planlari"}</span>
-                    </Link>
-                    <Link href="/admin/user-subscriptions" title={locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri"}>
-                      <CreditCard size={15} />
-                      <span>{locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri"}</span>
-                    </Link>
-                    <Link href="/admin/activity-logs" title={locale === "en" ? "Activity Logs" : "Islem Loglari"}>
-                      <ClipboardList size={15} />
-                      <span>{locale === "en" ? "Activity Logs" : "Islem Loglari"}</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar" aria-hidden="true">{authUser.name.slice(0, 1).toUpperCase()}</div>
-          <div>
-            <strong>{authUser.name}</strong>
-            <span>{authUser.email}</span>
-            <span className="sidebar-user-role">{authUser.role === "ADMIN" ? t.common.admin : t.common.user}</span>
-          </div>
-          <div className="sidebar-user-actions">
-            <button className="secondary-button" type="button" onClick={() => void handleLogout()}>
-              {t.common.logout}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AppSidebar
+        authUser={authUser}
+        collapsed={sidebarCollapsed}
+        groups={groups}
+        locale={locale}
+        onLogout={handleLogout}
+        onToggleCollapsed={toggleSidebarCollapsed}
+        onToggleNavGroup={toggleNavGroup}
+        openNavGroup={openNavGroup}
+        pathname={pathname}
+      />
 
       <section className="workspace admin-feedback-shell">
       <div className="topbar">
