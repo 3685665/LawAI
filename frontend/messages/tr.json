@@ -413,7 +413,7 @@
   },
   "document": {
     "title": "Dokuman yukle ve bilgi bankasina ekle",
-    "subtitle": "PDF, Word ve metin dosyalari tek akista kaydedilir, metni cikarilir, chunklara bolunur ve arama sistemlerine yazilir.",
+    "subtitle": "PDF, Word ve metin dosyalarini tek seferde veya toplu yukleyin; metin cikarilir, chunklara bolunur ve arama sistemlerine yazilir.",
     "pipelineTitle": "Islem sirasi",
     "pipelineIntro": "Yukleme tamamlandiginda belge asagidaki hattin tamamindan gecmis olur.",
     "pipelineSteps": [
@@ -430,14 +430,19 @@
       "Taranmis goruntu PDF'lerinde OCR olmadigi icin metin cikmayabilir.",
       "Ayni dosyayi tekrar yuklerseniz sistem yeni bir belge kaydi olusturur."
     ],
-    "chooseFile": "Dosyanizi secin",
-    "fileHint": "PDF, TXT, DOC, DOCX - en fazla 25 MB",
+    "chooseFile": "Dosyalarinizi secin",
+    "fileHint": "PDF, TXT, DOC, DOCX - birden fazla dosya, en fazla 25 MB",
+    "selectedCount": "{count} dosya secildi",
+    "clearFiles": "Listeyi temizle",
+    "processingProgress": "{current}/{total} isleniyor...",
+    "batchCompleted": "{success}/{total} belge islendi",
+    "batchPartial": "{success} basarili, {failed} basarisiz",
     "topic": "Konu basligi",
     "court": "Mahkeme (opsiyonel)",
     "analyze": "On kontrol",
     "ingest": "Yukle ve isle",
     "result": "Sonuc",
-    "empty": "Dosya yukleyip islem baslatinca ozet burada gorunur.",
+    "empty": "Dosya yukleyip islem baslatinca ozetler burada gorunur.",
     "processing": "Isleniyor...",
     "file": "Dosya",
     "type": "Tip",
@@ -455,7 +460,8 @@
     "goChat": "Sohbete git",
     "errors": {
       "noFile": "Dosya secilmedi.",
-      "selectFirst": "Once bir dosya secin.",
+      "selectFirst": "Once en az bir dosya secin.",
+      "invalidFiles": "Bazi dosyalar kabul edilmedi: {details}",
       "unsupported": "Belge isleme hatti PDF, Word ve metin dosyalarini destekler.",
       "tooLarge": "Dosya 25 MB sinirini asiyor.",
       "empty": "Dosya bos gorunuyor."

@@ -5070,12 +5070,43 @@ body[data-theme="dark"] .petition-linked-precedents li {
   padding-left: 18px;
 }
 
+.selected-file-list {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
 .selected-file {
   align-items: center;
   display: flex;
   gap: 12px;
   text-align: left;
   width: 100%;
+}
+
+.document-result-list {
+  display: grid;
+  gap: 16px;
+}
+
+.document-result-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.document-result-card h4 {
+  margin: 0;
+}
+
+.document-batch-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
 }
 
 .selected-file div {

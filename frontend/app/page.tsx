@@ -45,7 +45,7 @@ import {
 import { AppSidebar } from "@/components/app-sidebar";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import { findNavGroupForTab } from "@/lib/app-navigation";
-import { getMessages, isLocale, type Locale } from "@/lib/i18n";
+import { formatMessage, getMessages, isLocale, type Locale } from "@/lib/i18n";
 import { buildPetitionDocxBlob, sanitizePetitionFileName } from "@/lib/petitionExport";
 import {
   getPrecedentPlainContent,
@@ -3705,51 +3705,124 @@ export default function Home() {
   );
 }
 
+type DocumentUploadOutcome = {
+  filename: string;
+  result?: UploadResponse;
+  error?: string;
+};
+
 function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; loading: string; run: (action: string, fn: () => Promise<void>) => void; onGoToChat: () => void }) {
   const t = getMessages(locale).document;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const uploadInFlightRef = useRef(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [localError, setLocalError] = useState("");
-  const [result, setResult] = useState<UploadResponse | null>(null);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [outcomes, setOutcomes] = useState<DocumentUploadOutcome[]>([]);
 
-  function applyFile(nextFile: File | null) {
-    const validationError = validateFile(nextFile, locale);
-    if (validationError) {
-      setLocalError(validationError);
-      setFile(null);
-      setResult(null);
+  function applyFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) {
       return;
     }
+    const rejected: string[] = [];
+    const accepted: File[] = [];
+    Array.from(fileList).forEach((nextFile) => {
+      const validationError = validateFile(nextFile, locale);
+      if (validationError) {
+        rejected.push(`${nextFile.name}: ${validationError}`);
+        return;
+      }
+      accepted.push(nextFile);
+    });
+    if (rejected.length > 0) {
+      setLocalError(formatMessage(t.errors.invalidFiles, { details: rejected.join("; ") }));
+    } else {
+      setLocalError("");
+    }
+    if (accepted.length === 0) {
+      return;
+    }
+    setFiles((current) => {
+      const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+      const merged = [...current];
+      accepted.forEach((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(file);
+        }
+      });
+      return merged;
+    });
+    setOutcomes([]);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  function removeFile(index: number) {
+    setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setOutcomes([]);
+  }
+
+  function clearFiles() {
+    setFiles([]);
+    setOutcomes([]);
     setLocalError("");
-    setFile(nextFile);
-    setResult(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   }
 
   function runUpload() {
     if (uploadInFlightRef.current) {
       return;
     }
-    if (!file) {
+    if (files.length === 0) {
       setLocalError(t.errors.selectFirst);
       return;
     }
     uploadInFlightRef.current = true;
     run("document-upload", async () => {
       try {
-        const form = new FormData();
-        form.append("file", file, file.name);
-        setResult(await uploadMultipart<UploadResponse>("/upload", form));
+        const nextOutcomes: DocumentUploadOutcome[] = [];
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          setUploadProgress(formatMessage(t.processingProgress, { current: index + 1, total: files.length }));
+          try {
+            const form = new FormData();
+            form.append("file", file, file.name);
+            const result = await uploadMultipart<UploadResponse>("/upload", form);
+            nextOutcomes.push({ filename: file.name, result });
+          } catch (error) {
+            nextOutcomes.push({
+              filename: file.name,
+              error: error instanceof Error ? error.message : "Beklenmeyen hata"
+            });
+          }
+        }
+        setOutcomes(nextOutcomes);
+        const failedCount = nextOutcomes.filter((item) => item.error).length;
+        if (failedCount === nextOutcomes.length) {
+          throw new Error(nextOutcomes.map((item) => `${item.filename}: ${item.error}`).join("\n"));
+        }
+        if (failedCount === 0) {
+          setFiles([]);
+        }
       } finally {
         uploadInFlightRef.current = false;
+        setUploadProgress("");
       }
     });
   }
 
   const isBusy = Boolean(loading);
-  const issues = result?.detectedIssues ?? result?.warnings ?? [];
-  const indexedCount = result?.postgresChunks ?? result?.indexed ?? result?.chunkCount ?? 0;
-  const ingestSuccess = result?.chunkCount != null && indexedCount > 0;
+  const successOutcomes = outcomes.filter((item) => item.result);
+  const failedOutcomes = outcomes.filter((item) => item.error);
+  const anyIngestSuccess = successOutcomes.some((item) => {
+    const indexedCount = item.result?.postgresChunks ?? item.result?.indexed ?? item.result?.chunkCount ?? 0;
+    return indexedCount > 0;
+  });
 
   return (
     <section className="pdf-upload-layout">
@@ -3762,13 +3835,24 @@ function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; l
             {t.beforeUploadItems.map((item) => <li key={item}>{item}</li>)}
           </ul>
         </div>
-        <input ref={inputRef} accept={acceptedExtensions.join(",")} onChange={(event) => applyFile(event.target.files?.[0] ?? null)} type="file" />
+        <input
+          ref={inputRef}
+          accept={acceptedExtensions.join(",")}
+          multiple
+          onChange={(event) => applyFiles(event.target.files)}
+          type="file"
+        />
         <div className="dropzone" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
-          {file ? (
-            <div className="selected-file">
-              <FileText size={28} />
-              <div><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
-              <button className="icon-button" disabled={isBusy} onClick={(event) => { event.stopPropagation(); applyFile(null); }} type="button"><X size={18} /></button>
+          {files.length > 0 ? (
+            <div className="selected-file-list">
+              <strong>{formatMessage(t.selectedCount, { count: files.length })}</strong>
+              {files.map((file, index) => (
+                <div className="selected-file" key={`${file.name}-${file.size}-${file.lastModified}`}>
+                  <FileText size={24} />
+                  <div><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
+                  <button className="icon-button" disabled={isBusy} onClick={(event) => { event.stopPropagation(); removeFile(index); }} type="button"><X size={18} /></button>
+                </div>
+              ))}
             </div>
           ) : (
             <>
@@ -3779,7 +3863,10 @@ function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; l
           )}
         </div>
         <div className="upload-actions">
-          <button disabled={!file || isBusy} onClick={runUpload} type="button">{loading === "document-upload" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}{t.ingest}</button>
+          {files.length > 0 && (
+            <button className="secondary-button" disabled={isBusy} onClick={clearFiles} type="button">{t.clearFiles}</button>
+          )}
+          <button disabled={files.length === 0 || isBusy} onClick={runUpload} type="button">{loading === "document-upload" ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}{t.ingest}</button>
         </div>
         {localError && <div className="inline-error"><AlertCircle size={18} /><span>{localError}</span></div>}
         <div className="document-pipeline">
@@ -3798,43 +3885,92 @@ function DocumentPanel({ locale, loading, run, onGoToChat }: { locale: Locale; l
         </div>
       </div>
       <ResultPanel title={t.result}>
-        {!result && !loading && <EmptyState text={t.empty} />}
-        {loading && <div className="result-loading"><LoaderCircle className="spin" size={36} /><strong>{t.processing}</strong></div>}
-        {result && !loading && (
+        {outcomes.length === 0 && !loading && <EmptyState text={t.empty} />}
+        {loading && (
+          <div className="result-loading">
+            <LoaderCircle className="spin" size={36} />
+            <strong>{uploadProgress || t.processing}</strong>
+          </div>
+        )}
+        {outcomes.length > 0 && !loading && (
           <div className="document-summary">
-            {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{t.pipelineCompleted} {t.indexedParts.replace("{count}", String(indexedCount))}</span></div>}
-            <div className="result-stats">
-              {result.documentId != null && <div><span>{t.documentId}</span><strong>{result.documentId}</strong></div>}
-              <div><span>{t.file}</span><strong>{result.filename}</strong></div>
-              {result.contentType && <div><span>{t.type}</span><strong>{result.contentType}</strong></div>}
-              {result.size != null && <div><span>{t.size}</span><strong>{formatBytes(result.size)}</strong></div>}
-              {result.extractedCharacters != null && <div><span>{t.extractedText}</span><strong>{result.extractedCharacters.toLocaleString(locale === "en" ? "en-US" : "tr-TR")} {t.characters}</strong></div>}
-              {result.chunkCount != null && <div><span>{locale === "en" ? "Chunks" : "Chunk"}</span><strong>{result.chunkCount}</strong></div>}
-              {result.postgresChunks != null && <div><span>{t.postgres}</span><strong>{result.postgresChunks}</strong></div>}
-              {result.opensearchIndexed != null && <div><span>OpenSearch</span><strong>{result.opensearchIndexed}</strong></div>}
-              {result.pgvectorEmbeddings != null && <div><span>pgvector</span><strong>{result.pgvectorEmbeddings}</strong></div>}
+            <div className="document-batch-summary">
+              {failedOutcomes.length === 0 ? (
+                <div className="success-banner"><CheckCircle2 size={20} /><span>{formatMessage(t.batchCompleted, { success: successOutcomes.length, total: outcomes.length })}</span></div>
+              ) : (
+                <div className="inline-error"><AlertCircle size={18} /><span>{formatMessage(t.batchPartial, { success: successOutcomes.length, failed: failedOutcomes.length })}</span></div>
+              )}
+              {anyIngestSuccess && <button className="chat-cta" onClick={onGoToChat} type="button"><Bot size={17} />{t.goChat}</button>}
             </div>
-            <p className="document-result-help">{t.resultHelp}</p>
-            {result.message && <p>{result.message}</p>}
-            {result.summary && (
-              <div className="document-content-summary">
-                <span>{t.contentSummary}</span>
-                <p>{result.summary}</p>
-              </div>
-            )}
-            {result.storedPath && <div className="stored-path"><span>{t.storedPath}</span><code>{result.storedPath}</code></div>}
-            {result.textPreview && (
-              <div className="document-text-preview">
-                <span>{t.textPreview}</span>
-                <pre>{result.textPreview}</pre>
-              </div>
-            )}
-            {issues.length > 0 && <ul className="issue-list">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
-            {ingestSuccess && <button className="chat-cta" onClick={onGoToChat} type="button"><Bot size={17} />{t.goChat}</button>}
+            <div className="document-result-list">
+              {outcomes.map((outcome) => (
+                <DocumentUploadResultCard key={`${outcome.filename}-${outcome.error ?? outcome.result?.documentId ?? "ok"}`} locale={locale} outcome={outcome} t={t} />
+              ))}
+            </div>
           </div>
         )}
       </ResultPanel>
     </section>
+  );
+}
+
+function DocumentUploadResultCard({
+  locale,
+  outcome,
+  t
+}: {
+  locale: Locale;
+  outcome: DocumentUploadOutcome;
+  t: ReturnType<typeof getMessages>["document"];
+}) {
+  if (outcome.error) {
+    return (
+      <article className="document-result-card">
+        <h4>{outcome.filename}</h4>
+        <div className="inline-error"><AlertCircle size={18} /><span>{outcome.error}</span></div>
+      </article>
+    );
+  }
+
+  const result = outcome.result;
+  if (!result) {
+    return null;
+  }
+
+  const issues = result.detectedIssues ?? result.warnings ?? [];
+  const indexedCount = result.postgresChunks ?? result.indexed ?? result.chunkCount ?? 0;
+  const ingestSuccess = result.chunkCount != null && indexedCount > 0;
+
+  return (
+    <article className="document-result-card">
+      <h4>{result.filename}</h4>
+      {ingestSuccess && <div className="success-banner"><CheckCircle2 size={20} /><span>{t.pipelineCompleted} {t.indexedParts.replace("{count}", String(indexedCount))}</span></div>}
+      <div className="result-stats">
+        {result.documentId != null && <div><span>{t.documentId}</span><strong>{result.documentId}</strong></div>}
+        <div><span>{t.file}</span><strong>{result.filename}</strong></div>
+        {result.contentType && <div><span>{t.type}</span><strong>{result.contentType}</strong></div>}
+        {result.size != null && <div><span>{t.size}</span><strong>{formatBytes(result.size)}</strong></div>}
+        {result.extractedCharacters != null && <div><span>{t.extractedText}</span><strong>{result.extractedCharacters.toLocaleString(locale === "en" ? "en-US" : "tr-TR")} {t.characters}</strong></div>}
+        {result.chunkCount != null && <div><span>{locale === "en" ? "Chunks" : "Chunk"}</span><strong>{result.chunkCount}</strong></div>}
+        {result.postgresChunks != null && <div><span>{t.postgres}</span><strong>{result.postgresChunks}</strong></div>}
+        {result.opensearchIndexed != null && <div><span>OpenSearch</span><strong>{result.opensearchIndexed}</strong></div>}
+        {result.pgvectorEmbeddings != null && <div><span>pgvector</span><strong>{result.pgvectorEmbeddings}</strong></div>}
+      </div>
+      {result.message && <p>{result.message}</p>}
+      {result.summary && (
+        <div className="document-content-summary">
+          <span>{t.contentSummary}</span>
+          <p>{result.summary}</p>
+        </div>
+      )}
+      {result.textPreview && (
+        <div className="document-text-preview">
+          <span>{t.textPreview}</span>
+          <pre>{result.textPreview}</pre>
+        </div>
+      )}
+      {issues.length > 0 && <ul className="issue-list">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
+    </article>
   );
 }
 

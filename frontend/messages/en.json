@@ -413,7 +413,7 @@
   },
   "document": {
     "title": "Upload document and add to knowledge base",
-    "subtitle": "PDF, Word, and text files are saved, text is extracted, split into chunks, and written to the search systems in one flow.",
+    "subtitle": "Upload PDF, Word, and text files one at a time or in bulk; text is extracted, split into chunks, and written to the search systems.",
     "pipelineTitle": "Processing flow",
     "pipelineIntro": "After upload, the document passes through the full pipeline below.",
     "pipelineSteps": [
@@ -430,14 +430,19 @@
       "Scanned image PDFs may not produce text because OCR is not enabled.",
       "Uploading the same file again creates a new document record."
     ],
-    "chooseFile": "Choose your file",
-    "fileHint": "PDF, TXT, DOC, DOCX - up to 25 MB",
+    "chooseFile": "Choose your files",
+    "fileHint": "PDF, TXT, DOC, DOCX - multiple files, up to 25 MB each",
+    "selectedCount": "{count} files selected",
+    "clearFiles": "Clear list",
+    "processingProgress": "Processing {current}/{total}...",
+    "batchCompleted": "{success}/{total} documents processed",
+    "batchPartial": "{success} succeeded, {failed} failed",
     "topic": "Topic title",
     "court": "Court (optional)",
     "analyze": "Pre-check",
     "ingest": "Upload and process",
     "result": "Result",
-    "empty": "A summary appears here after you upload a file and start processing.",
+    "empty": "Summaries appear here after you upload files and start processing.",
     "processing": "Processing...",
     "file": "File",
     "type": "Type",
@@ -455,7 +460,8 @@
     "goChat": "Go to chat",
     "errors": {
       "noFile": "No file selected.",
-      "selectFirst": "Select a file first.",
+      "selectFirst": "Select at least one file first.",
+      "invalidFiles": "Some files were rejected: {details}",
       "unsupported": "The document processing pipeline supports PDF, Word, and text files.",
       "tooLarge": "File exceeds the 25 MB limit.",
       "empty": "File appears to be empty."
