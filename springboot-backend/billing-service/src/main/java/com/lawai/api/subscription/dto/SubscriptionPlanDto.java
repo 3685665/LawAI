@@ -20,9 +20,9 @@ public record SubscriptionPlanDto(
     List<String> features,
     List<String> lockedFeatures,
     String ctaLabel,
-    String stripeProductId,
-    String stripeMonthlyPriceId,
-    String stripeYearlyPriceId,
+    String iyzicoProductRef,
+    String iyzicoMonthlyPlanRef,
+    String iyzicoYearlyPlanRef,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {

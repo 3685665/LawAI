@@ -29,7 +29,7 @@ flowchart LR
 |--------|------|------------|
 | **api-gateway** | 8080 | Tek giriş noktası, CORS, route |
 | **auth-service** | 8081 | Kayıt, oturum, Google OAuth, e-posta |
-| **billing-service** | 8082 | Abonelik planları, Stripe |
+| **billing-service** | 8082 | Abonelik planları, iyzico |
 | **legal-service** | 8083 | Chat, içtihat, dilekçe, dava, doküman analizi |
 | **document-service** | 8084 | PDF yükleme, pgvector + OpenSearch arama |
 | **research-service** | 8085 | Çok kaynaklı hukuki araştırma (SSE) |

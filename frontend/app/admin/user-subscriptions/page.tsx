@@ -199,7 +199,7 @@ export default function AdminUserSubscriptionsPage() {
           <div>
             <span className="eyebrow">Yonetici paneli</span>
             <h1>Kullanici Abonelikleri</h1>
-            <p>Kullanici bazli abonelik kayitlarini, Stripe odeme durumunu ve manuel durum guncellemelerini buradan yonetin.</p>
+            <p>Kullanici bazli abonelik kayitlarini, iyzico odeme durumunu ve manuel durum guncellemelerini buradan yonetin.</p>
           </div>
           <div className="hero-actions">
             <Link className="ghost-button" href="/admin/subscriptions"><CreditCard size={17} /> Abonelik planlari</Link>

@@ -67,14 +67,14 @@ public class SubscriptionPlanEntity {
   @Column(name = "cta_label", nullable = false)
   private String ctaLabel;
 
-  @Column(name = "stripe_product_id", nullable = false, length = 128)
-  private String stripeProductId;
+  @Column(name = "iyzico_product_ref", nullable = false, length = 128)
+  private String iyzicoProductRef;
 
-  @Column(name = "stripe_monthly_price_id", nullable = false, length = 128)
-  private String stripeMonthlyPriceId;
+  @Column(name = "iyzico_monthly_plan_ref", nullable = false, length = 128)
+  private String iyzicoMonthlyPlanRef;
 
-  @Column(name = "stripe_yearly_price_id", nullable = false, length = 128)
-  private String stripeYearlyPriceId;
+  @Column(name = "iyzico_yearly_plan_ref", nullable = false, length = 128)
+  private String iyzicoYearlyPlanRef;
 
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
@@ -103,9 +103,9 @@ public class SubscriptionPlanEntity {
     entity.features = record.features() == null ? new ArrayList<>() : new ArrayList<>(record.features());
     entity.lockedFeatures = record.lockedFeatures() == null ? new ArrayList<>() : new ArrayList<>(record.lockedFeatures());
     entity.ctaLabel = record.ctaLabel();
-    entity.stripeProductId = record.stripeProductId();
-    entity.stripeMonthlyPriceId = record.stripeMonthlyPriceId();
-    entity.stripeYearlyPriceId = record.stripeYearlyPriceId();
+    entity.iyzicoProductRef = record.iyzicoProductRef();
+    entity.iyzicoMonthlyPlanRef = record.iyzicoMonthlyPlanRef();
+    entity.iyzicoYearlyPlanRef = record.iyzicoYearlyPlanRef();
     entity.createdAt = record.createdAt();
     entity.updatedAt = record.updatedAt();
     return entity;
@@ -115,7 +115,7 @@ public class SubscriptionPlanEntity {
     return new SubscriptionPlanRecord(
         id, name, slug, badge, description, monthlyPrice, yearlyPrice, currency, usageLimit, usagePeriod,
         highlighted, active, sortOrder, features, lockedFeatures, ctaLabel,
-        stripeProductId, stripeMonthlyPriceId, stripeYearlyPriceId, createdAt, updatedAt
+        iyzicoProductRef, iyzicoMonthlyPlanRef, iyzicoYearlyPlanRef, createdAt, updatedAt
     );
   }
 
@@ -135,9 +135,9 @@ public class SubscriptionPlanEntity {
     features = record.features() == null ? new ArrayList<>() : new ArrayList<>(record.features());
     lockedFeatures = record.lockedFeatures() == null ? new ArrayList<>() : new ArrayList<>(record.lockedFeatures());
     ctaLabel = record.ctaLabel();
-    stripeProductId = record.stripeProductId();
-    stripeMonthlyPriceId = record.stripeMonthlyPriceId();
-    stripeYearlyPriceId = record.stripeYearlyPriceId();
+    iyzicoProductRef = record.iyzicoProductRef();
+    iyzicoMonthlyPlanRef = record.iyzicoMonthlyPlanRef();
+    iyzicoYearlyPlanRef = record.iyzicoYearlyPlanRef();
     updatedAt = record.updatedAt();
   }
 

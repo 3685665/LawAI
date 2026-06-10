@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, CreditCard, LoaderCircle, Lock, Scale } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -10,7 +11,10 @@ import { authLogout, authMe, cancelMySubscription, createBillingCheckout, getMyS
 type BillingCycle = "monthly" | "yearly";
 type SubscriptionTab = "plans" | "mine";
 
+const CHECKOUT_FORM_KEY = "lawai-checkout-form";
+
 export default function SubscriptionsPage() {
+  const searchParams = useSearchParams();
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -46,6 +50,16 @@ export default function SubscriptionsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const checkoutState = searchParams.get("checkout");
+    if (checkoutState === "success") {
+      setActiveTab("mine");
+      setError("");
+    } else if (checkoutState === "cancel") {
+      setError(searchParams.get("error") || "Odeme islemi tamamlanmadi.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -86,6 +100,9 @@ export default function SubscriptionsPage() {
     try {
       const checkout = await createBillingCheckout({ planId: plan.id, billingCycle: cycle });
       setCurrentSubscription(checkout.subscription);
+      if (checkout.checkoutFormContent) {
+        sessionStorage.setItem(`${CHECKOUT_FORM_KEY}:${checkout.checkoutSessionId}`, checkout.checkoutFormContent);
+      }
       window.location.href = checkout.checkoutUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Odeme oturumu olusturulamadi.");
@@ -95,7 +112,7 @@ export default function SubscriptionsPage() {
   }
 
   async function cancelSubscription() {
-    if (!window.confirm("Mevcut aboneliginizi iptal etmek istiyor musunuz?")) return;
+    if (!window.confirm("Aboneliginiz donem sonunda iptal edilecek. Bu donem bitene kadar erisiminiz devam eder. Devam etmek istiyor musunuz?")) return;
     setActionLoading("cancel");
     setError("");
     try {
@@ -168,7 +185,7 @@ export default function SubscriptionsPage() {
             <div>
               <span className="section-label">Mevcut abonelik</span>
               <h2>{currentSubscription ? currentSubscription.planName : "Aktif abonelik yok"}</h2>
-              <p>{currentSubscription ? `${statusLabel(currentSubscription.status)} - ${cycleLabel(currentSubscription.billingCycle)} odeme` : "Bir plan sectiginizde Stripe odeme sureci baslar ve abonelik kaydiniz burada tutulur."}</p>
+              <p>{currentSubscription ? subscriptionSummary(currentSubscription) : "Bir plan sectiginizde iyzico odeme sureci baslar ve abonelik kaydiniz burada tutulur."}</p>
             </div>
             {currentSubscription ? (
               <div className="subscription-current-grid">
@@ -181,7 +198,7 @@ export default function SubscriptionsPage() {
             ) : null}
             <div className="hero-actions">
               <button className="secondary-button" type="button" onClick={() => setActiveTab("plans")}>Planlara don</button>
-              {currentSubscription?.status === "ACTIVE" ? <button className="danger-button" disabled={actionLoading === "cancel"} type="button" onClick={() => void cancelSubscription()}>{actionLoading === "cancel" ? <LoaderCircle className="spin" size={16} /> : null} Iptal et</button> : null}
+              {currentSubscription && !currentSubscription.cancelAtPeriodEnd && ["ACTIVE", "PAST_DUE"].includes(currentSubscription.status) ? <button className="danger-button" disabled={actionLoading === "cancel"} type="button" onClick={() => void cancelSubscription()}>{actionLoading === "cancel" ? <LoaderCircle className="spin" size={16} /> : null} Donem sonunda iptal et</button> : null}
             </div>
           </section>
         )}
@@ -196,7 +213,7 @@ function PlanCard({ plan, cycle, currentSubscription, loading, onSelect }: { pla
   const price = cycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
   const suffix = cycle === "yearly" ? "/ yil" : "/ ay";
   const isContact = price === 0 && plan.slug === "kurumsal";
-  const isCurrent = currentSubscription?.planId === plan.id && currentSubscription.status === "ACTIVE";
+  const isCurrent = currentSubscription?.planId === plan.id && ["ACTIVE", "PAST_DUE", "PENDING_PAYMENT"].includes(currentSubscription.status);
   return (
     <article className={`pricing-card ${plan.highlighted ? "featured" : ""}`}>
       {plan.badge ? <span className="plan-badge">{plan.badge}</span> : null}
@@ -223,9 +240,9 @@ function PlanCard({ plan, cycle, currentSubscription, loading, onSelect }: { pla
           ))}
         </div>
       ) : null}
-      <button className={plan.highlighted ? "" : "secondary-button"} disabled={loading || isCurrent} onClick={onSelect} type="button">
+      <button className={plan.highlighted ? "" : "secondary-button"} disabled={loading || isCurrent || isContact} onClick={onSelect} type="button">
         {loading ? <LoaderCircle className="spin" size={16} /> : null}
-        {isCurrent ? "Mevcut plan" : plan.ctaLabel || `${plan.name} sec`}
+        {isCurrent ? "Mevcut plan" : isContact ? "Iletisim gerekli" : plan.ctaLabel || `${plan.name} sec`}
       </button>
     </article>
   );
@@ -257,6 +274,14 @@ function statusLabel(value: string) {
     EXPIRED: "Suresi doldu"
   };
   return labels[value] ?? value;
+}
+
+function subscriptionSummary(subscription: UserSubscription) {
+  const parts = [statusLabel(subscription.status), `${cycleLabel(subscription.billingCycle)} odeme`];
+  if (subscription.cancelAtPeriodEnd) {
+    parts.push(`Donem sonunda iptal edilecek (${formatDate(subscription.endsAt)})`);
+  }
+  return parts.join(" - ");
 }
 
 

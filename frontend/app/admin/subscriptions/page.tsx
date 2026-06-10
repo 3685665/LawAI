@@ -23,9 +23,9 @@ type PlanForm = {
   featuresText: string;
   lockedFeaturesText: string;
   ctaLabel: string;
-  stripeProductId: string;
-  stripeMonthlyPriceId: string;
-  stripeYearlyPriceId: string;
+  iyzicoProductRef: string;
+  iyzicoMonthlyPlanRef: string;
+  iyzicoYearlyPlanRef: string;
 };
 
 const emptyForm: PlanForm = {
@@ -44,9 +44,9 @@ const emptyForm: PlanForm = {
   featuresText: "",
   lockedFeaturesText: "",
   ctaLabel: "",
-  stripeProductId: "",
-  stripeMonthlyPriceId: "",
-  stripeYearlyPriceId: ""
+  iyzicoProductRef: "",
+  iyzicoMonthlyPlanRef: "",
+  iyzicoYearlyPlanRef: ""
 };
 
 export default function AdminSubscriptionsPage() {
@@ -127,9 +127,9 @@ export default function AdminSubscriptionsPage() {
       featuresText: plan.features.join("\n"),
       lockedFeaturesText: plan.lockedFeatures.join("\n"),
       ctaLabel: plan.ctaLabel ?? "",
-      stripeProductId: plan.stripeProductId ?? "",
-      stripeMonthlyPriceId: plan.stripeMonthlyPriceId ?? "",
-      stripeYearlyPriceId: plan.stripeYearlyPriceId ?? ""
+      iyzicoProductRef: plan.iyzicoProductRef ?? "",
+      iyzicoMonthlyPlanRef: plan.iyzicoMonthlyPlanRef ?? "",
+      iyzicoYearlyPlanRef: plan.iyzicoYearlyPlanRef ?? ""
     });
   }
 
@@ -256,9 +256,9 @@ export default function AdminSubscriptionsPage() {
               <Input label="Kullanim hakki" value={form.usageLimit} onChange={(value) => setForm((current) => ({ ...current, usageLimit: value }))} />
               <Input label="Sira" type="number" value={form.sortOrder} onChange={(value) => setForm((current) => ({ ...current, sortOrder: value }))} />
               <Input label="Buton metni" value={form.ctaLabel} onChange={(value) => setForm((current) => ({ ...current, ctaLabel: value }))} />
-              <Input label="Stripe Product ID" value={form.stripeProductId} onChange={(value) => setForm((current) => ({ ...current, stripeProductId: value }))} placeholder="prod_..." />
-              <Input label="Stripe aylik Price ID" value={form.stripeMonthlyPriceId} onChange={(value) => setForm((current) => ({ ...current, stripeMonthlyPriceId: value }))} placeholder="price_..." />
-              <Input label="Stripe yillik Price ID" value={form.stripeYearlyPriceId} onChange={(value) => setForm((current) => ({ ...current, stripeYearlyPriceId: value }))} placeholder="price_..." />
+              <Input label="iyzico urun referansi" value={form.iyzicoProductRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoProductRef: value }))} placeholder="urun-ref" />
+              <Input label="iyzico aylik plan referansi" value={form.iyzicoMonthlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoMonthlyPlanRef: value }))} placeholder="plan-ref" />
+              <Input label="iyzico yillik plan referansi" value={form.iyzicoYearlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoYearlyPlanRef: value }))} placeholder="plan-ref" />
             </div>
             <label className="field-label">Aciklama<textarea rows={3} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label>
             <div className="subscription-admin-grid textareas">
@@ -297,9 +297,9 @@ function toPayload(form: PlanForm): SubscriptionPlanPayload {
     features: lines(form.featuresText),
     lockedFeatures: lines(form.lockedFeaturesText),
     ctaLabel: form.ctaLabel.trim(),
-    stripeProductId: form.stripeProductId.trim(),
-    stripeMonthlyPriceId: form.stripeMonthlyPriceId.trim(),
-    stripeYearlyPriceId: form.stripeYearlyPriceId.trim()
+    iyzicoProductRef: form.iyzicoProductRef.trim(),
+    iyzicoMonthlyPlanRef: form.iyzicoMonthlyPlanRef.trim(),
+    iyzicoYearlyPlanRef: form.iyzicoYearlyPlanRef.trim()
   };
 }
 

@@ -36,9 +36,9 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.stripe</groupId>
-      <artifactId>stripe-java</artifactId>
-      <version>29.2.0</version>
+      <groupId>com.iyzipay</groupId>
+      <artifactId>iyzipay-java</artifactId>
+      <version>2.0.141</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>

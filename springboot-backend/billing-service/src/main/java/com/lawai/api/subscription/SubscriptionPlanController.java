@@ -4,7 +4,6 @@ import com.lawai.common.client.ActivityLogClient;
 import com.lawai.api.subscription.dto.SubscriptionPlanDto;
 import com.lawai.api.subscription.dto.SubscriptionPlanRequest;
 import com.lawai.api.subscription.dto.UserSubscriptionDto;
-import com.lawai.api.subscription.dto.UserSubscriptionRequest;
 import com.lawai.api.subscription.dto.UserSubscriptionStatusRequest;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -27,10 +26,16 @@ import java.util.List;
 public class SubscriptionPlanController {
 
   private final SubscriptionPlanService subscriptionPlanService;
+  private final IyzicoBillingService iyzicoBillingService;
   private final ActivityLogClient activityLogClient;
 
-  public SubscriptionPlanController(SubscriptionPlanService subscriptionPlanService, ActivityLogClient activityLogClient) {
+  public SubscriptionPlanController(
+      SubscriptionPlanService subscriptionPlanService,
+      IyzicoBillingService iyzicoBillingService,
+      ActivityLogClient activityLogClient
+  ) {
     this.subscriptionPlanService = subscriptionPlanService;
+    this.iyzicoBillingService = iyzicoBillingService;
     this.activityLogClient = activityLogClient;
   }
 
@@ -50,15 +55,15 @@ public class SubscriptionPlanController {
   }
 
   @PostMapping("/me")
-  public UserSubscriptionDto subscribe(@Valid @RequestBody UserSubscriptionRequest request, Authentication authentication) {
-    throw new IllegalArgumentException("Abonelik baslatmak icin odeme checkout akisini kullanin.");
+  public UserSubscriptionDto subscribe(Authentication authentication) {
+    throw new IllegalArgumentException("Abonelik baslatmak icin /api/billing/checkout akisini kullanin.");
   }
 
   @PostMapping("/me/cancel")
   public UserSubscriptionDto cancelMine(Authentication authentication) {
     AuthenticatedUser user = requireUser(authentication);
-    UserSubscriptionDto response = subscriptionPlanService.cancelMine(user);
-    activityLogClient.logBackend(user, "subscription-cancel", "Abonelik", "Abonelik iptal edildi: " + response.planName(), "/api/subscriptions/me/cancel");
+    UserSubscriptionDto response = iyzicoBillingService.cancelSubscription(user);
+    activityLogClient.logBackend(user, "subscription-cancel", "Abonelik", "Abonelik donem sonunda iptal edilecek: " + response.planName(), "/api/subscriptions/me/cancel");
     return response;
   }
 

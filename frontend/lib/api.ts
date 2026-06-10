@@ -252,9 +252,9 @@ export type SubscriptionPlan = {
   features: string[];
   lockedFeatures: string[];
   ctaLabel?: string | null;
-  stripeProductId?: string | null;
-  stripeMonthlyPriceId?: string | null;
-  stripeYearlyPriceId?: string | null;
+  iyzicoProductRef?: string | null;
+  iyzicoMonthlyPlanRef?: string | null;
+  iyzicoYearlyPlanRef?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -295,14 +295,15 @@ export type SubscriptionPlanPayload = {
   features: string[];
   lockedFeatures: string[];
   ctaLabel?: string;
-  stripeProductId?: string;
-  stripeMonthlyPriceId?: string;
-  stripeYearlyPriceId?: string;
+  iyzicoProductRef?: string;
+  iyzicoMonthlyPlanRef?: string;
+  iyzicoYearlyPlanRef?: string;
 };
 export type BillingCheckoutResponse = {
   checkoutUrl: string;
   checkoutSessionId: string;
   subscription: UserSubscription;
+  checkoutFormContent: string;
 };
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {

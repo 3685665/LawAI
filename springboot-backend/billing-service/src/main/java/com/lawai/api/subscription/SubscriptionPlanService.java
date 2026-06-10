@@ -1,9 +1,9 @@
 package com.lawai.api.subscription;
 
+import com.iyzipay.model.subscription.resource.CreatedSubscriptionData;
 import com.lawai.api.subscription.dto.SubscriptionPlanDto;
 import com.lawai.api.subscription.dto.SubscriptionPlanRequest;
 import com.lawai.api.subscription.dto.UserSubscriptionDto;
-import com.lawai.api.subscription.dto.UserSubscriptionRequest;
 import com.lawai.api.subscription.model.BillingEventRecord;
 import com.lawai.api.subscription.model.SubscriptionPlanRecord;
 import com.lawai.api.subscription.model.SubscriptionStorePayload;
@@ -104,51 +104,25 @@ public class SubscriptionPlanService {
   }
 
   public UserSubscriptionDto mySubscription(AuthenticatedUser user) {
-    UserSubscriptionRecord record = activeSubscriptionFor(user);
+    UserSubscriptionRecord record = currentSubscriptionFor(user);
     return record == null ? null : toDto(record);
   }
 
-  public UserSubscriptionDto subscribe(AuthenticatedUser user, UserSubscriptionRequest request) {
-    SubscriptionStorePayload store = loadStore();
-    SubscriptionPlanRecord plan = store.plans().stream()
-        .filter(item -> item.id().equals(request.planId()) && item.active())
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Aktif abonelik plani bulunamadi."));
-    String billingCycle = normalizeBillingCycle(request.billingCycle());
+  public UserSubscriptionDto activateFreePlan(AuthenticatedUser user, SubscriptionPlanRecord plan, String billingCycle) {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    OffsetDateTime endsAt = "yearly".equals(billingCycle) ? now.plusYears(1) : now.plusMonths(1);
-    List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
-    boolean updated = false;
-    UserSubscriptionRecord result = null;
-    for (UserSubscriptionRecord item : store.userSubscriptions()) {
-      if (item.userId().equals(user.id()) && !"CANCELLED".equalsIgnoreCase(item.status())) {
-        UserSubscriptionRecord rewritten = item
-            .withUser(user.name(), user.email(), now)
-            .withPlan(plan.id(), plan.name(), billingCycle, now, endsAt, now)
-            .withStatus("ACTIVE", now);
-        subscriptions.add(rewritten);
-        result = rewritten;
-        updated = true;
-      } else {
-        subscriptions.add(item);
-      }
-    }
-    if (!updated) {
-      result = new UserSubscriptionRecord(UUID.randomUUID().toString(), user.id(), user.name(), user.email(), plan.id(), plan.name(), billingCycle, "ACTIVE", "manual", "", "", "", "", "manual", false, now, endsAt, now, now);
-      subscriptions.add(result);
-    }
-    saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
-    return toDto(result);
+    OffsetDateTime endsAt = periodEnd(now, billingCycle);
+    return toDto(upsertSubscription(user, plan, billingCycle, "ACTIVE", "free", "", "", "", "", false, now, endsAt, now, "success"));
   }
 
-  public UserSubscriptionDto cancelMine(AuthenticatedUser user) {
+  public UserSubscriptionDto cancelAtPeriodEnd(AuthenticatedUser user) {
     SubscriptionStorePayload store = loadStore();
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     UserSubscriptionRecord result = null;
     List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
     for (UserSubscriptionRecord item : store.userSubscriptions()) {
-      if (item.userId().equals(user.id()) && "ACTIVE".equalsIgnoreCase(item.status())) {
-        UserSubscriptionRecord rewritten = item.withStatus("CANCELLED", now);
+      if (item.userId().equals(user.id()) && isAccessibleStatus(item.status())) {
+        UserSubscriptionRecord rewritten = item
+            .withProvider(item.provider(), item.providerCustomerId(), item.providerSubscriptionId(), item.providerCheckoutSessionId(), item.providerPriceId(), item.lastPaymentStatus(), true, now);
         subscriptions.add(rewritten);
         result = rewritten;
       } else {
@@ -156,10 +130,36 @@ public class SubscriptionPlanService {
       }
     }
     if (result == null) {
-      throw new IllegalArgumentException("Aktif abonelik bulunamadi.");
+      throw new IllegalArgumentException("Iptal edilebilir abonelik bulunamadi.");
     }
     saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
     return toDto(result);
+  }
+
+  public UserSubscriptionRecord requireCancellableSubscription(AuthenticatedUser user) {
+    UserSubscriptionRecord record = currentSubscriptionFor(user);
+    if (record == null || !isAccessibleStatus(record.status())) {
+      throw new IllegalArgumentException("Iptal edilebilir abonelik bulunamadi.");
+    }
+    return record;
+  }
+
+  public void expireEndedSubscriptions() {
+    SubscriptionStorePayload store = loadStore();
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
+    boolean updated = false;
+    for (UserSubscriptionRecord item : store.userSubscriptions()) {
+      if (shouldExpire(item, now)) {
+        subscriptions.add(item.withStatus("EXPIRED", now));
+        updated = true;
+      } else {
+        subscriptions.add(item);
+      }
+    }
+    if (updated) {
+      saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
+    }
   }
 
   public List<UserSubscriptionDto> listUserSubscriptions(AuthenticatedUser user) {
@@ -200,41 +200,44 @@ public class SubscriptionPlanService {
         .orElseThrow(() -> new IllegalArgumentException("Aktif abonelik plani bulunamadi."));
   }
 
-  public String requireStripePriceId(SubscriptionPlanRecord plan, String billingCycle) {
-    String normalizedCycle = normalizeBillingCycle(billingCycle);
-    String priceId = "yearly".equals(normalizedCycle) ? clean(plan.stripeYearlyPriceId()) : clean(plan.stripeMonthlyPriceId());
-    if (!StringUtils.hasText(priceId)) {
-      throw new IllegalArgumentException("Bu plan icin Stripe Price ID ayarlanmadi.");
-    }
-    return priceId;
+  public String normalizeBillingCyclePublic(String billingCycle) {
+    return normalizeBillingCycle(billingCycle);
   }
 
-  public UserSubscriptionDto markStripeCheckoutPending(AuthenticatedUser user, SubscriptionPlanRecord plan, String billingCycle, String checkoutSessionId, String customerId, String priceId) {
-    SubscriptionStorePayload store = loadStore();
+  public String requireIyzicoPricingPlanRef(SubscriptionPlanRecord plan, String billingCycle) {
     String normalizedCycle = normalizeBillingCycle(billingCycle);
+    String planRef = "yearly".equals(normalizedCycle) ? clean(plan.iyzicoYearlyPlanRef()) : clean(plan.iyzicoMonthlyPlanRef());
+    if (!StringUtils.hasText(planRef)) {
+      throw new IllegalArgumentException("Bu plan icin iyzico odeme plani referansi ayarlanmadi.");
+    }
+    return planRef;
+  }
+
+  public UserSubscriptionDto markIyzicoCheckoutPending(
+      AuthenticatedUser user,
+      SubscriptionPlanRecord plan,
+      String billingCycle,
+      String checkoutToken,
+      String pricingPlanRef,
+      String conversationId
+  ) {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
-    UserSubscriptionRecord result = null;
-    boolean updated = false;
-    for (UserSubscriptionRecord item : store.userSubscriptions()) {
-      if (item.userId().equals(user.id()) && !"CANCELLED".equalsIgnoreCase(item.status())) {
-        UserSubscriptionRecord rewritten = item
-            .withUser(user.name(), user.email(), now)
-            .withPlan(plan.id(), plan.name(), normalizedCycle, now, now, now)
-            .withStatus("PENDING_PAYMENT", now)
-            .withProvider("stripe", customerId, item.providerSubscriptionId(), checkoutSessionId, priceId, "pending", false, now);
-        subscriptions.add(rewritten);
-        result = rewritten;
-        updated = true;
-      } else {
-        subscriptions.add(item);
-      }
-    }
-    if (!updated) {
-      result = new UserSubscriptionRecord(UUID.randomUUID().toString(), user.id(), user.name(), user.email(), plan.id(), plan.name(), normalizedCycle, "PENDING_PAYMENT", "stripe", customerId, "", checkoutSessionId, priceId, "pending", false, now, now, now, now);
-      subscriptions.add(result);
-    }
-    saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
+    UserSubscriptionRecord result = upsertSubscription(
+        user,
+        plan,
+        billingCycle,
+        "PENDING_PAYMENT",
+        "iyzico",
+        conversationId,
+        "",
+        checkoutToken,
+        pricingPlanRef,
+        false,
+        now,
+        now,
+        now,
+        "pending"
+    );
     return toDto(result);
   }
 
@@ -250,52 +253,84 @@ public class SubscriptionPlanService {
     }
   }
 
-  public void activateStripeSubscription(String checkoutSessionId, String customerId, String subscriptionId, String paymentStatus) {
-    updateStripeSubscription(checkoutSessionId, subscriptionId, "ACTIVE", customerId, subscriptionId, paymentStatus, false, null, null);
-  }
-
-  public void updateStripeSubscriptionByProviderId(String subscriptionId, String status, String customerId, String paymentStatus, boolean cancelAtPeriodEnd, Long currentPeriodStart, Long currentPeriodEnd) {
-    updateStripeSubscription(null, subscriptionId, status, customerId, subscriptionId, paymentStatus, cancelAtPeriodEnd, currentPeriodStart, currentPeriodEnd);
-  }
-
-  public void updateStripeSubscriptionByMetadata(String userId, String planId, String subscriptionId, String status, String customerId, String paymentStatus, boolean cancelAtPeriodEnd, Long currentPeriodStart, Long currentPeriodEnd) {
+  public UserSubscriptionDto activateIyzicoSubscription(String checkoutToken, CreatedSubscriptionData data) {
+    String mappedStatus = mapIyzicoSubscriptionStatus(data.getSubscriptionStatus());
+    OffsetDateTime startsAt = fromIyzicoDate(data.getStartDate());
+    OffsetDateTime endsAt = fromIyzicoDate(data.getEndDate());
+    if (endsAt == null) {
+      endsAt = startsAt == null ? OffsetDateTime.now(ZoneOffset.UTC) : periodEnd(startsAt, findBillingCycleByToken(checkoutToken));
+    }
+    if (startsAt == null) {
+      startsAt = OffsetDateTime.now(ZoneOffset.UTC);
+    }
     SubscriptionStorePayload store = loadStore();
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
-    boolean updated = false;
+    UserSubscriptionRecord result = null;
     for (UserSubscriptionRecord item : store.userSubscriptions()) {
-      if (item.userId().equals(userId) && item.planId().equals(planId) && ("PENDING_PAYMENT".equalsIgnoreCase(item.status()) || !StringUtils.hasText(item.providerSubscriptionId()))) {
-        OffsetDateTime startsAt = currentPeriodStart == null ? item.startsAt() : fromUnix(currentPeriodStart);
-        OffsetDateTime endsAt = currentPeriodEnd == null ? item.endsAt() : fromUnix(currentPeriodEnd);
+      if (checkoutToken.equals(item.providerCheckoutSessionId())) {
         UserSubscriptionRecord rewritten = item
-            .withStatus(status, now)
-            .withProvider("stripe", cleanOrExisting(customerId, item.providerCustomerId()), cleanOrExisting(subscriptionId, item.providerSubscriptionId()), item.providerCheckoutSessionId(), item.providerPriceId(), cleanOrExisting(paymentStatus, item.lastPaymentStatus()), cancelAtPeriodEnd, now)
+            .withStatus(mappedStatus, now)
+            .withProvider(
+                "iyzico",
+                cleanOrExisting(data.getCustomerReferenceCode(), item.providerCustomerId()),
+                cleanOrExisting(data.getReferenceCode(), item.providerSubscriptionId()),
+                item.providerCheckoutSessionId(),
+                cleanOrExisting(data.getPricingPlanReferenceCode(), item.providerPriceId()),
+                cleanOrExisting(data.getSubscriptionStatus(), item.lastPaymentStatus()),
+                false,
+                now
+            )
             .withPeriod(startsAt, endsAt, now);
         subscriptions.add(rewritten);
-        updated = true;
+        result = rewritten;
       } else {
         subscriptions.add(item);
       }
     }
-    if (updated) {
-      saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
+    if (result == null) {
+      throw new IllegalArgumentException("Bekleyen abonelik kaydi bulunamadi.");
     }
+    saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
+    return toDto(result);
   }
 
-  private void updateStripeSubscription(String checkoutSessionId, String lookupSubscriptionId, String status, String customerId, String subscriptionId, String paymentStatus, boolean cancelAtPeriodEnd, Long currentPeriodStart, Long currentPeriodEnd) {
+  public void renewIyzicoSubscription(String subscriptionReferenceCode, String customerReferenceCode, String paymentStatus) {
+    updateIyzicoSubscription(subscriptionReferenceCode, "ACTIVE", customerReferenceCode, paymentStatus, true);
+  }
+
+  public void updateIyzicoSubscriptionStatus(String subscriptionReferenceCode, String status, String customerReferenceCode, String paymentStatus) {
+    updateIyzicoSubscription(subscriptionReferenceCode, status, customerReferenceCode, paymentStatus, false);
+  }
+
+  private void updateIyzicoSubscription(String subscriptionReferenceCode, String status, String customerReferenceCode, String paymentStatus, boolean extendPeriod) {
+    if (!StringUtils.hasText(subscriptionReferenceCode)) {
+      return;
+    }
     SubscriptionStorePayload store = loadStore();
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
     boolean updated = false;
     for (UserSubscriptionRecord item : store.userSubscriptions()) {
-      boolean matchesSession = StringUtils.hasText(checkoutSessionId) && checkoutSessionId.equals(item.providerCheckoutSessionId());
-      boolean matchesSubscription = StringUtils.hasText(lookupSubscriptionId) && lookupSubscriptionId.equals(item.providerSubscriptionId());
-      if (matchesSession || matchesSubscription) {
-        OffsetDateTime startsAt = currentPeriodStart == null ? item.startsAt() : fromUnix(currentPeriodStart);
-        OffsetDateTime endsAt = currentPeriodEnd == null ? item.endsAt() : fromUnix(currentPeriodEnd);
+      if (subscriptionReferenceCode.equals(item.providerSubscriptionId())) {
+        OffsetDateTime startsAt = item.startsAt();
+        OffsetDateTime endsAt = item.endsAt();
+        if (extendPeriod && "ACTIVE".equalsIgnoreCase(status)) {
+          OffsetDateTime base = endsAt != null && endsAt.isAfter(now) ? endsAt : now;
+          endsAt = periodEnd(base, item.billingCycle());
+        }
         UserSubscriptionRecord rewritten = item
             .withStatus(status, now)
-            .withProvider("stripe", cleanOrExisting(customerId, item.providerCustomerId()), cleanOrExisting(subscriptionId, item.providerSubscriptionId()), item.providerCheckoutSessionId(), item.providerPriceId(), cleanOrExisting(paymentStatus, item.lastPaymentStatus()), cancelAtPeriodEnd, now)
+            .withProvider(
+                item.provider(),
+                cleanOrExisting(customerReferenceCode, item.providerCustomerId()),
+                item.providerSubscriptionId(),
+                item.providerCheckoutSessionId(),
+                item.providerPriceId(),
+                cleanOrExisting(paymentStatus, item.lastPaymentStatus()),
+                item.cancelAtPeriodEnd(),
+                now
+            )
             .withPeriod(startsAt, endsAt, now);
         subscriptions.add(rewritten);
         updated = true;
@@ -335,9 +370,9 @@ public class SubscriptionPlanService {
         features,
         cleanList(request.lockedFeatures()),
         StringUtils.hasText(request.ctaLabel()) ? request.ctaLabel().trim() : name + " sec",
-        clean(request.stripeProductId()),
-        clean(request.stripeMonthlyPriceId()),
-        clean(request.stripeYearlyPriceId()),
+        clean(request.iyzicoProductRef()),
+        clean(request.iyzicoMonthlyPlanRef()),
+        clean(request.iyzicoYearlyPlanRef()),
         createdAt,
         updatedAt
     );
@@ -387,22 +422,141 @@ public class SubscriptionPlanService {
   }
 
   private SubscriptionPlanDto toDto(SubscriptionPlanRecord record) {
-    return new SubscriptionPlanDto(record.id(), record.name(), record.slug(), record.badge(), record.description(), record.monthlyPrice(), record.yearlyPrice(), record.currency(), record.usageLimit(), record.usagePeriod(), record.highlighted(), record.active(), record.sortOrder(), record.features(), record.lockedFeatures(), record.ctaLabel(), record.stripeProductId(), record.stripeMonthlyPriceId(), record.stripeYearlyPriceId(), record.createdAt(), record.updatedAt());
+    return new SubscriptionPlanDto(record.id(), record.name(), record.slug(), record.badge(), record.description(), record.monthlyPrice(), record.yearlyPrice(), record.currency(), record.usageLimit(), record.usagePeriod(), record.highlighted(), record.active(), record.sortOrder(), record.features(), record.lockedFeatures(), record.ctaLabel(), record.iyzicoProductRef(), record.iyzicoMonthlyPlanRef(), record.iyzicoYearlyPlanRef(), record.createdAt(), record.updatedAt());
   }
 
   private UserSubscriptionDto toDto(UserSubscriptionRecord record) {
     return new UserSubscriptionDto(record.id(), record.userId(), record.userName(), record.userEmail(), record.planId(), record.planName(), record.billingCycle(), record.status(), record.provider(), record.providerCustomerId(), record.providerSubscriptionId(), record.providerCheckoutSessionId(), record.providerPriceId(), record.lastPaymentStatus(), record.cancelAtPeriodEnd(), record.startsAt(), record.endsAt(), record.createdAt(), record.updatedAt());
   }
 
-  private UserSubscriptionRecord activeSubscriptionFor(AuthenticatedUser user) {
+  private UserSubscriptionRecord currentSubscriptionFor(AuthenticatedUser user) {
     if (user == null) {
       return null;
     }
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     return loadStore().userSubscriptions().stream()
         .filter(item -> item.userId().equals(user.id()))
-        .filter(item -> "ACTIVE".equalsIgnoreCase(item.status()))
+        .filter(item -> isAccessibleStatus(item.status()))
+        .filter(item -> item.endsAt() == null || !item.endsAt().isBefore(now))
         .max(Comparator.comparing(UserSubscriptionRecord::updatedAt))
         .orElse(null);
+  }
+
+  private UserSubscriptionRecord upsertSubscription(
+      AuthenticatedUser user,
+      SubscriptionPlanRecord plan,
+      String billingCycle,
+      String status,
+      String provider,
+      String customerId,
+      String subscriptionId,
+      String checkoutToken,
+      String pricingPlanRef,
+      boolean cancelAtPeriodEnd,
+      OffsetDateTime startsAt,
+      OffsetDateTime endsAt,
+      OffsetDateTime now,
+      String lastPaymentStatus
+  ) {
+    SubscriptionStorePayload store = loadStore();
+    List<UserSubscriptionRecord> subscriptions = new ArrayList<>();
+    UserSubscriptionRecord result = null;
+    boolean updated = false;
+    for (UserSubscriptionRecord item : store.userSubscriptions()) {
+      if (item.userId().equals(user.id()) && !isTerminalStatus(item.status())) {
+        UserSubscriptionRecord rewritten = item
+            .withUser(user.name(), user.email(), now)
+            .withPlan(plan.id(), plan.name(), billingCycle, startsAt, endsAt, now)
+            .withStatus(status, now)
+            .withProvider(provider, customerId, subscriptionId, checkoutToken, pricingPlanRef, lastPaymentStatus, cancelAtPeriodEnd, now);
+        subscriptions.add(rewritten);
+        result = rewritten;
+        updated = true;
+      } else {
+        subscriptions.add(item);
+      }
+    }
+    if (!updated) {
+      result = new UserSubscriptionRecord(
+          UUID.randomUUID().toString(),
+          user.id(),
+          user.name(),
+          user.email(),
+          plan.id(),
+          plan.name(),
+          billingCycle,
+          status,
+          provider,
+          customerId,
+          subscriptionId,
+          checkoutToken,
+          pricingPlanRef,
+          lastPaymentStatus,
+          cancelAtPeriodEnd,
+          startsAt,
+          endsAt,
+          now,
+          now
+      );
+      subscriptions.add(result);
+    }
+    saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
+    return result;
+  }
+
+  private boolean isAccessibleStatus(String status) {
+    return "ACTIVE".equalsIgnoreCase(status)
+        || "PAST_DUE".equalsIgnoreCase(status)
+        || "PENDING_PAYMENT".equalsIgnoreCase(status);
+  }
+
+  private boolean isTerminalStatus(String status) {
+    return "CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status);
+  }
+
+  private boolean shouldExpire(UserSubscriptionRecord item, OffsetDateTime now) {
+    if (item.endsAt() == null || item.endsAt().isAfter(now)) {
+      return false;
+    }
+    return isAccessibleStatus(item.status()) || "CANCELLED".equalsIgnoreCase(item.status());
+  }
+
+  private OffsetDateTime periodEnd(OffsetDateTime startsAt, String billingCycle) {
+    return "yearly".equalsIgnoreCase(billingCycle) ? startsAt.plusYears(1) : startsAt.plusMonths(1);
+  }
+
+  private String findBillingCycleByToken(String checkoutToken) {
+    return loadStore().userSubscriptions().stream()
+        .filter(item -> checkoutToken.equals(item.providerCheckoutSessionId()))
+        .map(UserSubscriptionRecord::billingCycle)
+        .findFirst()
+        .orElse("monthly");
+  }
+
+  private String mapIyzicoSubscriptionStatus(String status) {
+    return switch (status == null ? "" : status.toUpperCase(Locale.ROOT)) {
+      case "ACTIVE" -> "ACTIVE";
+      case "PENDING" -> "PENDING_PAYMENT";
+      case "UNPAID" -> "PAST_DUE";
+      case "CANCELED", "CANCELLED" -> "CANCELLED";
+      case "EXPIRED" -> "EXPIRED";
+      default -> "PENDING_PAYMENT";
+    };
+  }
+
+  private OffsetDateTime fromIyzicoDate(String value) {
+    if (!StringUtils.hasText(value)) {
+      return null;
+    }
+    try {
+      long epoch = Long.parseLong(value.trim());
+      if (value.trim().length() <= 10) {
+        epoch *= 1000L;
+      }
+      return OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(epoch), ZoneOffset.UTC);
+    } catch (NumberFormatException exception) {
+      return null;
+    }
   }
 
   private String normalizeBillingCycle(String value) {
@@ -419,10 +573,6 @@ public class SubscriptionPlanService {
       return cleaned;
     }
     throw new IllegalArgumentException("Abonelik durumu gecersiz.");
-  }
-
-  private OffsetDateTime fromUnix(Long value) {
-    return OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(value), ZoneOffset.UTC);
   }
 
   private String cleanOrExisting(String value, String fallback) {

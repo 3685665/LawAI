@@ -18,9 +18,19 @@ app:
   billing:
     success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/subscriptions?checkout=success}
     cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/subscriptions?checkout=cancel}
-    stripe:
-      secret-key: ${STRIPE_SECRET_KEY:}
-      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    checkout-page-url: ${BILLING_CHECKOUT_PAGE_URL:http://localhost:3000/subscriptions/checkout}
+    iyzico:
+      api-key: ${IYZICO_API_KEY:}
+      secret-key: ${IYZICO_SECRET_KEY:}
+      merchant-id: ${IYZICO_MERCHANT_ID:}
+      base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
+      callback-url: ${IYZICO_CALLBACK_URL:http://localhost:8080/api/billing/iyzico/callback}
+      default-gsm: ${IYZICO_DEFAULT_GSM:+905555555555}
+      default-identity-number: ${IYZICO_DEFAULT_IDENTITY_NUMBER:11111111111}
+      default-address: ${IYZICO_DEFAULT_ADDRESS:Istanbul}
+      default-city: ${IYZICO_DEFAULT_CITY:Istanbul}
+      default-country: ${IYZICO_DEFAULT_COUNTRY:Turkey}
+      default-zip-code: ${IYZICO_DEFAULT_ZIP_CODE:34000}
 
 management:
   health:

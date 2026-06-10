@@ -5,8 +5,10 @@ import com.lawai.common.config.JpaPersistenceConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = {"com.lawai.api", "com.lawai.persistence", "com.lawai.config"})
+@EnableScheduling
 @Import({CommonAutoConfiguration.class, JpaPersistenceConfiguration.class})
 public class BillingServiceApplication {
   public static void main(String[] args) {
