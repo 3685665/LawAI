@@ -15,7 +15,7 @@ Bu proje, web/API katmanini Spring Boot'a, AI/RAG katmanini Python'a ayiracak se
 
 - `frontend`: Next.js 15, React 19, TypeScript
 - `backend`: Python AI mikroservisi, LangChain, OpenAI/Gemini/Ollama adaptorleri
-- `springboot-backend`: Spring Boot microservices (gateway + domain servisleri); legacy monolit `monolith/` altında
+- `springboot-backend`: Spring Boot microservices (API gateway + domain servisleri)
 
 ## Python AI Servisi
 
@@ -27,7 +27,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 ```
 
 Ollama icin once gerekli modelleri indirin:
@@ -65,13 +65,7 @@ cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
 start-microservices.bat
 ```
 
-API Gateway `http://localhost:8080` üzerinden frontend ile konuşur.
-
-**Eski monolit** (tek JAR, geri dönüş için) — gateway ile aynı anda çalıştırmayın:
-
-```powershell
-start-monolith.bat
-```
+API Gateway `http://localhost:8080` üzerinden frontend ile konuşur. Python AI servisi `http://localhost:8000` üzerinde çalışmalıdır (Spring servisleri `AI_BASE_URL` ile bu adrese bağlanır).
 
 Frontend varsayilan olarak `http://localhost:3000`, ana API `http://localhost:8080/api` adresinde calisir.
 

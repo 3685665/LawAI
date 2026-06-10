@@ -1,6 +1,6 @@
 # LawAI Spring Boot Microservices
 
-Monolitik `springboot-backend` uygulaması, bağımsız deploy edilebilir microservislere ayrıldı. Frontend ve Python AI backend aynı API sözleşmesiyle **API Gateway** (`8080`) üzerinden konuşur.
+Spring Boot uygulaması bağımsız deploy edilebilir microservislere ayrıldı. Frontend ve Python AI backend aynı API sözleşmesiyle **API Gateway** (`8080`) üzerinden konuşur.
 
 ## Mimari
 
@@ -48,26 +48,7 @@ springboot-backend/
 ├── research-service/
 ├── platform-service/
 ├── api-gateway/
-├── monolith/               # Eski tek-parça uygulama (legacy, opsiyonel)
-├── start-microservices.bat # Önerilen başlatma
-└── start-monolith.bat      # Sadece geri dönüş için
-```
-
-## Eski kod vs yeni kod
-
-| | **Microservices (yeni)** | **Monolith (eski)** |
-|---|---|---|
-| Konum | `auth-service/`, `legal-service/`, … | `monolith/src/` |
-| Varsayılan build | Evet (`mvn install`) | Hayır (profil gerekir) |
-| Port | Gateway `8080` | Tek process `8080` |
-| Birlikte çalışır mı? | **Hayır** — ikisi de 8080 kullanır |
-
-Eski kod silinmedi; `monolith/` altına taşındı. Yeni geliştirmeler ilgili microservice modülünde yapılmalı. Monolit yalnızca geçiş veya karşılaştırma için kullanılır:
-
-```bash
-./mvnw -pl monolith -Plegacy-monolith spring-boot:run
-# veya
-start-monolith.bat
+└── start-microservices.bat # Yerel başlatma
 ```
 
 ## Gereksinimler
@@ -117,5 +98,5 @@ docker build --build-arg JAR_FILE=auth-service/target/auth-service-*.jar -t lawa
 ## Notlar
 
 - Tüm servisler varsayılan olarak aynı PostgreSQL veritabanını (`lawai`) kullanır; tablolar domain bazında ayrılmıştır.
-- Eski monolit kodu `src/` altında durur; yeni geliştirmeler ilgili microservice modülünde yapılmalıdır.
+- Yeni geliştirmeler ilgili microservice modülünde yapılmalıdır.
 - Gateway route tanımları: `api-gateway/src/main/resources/application.yml`

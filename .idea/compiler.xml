@@ -25,7 +25,6 @@
       <module name="billing-service" options="-parameters" />
       <module name="document-service" options="-parameters" />
       <module name="lawai-common" options="-parameters" />
-      <module name="lawai-springboot-backend" options="" />
       <module name="legal-service" options="-parameters" />
       <module name="platform-service" options="-parameters" />
       <module name="research-service" options="-parameters" />

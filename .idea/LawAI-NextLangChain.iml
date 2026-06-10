@@ -3,10 +3,6 @@
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_24" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$/../springboot-backend">
-      <sourceFolder url="file://$MODULE_DIR$/../springboot-backend/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../springboot-backend/src/main/resources" type="java-resource" />
-      <sourceFolder url="file://$MODULE_DIR$/../springboot-backend/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/../springboot-backend/src/test/resources" type="java-test-resource" />
       <excludeFolder url="file://$MODULE_DIR$/../springboot-backend/target" />
     </content>
     <orderEntry type="inheritedJdk" />

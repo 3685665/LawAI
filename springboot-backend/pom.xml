@@ -61,13 +61,4 @@
       </plugins>
     </pluginManagement>
   </build>
-
-  <profiles>
-    <profile>
-      <id>legacy-monolith</id>
-      <modules>
-        <module>monolith</module>
-      </modules>
-    </profile>
-  </profiles>
 </project>
