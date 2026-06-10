@@ -6421,3 +6421,182 @@ body[data-theme="dark"] .petition-linked-precedents li {
   }
 }
 
+.batch-documents-panel .section-copy {
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+
+.batch-job-form {
+  margin-top: 1rem;
+}
+
+.batch-form-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.batch-run-detail {
+  margin-top: 1.25rem;
+}
+
+.table-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  height: 100%;
+}
+
+.secondary-button.compact {
+  font-size: 12px;
+  min-height: 30px;
+  padding: 0.25rem 0.55rem;
+}
+
+.secondary-button.danger {
+  border-color: #f0c7c7;
+  color: #9b2c2c;
+}
+
+.status-pill {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.status-pill.success {
+  background: #e8f5eb;
+  color: #21603a;
+}
+
+.status-pill.warning {
+  background: #fff4df;
+  color: #8a5b00;
+}
+
+.status-pill.info {
+  background: #e8f1fb;
+  color: #1f4f8a;
+}
+
+.status-pill.danger {
+  background: #fdecec;
+  color: #9b2c2c;
+}
+
+.batch-directory-picker {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.batch-path-display {
+  background: #eef6ff;
+  border: 1px solid #cfe3fb;
+  border-radius: 12px;
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.batch-path-display span {
+  color: #1f4f8a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.batch-path-display code {
+  color: #0f172a;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.field-hint {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 0.45rem;
+}
+
+.batch-auto-name {
+  background: #f7f9fb;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.batch-auto-name span,
+.batch-auto-name small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.batch-directory-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 1200;
+}
+
+.batch-directory-modal {
+  max-height: min(80vh, 720px);
+  max-width: 720px;
+  overflow: auto;
+  width: 100%;
+}
+
+.batch-directory-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.batch-directory-item {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.55rem;
+}
+
+.batch-directory-open {
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  gap: 0.15rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+}
+
+.batch-directory-open:hover {
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.batch-directory-open small {
+  color: var(--muted);
+  font-size: 11px;
+  grid-column: 2;
+  word-break: break-all;
+}
+

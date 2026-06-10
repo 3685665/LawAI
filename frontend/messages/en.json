@@ -554,6 +554,117 @@
       "updateFailed": "Profile could not be updated."
     }
   },
+  "batchDocuments": {
+    "eyebrow": "Scheduled processing",
+    "title": "Batch Document Processing",
+    "subtitle": "Automatically process PDF, Word, and text files from a directory on a daily, weekly, monthly, or one-time schedule.",
+    "jobsCount": "jobs",
+    "refresh": "Refresh",
+    "newJob": "New job",
+    "enabledYes": "Active",
+    "enabledNo": "Inactive",
+    "notScheduled": "Not scheduled",
+    "savedCreate": "Job created.",
+    "savedUpdate": "Job updated.",
+    "deleted": "Job deleted.",
+    "runCompleted": "{success}/{total} files processed.",
+    "confirmDelete": "Delete job \"{name}\"?",
+    "schedule": {
+      "once": "One-time",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "form": {
+      "createTitle": "New batch processing job",
+      "editTitle": "Edit job",
+      "autoName": "Auto-generated job name",
+      "autoNameHint": "Built automatically from the directory name and schedule.",
+      "directory": "Source directory",
+      "directoryPlaceholder": "e.g. C:\\LawAI\\incoming",
+      "directoryManualHint": "Type the full file path or use Browse to pick a folder from your computer. The selected path is shown below.",
+      "browseDirectory": "Browse",
+      "selectedDirectory": "Selected file path",
+      "browseTitle": "Directory picker",
+      "browseRoots": "Root directories",
+      "browseUp": "Parent folder",
+      "browseSelect": "Select this folder",
+      "browseEmpty": "No subfolders in this directory.",
+      "browseLoading": "Loading directories...",
+      "scheduleType": "Schedule",
+      "time": "Time",
+      "date": "Date",
+      "weekday": "Day of week",
+      "monthDay": "Day of month",
+      "enabled": "Job enabled",
+      "enabledHint": "Disabled jobs are not executed by the scheduler.",
+      "saveCreate": "Save job",
+      "saveUpdate": "Save changes"
+    },
+    "columns": {
+      "name": "Name",
+      "directory": "Directory",
+      "schedule": "Frequency",
+      "time": "Time",
+      "enabled": "State",
+      "nextRun": "Next run",
+      "lastRun": "Last run",
+      "actions": "Actions",
+      "job": "Job",
+      "trigger": "Trigger",
+      "status": "Status",
+      "startedAt": "Started",
+      "summary": "Summary"
+    },
+    "actions": {
+      "edit": "Edit",
+      "runNow": "Run now"
+    },
+    "trigger": {
+      "manual": "Manual",
+      "scheduled": "Scheduled"
+    },
+    "history": {
+      "eyebrow": "History",
+      "title": "Run history"
+    },
+    "runDetail": {
+      "eyebrow": "Latest run",
+      "total": "Total files",
+      "success": "Succeeded",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "startedAt": "Started",
+      "finishedAt": "Finished"
+    },
+    "fileColumns": {
+      "name": "File",
+      "size": "Size",
+      "status": "Status",
+      "documentId": "Document ID",
+      "chars": "Characters",
+      "chunks": "Chunks",
+      "error": "Error"
+    },
+    "runSummaryFallback": "{success} succeeded, {failed} failed / {total} files",
+    "errors": {
+      "loadFailed": "Batch document jobs could not be loaded.",
+      "saveFailed": "Job could not be saved.",
+      "deleteFailed": "Job could not be deleted.",
+      "runFailed": "Job could not be executed.",
+      "directoryRequired": "Select a directory first.",
+      "browseFailed": "Directories could not be listed."
+    }
+  },
   "common": {
     "loading": "Loading",
     "back": "Back",

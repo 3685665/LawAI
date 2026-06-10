@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,10 +43,49 @@ public class DocumentProcessingService {
 
   public DocumentUploadResponse upload(MultipartFile file) {
     String filename = safeFilename(file);
+    try {
+      return processContent(
+          filename,
+          file.getContentType() == null ? "application/pdf" : file.getContentType(),
+          file.getSize(),
+          "",
+          file.getBytes()
+      );
+    } catch (IOException exception) {
+      throw new IllegalStateException("Dosya okunamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public DocumentUploadResponse processFile(Path filePath) {
+    try {
+      String filename = filePath.getFileName().toString();
+      String contentType = Files.probeContentType(filePath);
+      if (contentType == null) {
+        contentType = "application/octet-stream";
+      }
+      return processContent(
+          filename,
+          contentType,
+          Files.size(filePath),
+          filePath.toAbsolutePath().normalize().toString(),
+          Files.readAllBytes(filePath)
+      );
+    } catch (IOException exception) {
+      throw new IllegalStateException("Dosya okunamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  private DocumentUploadResponse processContent(
+      String filename,
+      String contentType,
+      long sizeBytes,
+      String storedPath,
+      byte[] content
+  ) {
     if (!isSupportedExtension(filename)) {
       throw new IllegalArgumentException("Belge isleme hatti PDF, Word ve metin dosyalarini destekler.");
     }
-    String text = pdfTextExtractionClient.extract(file, filename);
+    String text = pdfTextExtractionClient.extract(content, filename);
     if (text.length() < MIN_TEXT_LENGTH) {
       throw new IllegalArgumentException("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.");
     }
@@ -53,26 +94,24 @@ public class DocumentProcessingService {
         .map(chunk -> new DocumentChunk(chunk.index(), chunk.content(), embeddingService.embedLiteral(chunk.content())))
         .toList();
 
-    long documentId = documentRepository.createDocument(
-        filename,
-        file.getContentType() == null ? "application/pdf" : file.getContentType(),
-        file.getSize(),
-        "",
-        text
-    );
+    long documentId = documentRepository.createDocument(filename, contentType, sizeBytes, storedPath, text);
     List<StoredChunk> storedChunks = documentRepository.createChunks(documentId, chunks);
     int opensearchIndexed = openSearchClient.indexChunks(filename, storedChunks);
+
+    String message = storedPath == null || storedPath.isBlank()
+        ? "Belge bellek uzerinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
+        : "Belge dizinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.";
 
     return new DocumentUploadResponse(
         documentId,
         filename,
-        null,
+        storedPath.isBlank() ? null : storedPath,
         text.length(),
         chunks.size(),
         storedChunks.size(),
         opensearchIndexed,
         storedChunks.size(),
-        "Belge bellek uzerinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.",
+        message,
         summarize(text, filename, chunks.size()),
         preview(text, 1200)
     );

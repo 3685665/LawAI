@@ -554,6 +554,117 @@
       "updateFailed": "Profil guncellenemedi."
     }
   },
+  "batchDocuments": {
+    "eyebrow": "Zamanlanmis isleme",
+    "title": "Toplu Belge Isleme",
+    "subtitle": "Belirli bir dizindeki PDF, Word ve metin dosyalarini gunluk, haftalik, aylik veya tek seferlik olarak otomatik isleyin.",
+    "jobsCount": "gorev",
+    "refresh": "Yenile",
+    "newJob": "Yeni gorev",
+    "enabledYes": "Aktif",
+    "enabledNo": "Pasif",
+    "notScheduled": "Planlanmadi",
+    "savedCreate": "Gorev olusturuldu.",
+    "savedUpdate": "Gorev guncellendi.",
+    "deleted": "Gorev silindi.",
+    "runCompleted": "{success}/{total} dosya islendi.",
+    "confirmDelete": "\"{name}\" gorevini silmek istiyor musunuz?",
+    "schedule": {
+      "once": "Tek sefer",
+      "daily": "Gunluk",
+      "weekly": "Haftalik",
+      "monthly": "Aylik"
+    },
+    "weekdays": {
+      "monday": "Pazartesi",
+      "tuesday": "Sali",
+      "wednesday": "Carsamba",
+      "thursday": "Persembe",
+      "friday": "Cuma",
+      "saturday": "Cumartesi",
+      "sunday": "Pazar"
+    },
+    "form": {
+      "createTitle": "Yeni toplu isleme gorevi",
+      "editTitle": "Gorevi duzenle",
+      "autoName": "Otomatik gorev adi",
+      "autoNameHint": "Dizin adi ve zamanlama bilgisinden otomatik olusturulur.",
+      "directory": "Kaynak dizin",
+      "directoryPlaceholder": "Orn. C:\\LawAI\\incoming",
+      "directoryManualHint": "Tam dosya yolunu yazin veya Dizin sec ile bilgisayarinizdan klasor secin. Secilen yol asagida gorunur.",
+      "browseDirectory": "Dizin sec",
+      "selectedDirectory": "Secilen dosya yolu",
+      "browseTitle": "Dizin secici",
+      "browseRoots": "Kok dizinler",
+      "browseUp": "Ust dizin",
+      "browseSelect": "Bu dizini sec",
+      "browseEmpty": "Bu dizinde alt klasor yok.",
+      "browseLoading": "Dizinler yukleniyor...",
+      "scheduleType": "Zamanlama",
+      "time": "Saat",
+      "date": "Tarih",
+      "weekday": "Haftanin gunu",
+      "monthDay": "Ay gunu",
+      "enabled": "Gorev aktif",
+      "enabledHint": "Pasif gorevler zamanlayici tarafindan calistirilmaz.",
+      "saveCreate": "Gorevi kaydet",
+      "saveUpdate": "Guncellemeyi kaydet"
+    },
+    "columns": {
+      "name": "Ad",
+      "directory": "Dizin",
+      "schedule": "Periyot",
+      "time": "Saat",
+      "enabled": "Durum",
+      "nextRun": "Sonraki calisma",
+      "lastRun": "Son calisma",
+      "actions": "Islemler",
+      "job": "Gorev",
+      "trigger": "Tetik",
+      "status": "Durum",
+      "startedAt": "Baslangic",
+      "summary": "Ozet"
+    },
+    "actions": {
+      "edit": "Duzenle",
+      "runNow": "Simdi calistir"
+    },
+    "trigger": {
+      "manual": "Manuel",
+      "scheduled": "Zamanli"
+    },
+    "history": {
+      "eyebrow": "Gecmis",
+      "title": "Calistirma gecmisi"
+    },
+    "runDetail": {
+      "eyebrow": "Son calistirma",
+      "total": "Toplam dosya",
+      "success": "Basarili",
+      "failed": "Basarisiz",
+      "skipped": "Atlanan",
+      "startedAt": "Baslangic",
+      "finishedAt": "Bitis"
+    },
+    "fileColumns": {
+      "name": "Dosya",
+      "size": "Boyut",
+      "status": "Durum",
+      "documentId": "Belge ID",
+      "chars": "Karakter",
+      "chunks": "Parca",
+      "error": "Hata"
+    },
+    "runSummaryFallback": "{success} basarili, {failed} basarisiz / {total} dosya",
+    "errors": {
+      "loadFailed": "Toplu belge gorevleri yuklenemedi.",
+      "saveFailed": "Gorev kaydedilemedi.",
+      "deleteFailed": "Gorev silinemedi.",
+      "runFailed": "Gorev calistirilamadi.",
+      "directoryRequired": "Once bir dizin secin.",
+      "browseFailed": "Dizinler listelenemedi."
+    }
+  },
   "common": {
     "loading": "Yukleniyor",
     "back": "Geri",

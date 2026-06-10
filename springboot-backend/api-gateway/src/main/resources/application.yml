@@ -36,7 +36,7 @@ spring:
         - id: document-service
           uri: ${DOCUMENT_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/upload,/api/search
+            - Path=/api/upload,/api/search,/api/batch-documents,/api/batch-documents/**
         - id: research-service
           uri: ${RESEARCH_SERVICE_URL:http://localhost:8085}
           predicates:

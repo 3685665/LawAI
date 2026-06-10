@@ -31,7 +31,10 @@ public class PdfTextExtractionClient {
   }
 
   public String extract(MultipartFile file, String filename) {
-    byte[] content = readBytes(file);
+    return extract(readBytes(file), filename);
+  }
+
+  public String extract(byte[] content, String filename) {
     ByteArrayResource resource = new ByteArrayResource(content) {
       @Override
       public String getFilename() {

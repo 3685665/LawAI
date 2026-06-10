@@ -134,6 +134,79 @@ export type FeedbackUpdatePayload = {
   message: string;
   status: FeedbackStatus;
 };
+export type BatchScheduleType = "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY";
+
+export type BatchDocumentJob = {
+  id: number;
+  name: string;
+  directoryPath: string;
+  scheduleType: BatchScheduleType;
+  scheduledTime: string;
+  scheduledDate?: string | null;
+  dayOfWeek?: number | null;
+  dayOfMonth?: number | null;
+  enabled: boolean;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BatchDocumentRunFile = {
+  id: number;
+  filename: string;
+  filePath: string;
+  fileSizeBytes?: number | null;
+  status: "SUCCESS" | "FAILED" | "SKIPPED";
+  documentId?: number | null;
+  extractedChars?: number | null;
+  chunkCount?: number | null;
+  errorMessage?: string | null;
+  processedAt: string;
+};
+
+export type BatchDocumentRun = {
+  id: number;
+  jobId: number;
+  jobName: string;
+  triggerType: "SCHEDULED" | "MANUAL";
+  status: "RUNNING" | "COMPLETED" | "PARTIAL" | "FAILED";
+  startedAt: string;
+  finishedAt?: string | null;
+  totalFiles: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  summaryMessage?: string | null;
+  files: BatchDocumentRunFile[];
+};
+
+export type DirectoryBrowseEntry = {
+  name: string;
+  path: string;
+  directory: boolean;
+};
+
+export type DirectoryBrowseResponse = {
+  currentPath?: string | null;
+  parentPath?: string | null;
+  roots: string[];
+  entries: DirectoryBrowseEntry[];
+};
+
+export type BatchDocumentJobPayload = {
+  name?: string | null;
+  directoryPath: string;
+  scheduleType: BatchScheduleType;
+  scheduledTime: string;
+  scheduledDate?: string | null;
+  dayOfWeek?: number | null;
+  dayOfMonth?: number | null;
+  enabled: boolean;
+};
+
 export type ActivityLogRecord = {
   id: string;
   userId: string;
@@ -425,6 +498,52 @@ export async function updateFeedback(id: string, payload: FeedbackUpdatePayload)
 
 export async function deleteFeedback(id: string): Promise<void> {
   await deleteJson<void>(`/feedback/${id}`);
+}
+
+export async function browseBatchDocumentDirectories(path?: string): Promise<DirectoryBrowseResponse> {
+  const query = path ? `?path=${encodeURIComponent(path)}` : "";
+  return getJson<DirectoryBrowseResponse>(`/batch-documents/directories${query}`);
+}
+
+export async function listBatchDocumentJobs(): Promise<BatchDocumentJob[]> {
+  return getJson<BatchDocumentJob[]>("/batch-documents/jobs");
+}
+
+export async function createBatchDocumentJob(payload: BatchDocumentJobPayload): Promise<BatchDocumentJob> {
+  return postJson<BatchDocumentJob>("/batch-documents/jobs", payload);
+}
+
+export async function updateBatchDocumentJob(id: number, payload: BatchDocumentJobPayload): Promise<BatchDocumentJob> {
+  const response = await fetch(`${API_BASE}/batch-documents/jobs/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function deleteBatchDocumentJob(id: number): Promise<void> {
+  await deleteJson<void>(`/batch-documents/jobs/${id}`);
+}
+
+export async function triggerBatchDocumentJob(id: number): Promise<BatchDocumentRun> {
+  return postJson<BatchDocumentRun>(`/batch-documents/jobs/${id}/run`, {});
+}
+
+export async function listBatchDocumentRuns(jobId?: number, limit = 20): Promise<BatchDocumentRun[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (jobId != null) {
+    query.set("jobId", String(jobId));
+  }
+  return getJson<BatchDocumentRun[]>(`/batch-documents/runs?${query.toString()}`);
+}
+
+export async function getBatchDocumentRun(runId: number): Promise<BatchDocumentRun> {
+  return getJson<BatchDocumentRun>(`/batch-documents/runs/${runId}`);
 }
 
 export async function listSubscriptions(): Promise<SubscriptionPlan[]> {
