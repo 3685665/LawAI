@@ -1,6 +1,8 @@
 package com.lawai.auth;
 
 import com.lawai.common.client.ActivityLogClient;
+import com.lawai.auth.dto.AuthAdminCreateUserRequest;
+import com.lawai.auth.dto.AuthAdminUpdateUserRequest;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthGoogleRequest;
@@ -19,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -114,6 +117,52 @@ public class AuthController {
   @GetMapping("/users/{id}")
   public AuthUserDto user(@PathVariable String id, HttpServletRequest request) {
     return authService.getUser(extractSessionToken(request), id);
+  }
+
+  @PostMapping("/users")
+  public AuthUserDto createUser(@Valid @RequestBody AuthAdminCreateUserRequest request, HttpServletRequest httpRequest) {
+    String sessionToken = extractSessionToken(httpRequest);
+    AuthUserDto user = authService.createUser(sessionToken, request);
+    AuthUserDto currentUser = authService.currentUser(sessionToken);
+    activityLogClient.logBackend(
+        toCommonUser(toAuthenticatedUser(currentUser)),
+        "admin-user-create",
+        "Kullanici Yonetimi",
+        "Yeni kullanici olusturuldu: " + user.email(),
+        "/api/auth/users"
+    );
+    return user;
+  }
+
+  @PutMapping("/users/{id}")
+  public AuthUserDto updateUser(@PathVariable String id, @Valid @RequestBody AuthAdminUpdateUserRequest request, HttpServletRequest httpRequest) {
+    String sessionToken = extractSessionToken(httpRequest);
+    AuthUserDto user = authService.updateUser(sessionToken, id, request);
+    AuthUserDto currentUser = authService.currentUser(sessionToken);
+    activityLogClient.logBackend(
+        toCommonUser(toAuthenticatedUser(currentUser)),
+        "admin-user-update",
+        "Kullanici Yonetimi",
+        "Kullanici guncellendi: " + user.email(),
+        "/api/auth/users/" + id
+    );
+    return user;
+  }
+
+  @DeleteMapping("/users/{id}")
+  public ResponseEntity<?> deleteUser(@PathVariable String id, HttpServletRequest httpRequest) {
+    String sessionToken = extractSessionToken(httpRequest);
+    AuthUserDto targetUser = authService.getUser(sessionToken, id);
+    authService.deleteUser(sessionToken, id);
+    AuthUserDto currentUser = authService.currentUser(sessionToken);
+    activityLogClient.logBackend(
+        toCommonUser(toAuthenticatedUser(currentUser)),
+        "admin-user-delete",
+        "Kullanici Yonetimi",
+        "Kullanici silindi: " + targetUser.email(),
+        "/api/auth/users/" + id
+    );
+    return ResponseEntity.ok().body(java.util.Map.of("message", "Kullanici silindi."));
   }
 
   @PutMapping("/me")

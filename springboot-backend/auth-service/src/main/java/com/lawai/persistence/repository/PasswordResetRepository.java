@@ -10,4 +10,6 @@ public interface PasswordResetRepository extends JpaRepository<PasswordResetEnti
   List<PasswordResetEntity> findByUserIdAndUsedFalse(String userId);
 
   void deleteByUserIdAndUsedFalse(String userId);
+
+  void deleteByUserId(String userId);
 }

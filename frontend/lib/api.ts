@@ -99,6 +99,16 @@ export type AuthUser = {
   role?: string | null;
   createdAt?: string | null;
   lastLoginAt?: string | null;
+  verified?: boolean | null;
+  verifiedAt?: string | null;
+};
+
+export type AdminUserPayload = {
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  verified?: boolean;
+  password?: string;
 };
 
 export type AuthSessionResponse = { user: AuthUser };
@@ -361,6 +371,27 @@ export async function listUsers(): Promise<AuthUser[]> {
 
 export async function getUser(id: string): Promise<AuthUser> {
   return getJson<AuthUser>(`/auth/users/${id}`);
+}
+
+export async function createUser(payload: AdminUserPayload & { password: string }): Promise<AuthUser> {
+  return postJson<AuthUser>("/auth/users", payload);
+}
+
+export async function updateUser(id: string, payload: AdminUserPayload): Promise<AuthUser> {
+  const response = await fetch(`${API_BASE}/auth/users/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await deleteJson<void>(`/auth/users/${id}`);
 }
 
 export async function createActivityLog(payload: { action: string; screen: string; detail?: string; path?: string }): Promise<ActivityLogRecord> {

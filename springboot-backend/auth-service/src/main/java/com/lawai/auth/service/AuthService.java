@@ -2,6 +2,8 @@ package com.lawai.auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lawai.auth.dto.AuthAdminCreateUserRequest;
+import com.lawai.auth.dto.AuthAdminUpdateUserRequest;
 import com.lawai.auth.dto.AuthChangePasswordRequest;
 import com.lawai.auth.dto.AuthForgotPasswordRequest;
 import com.lawai.auth.dto.AuthLoginRequest;
@@ -372,6 +374,83 @@ public class AuthService {
   }
 
   @Transactional
+  public AuthUserDto createUser(String sessionToken, AuthAdminCreateUserRequest request) {
+    requireAdmin(sessionToken);
+    String email = normalizeEmail(request.email());
+    if (findUserByEmail(email).isPresent()) {
+      throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+    }
+
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    UserRecord user = new UserRecord(
+        UUID.randomUUID().toString(),
+        request.name().trim(),
+        email,
+        passwordEncoder.encode(request.password()),
+        request.role(),
+        now,
+        null,
+        true,
+        now
+    );
+    userRepository.save(UserEntity.fromRecord(user));
+    return toDto(user);
+  }
+
+  @Transactional
+  public AuthUserDto updateUser(String sessionToken, String userId, AuthAdminUpdateUserRequest request) {
+    SessionRecord session = requireSession(sessionToken);
+    requireAdmin(sessionToken);
+    UserRecord user = requireUser(userId);
+    String nextEmail = normalizeEmail(request.email());
+
+    userRepository.findByEmailIgnoreCase(nextEmail)
+        .filter(item -> !item.getId().equals(user.id()))
+        .ifPresent(item -> {
+          throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+        });
+
+    if (session.userId().equals(user.id()) && !"ADMIN".equalsIgnoreCase(request.role())) {
+      throw new IllegalArgumentException("Kendi yonetici rolunuzu kaldiramazsiniz.");
+    }
+
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    boolean verified = Boolean.TRUE.equals(request.verified());
+    UserRecord updatedUser = new UserRecord(
+        user.id(),
+        request.name().trim(),
+        nextEmail,
+        request.password() != null ? passwordEncoder.encode(request.password()) : user.passwordHash(),
+        request.role(),
+        user.createdAt(),
+        user.lastLoginAt(),
+        verified,
+        verified ? (user.verifiedAt() != null ? user.verifiedAt() : now) : null
+    );
+    replaceUser(updatedUser);
+    if (request.password() != null) {
+      invalidateSessionsForUser(user.id());
+    }
+    return toDto(updatedUser);
+  }
+
+  @Transactional
+  public void deleteUser(String sessionToken, String userId) {
+    SessionRecord session = requireSession(sessionToken);
+    requireAdmin(sessionToken);
+    if (session.userId().equals(userId)) {
+      throw new IllegalArgumentException("Kendi hesabinizi silemezsiniz.");
+    }
+    if (!userRepository.existsById(userId)) {
+      throw new IllegalArgumentException("Kullanici bulunamadi.");
+    }
+    authSessionRepository.deleteByUserId(userId);
+    passwordResetRepository.deleteByUserId(userId);
+    emailVerificationRepository.deleteByUserId(userId);
+    userRepository.deleteById(userId);
+  }
+
+  @Transactional
   public String issueSessionToken(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
         .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
@@ -442,7 +521,16 @@ public class AuthService {
   }
 
   private AuthUserDto toDto(UserRecord user) {
-    return new AuthUserDto(user.id(), user.name(), user.email(), effectiveRole(user), user.createdAt(), user.lastLoginAt());
+    return new AuthUserDto(
+        user.id(),
+        user.name(),
+        user.email(),
+        effectiveRole(user),
+        user.createdAt(),
+        user.lastLoginAt(),
+        user.verified(),
+        user.verifiedAt()
+    );
   }
 
   private UserRecord requireUser(String userId) {

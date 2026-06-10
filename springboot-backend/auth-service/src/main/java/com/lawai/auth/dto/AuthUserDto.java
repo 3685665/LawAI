@@ -8,6 +8,8 @@ public record AuthUserDto(
     String email,
     String role,
     OffsetDateTime createdAt,
-    OffsetDateTime lastLoginAt
+    OffsetDateTime lastLoginAt,
+    Boolean verified,
+    OffsetDateTime verifiedAt
 ) {
 }

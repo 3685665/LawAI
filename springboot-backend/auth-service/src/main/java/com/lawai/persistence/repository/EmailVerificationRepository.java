@@ -10,4 +10,6 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
   List<EmailVerificationEntity> findByUserIdAndUsedFalse(String userId);
 
   void deleteByUserIdAndUsedFalse(String userId);
+
+  void deleteByUserId(String userId);
 }

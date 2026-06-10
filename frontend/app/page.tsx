@@ -23,6 +23,9 @@ import {
   LoaderCircle,
   Mic,
   MessageSquareMore,
+  Plus,
+  Save,
+  Trash2,
   Palette,
   Scale,
   Search,
@@ -63,13 +66,16 @@ import {
   type AuthUser,
   type ChatHistorySession,
   checkHealth,
+  createUser,
   deleteJson,
+  deleteUser,
   getJson,
   getUser,
   patchJson,
   postJson,
   listFeedback,
   listUsers,
+  updateUser,
   Precedent,
   seedSamples,
   summarizePrecedent,
@@ -197,7 +203,21 @@ function getPrecedentKey(item: Precedent, index: number) {
   return `${item.court}:${item.docketNo ?? ""}:${item.decisionNo ?? ""}:${index}`;
 }
 type AdminSection = "feedback" | "users";
-type AdminUserView = "list" | "detail";
+type AdminUserView = "list" | "detail" | "create";
+type AdminUserForm = {
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  verified: boolean;
+  password: string;
+};
+const emptyAdminUserForm = (): AdminUserForm => ({
+  name: "",
+  email: "",
+  role: "USER",
+  verified: true,
+  password: ""
+});
 type ThemeMode = "original" | "light" | "dark";
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
@@ -483,6 +503,8 @@ export default function Home() {
   const [selectedAdminUserId, setSelectedAdminUserId] = useState<string | null>(null);
   const [selectedAdminUser, setSelectedAdminUser] = useState<AuthUser | null>(null);
   const [adminUserView, setAdminUserView] = useState<AdminUserView>("list");
+  const [adminUserForm, setAdminUserForm] = useState<AdminUserForm>(emptyAdminUserForm);
+  const [adminUserSaving, setAdminUserSaving] = useState(false);
   const [settingsSection, setSettingsSection] = useState<"view" | "account">("view");
   const { collapsed: sidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } = useSidebarCollapsed();
   const [openNavGroup, setOpenNavGroup] = useState<string | null>(null);
@@ -826,6 +848,16 @@ export default function Home() {
       renderCell: (params) => <span className="feedback-pill feedback-pill-status">{String(params.value ?? "USER")}</span>
     },
     {
+      field: "verified",
+      headerName: locale === "en" ? "Verified" : "Dogrulandi",
+      width: 130,
+      renderCell: (params) => (
+        <span className={`feedback-pill ${params.row.verified ? "feedback-pill-status" : ""}`}>
+          {params.row.verified ? (locale === "en" ? "Yes" : "Evet") : (locale === "en" ? "No" : "Hayir")}
+        </span>
+      )
+    },
+    {
       field: "createdAt",
       headerName: locale === "en" ? "Created" : "Olusturma",
       width: 180,
@@ -1034,15 +1066,102 @@ export default function Home() {
     }
   }
 
+  function fillAdminUserForm(user: AuthUser) {
+    setAdminUserForm({
+      name: user.name,
+      email: user.email,
+      role: user.role === "ADMIN" ? "ADMIN" : "USER",
+      verified: Boolean(user.verified),
+      password: ""
+    });
+  }
+
+  function openCreateAdminUser() {
+    setAdminUsersError("");
+    setSelectedAdminUserId(null);
+    setSelectedAdminUser(null);
+    setAdminUserForm(emptyAdminUserForm());
+    setAdminUserView("create");
+  }
+
   async function openAdminUser(id: string) {
     setAdminUsersError("");
     try {
       const user = await getUser(id);
       setSelectedAdminUserId(user.id);
       setSelectedAdminUser(user);
+      fillAdminUserForm(user);
       setAdminUserView("detail");
     } catch (err) {
       setAdminUsersError(err instanceof Error ? err.message : "Kullanici acilamadi.");
+    }
+  }
+
+  async function handleSaveAdminUser(event: FormEvent) {
+    event.preventDefault();
+    setAdminUserSaving(true);
+    setAdminUsersError("");
+    try {
+      if (adminUserView === "create") {
+        if (adminUserForm.password.trim().length < 10) {
+          throw new Error(locale === "en" ? "Password must be at least 10 characters." : "Sifre en az 10 karakter olmali.");
+        }
+        const created = await createUser({
+          name: adminUserForm.name.trim(),
+          email: adminUserForm.email.trim(),
+          role: adminUserForm.role,
+          verified: adminUserForm.verified,
+          password: adminUserForm.password
+        });
+        const users = await listUsers();
+        setAdminUsers(users);
+        setSelectedAdminUserId(created.id);
+        setSelectedAdminUser(created);
+        fillAdminUserForm(created);
+        setAdminUserView("detail");
+      } else if (selectedAdminUserId) {
+        const payload = {
+          name: adminUserForm.name.trim(),
+          email: adminUserForm.email.trim(),
+          role: adminUserForm.role,
+          verified: adminUserForm.verified,
+          ...(adminUserForm.password.trim() ? { password: adminUserForm.password } : {})
+        };
+        const updated = await updateUser(selectedAdminUserId, payload);
+        const users = await listUsers();
+        setAdminUsers(users);
+        setSelectedAdminUser(updated);
+        fillAdminUserForm(updated);
+        setAdminUserForm((current) => ({ ...current, password: "" }));
+      }
+    } catch (err) {
+      setAdminUsersError(err instanceof Error ? err.message : "Kullanici kaydedilemedi.");
+    } finally {
+      setAdminUserSaving(false);
+    }
+  }
+
+  async function handleDeleteAdminUser() {
+    if (!selectedAdminUserId || !selectedAdminUser) return;
+    const confirmMessage = locale === "en"
+      ? `Delete user ${selectedAdminUser.email}?`
+      : `${selectedAdminUser.email} kullanicisi silinsin mi?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setAdminUserSaving(true);
+    setAdminUsersError("");
+    try {
+      await deleteUser(selectedAdminUserId);
+      const users = await listUsers();
+      setAdminUsers(users);
+      setSelectedAdminUserId(null);
+      setSelectedAdminUser(null);
+      setAdminUserForm(emptyAdminUserForm());
+      setAdminUserView("list");
+    } catch (err) {
+      setAdminUsersError(err instanceof Error ? err.message : "Kullanici silinemedi.");
+    } finally {
+      setAdminUserSaving(false);
     }
   }
 
@@ -2053,6 +2172,7 @@ export default function Home() {
       setSelectedAdminUserId(null);
       setSelectedAdminUser(null);
       setAdminUserView("list");
+      setAdminUserForm(emptyAdminUserForm());
       setAuthForm({
         name: "",
         email: "",
@@ -3237,6 +3357,10 @@ export default function Home() {
                       <span className="status">{adminUsers.length} {t.tools.records}</span>
                     </div>
                     <div className="admin-actions">
+                      <button className="secondary-button" type="button" onClick={openCreateAdminUser}>
+                        <Plus size={17} />
+                        {locale === "en" ? "Add user" : "Kullanici ekle"}
+                      </button>
                       <button className="secondary-button" type="button" onClick={() => void loadAdminUsers()} disabled={adminUsersLoading}>
                         {adminUsersLoading ? <LoaderCircle className="spin" size={17} /> : <UserRound size={17} />}
                         {locale === "en" ? "Refresh users" : "Kullanicilari yenile"}
@@ -3281,12 +3405,20 @@ export default function Home() {
                   </article>
                 )}
 
-                {adminSection === "users" && adminUserView === "detail" && (
+                {adminSection === "users" && (adminUserView === "detail" || adminUserView === "create") && (
                   <article className="panel admin-card">
                     <div className="section-head">
                       <div>
-                        <span className="section-label">{locale === "en" ? "User detail" : "Kullanici detayi"}</span>
-                        <h3>{selectedAdminUser?.name ?? "-"}</h3>
+                        <span className="section-label">
+                          {adminUserView === "create"
+                            ? (locale === "en" ? "New user" : "Yeni kullanici")
+                            : (locale === "en" ? "User detail" : "Kullanici detayi")}
+                        </span>
+                        <h3>
+                          {adminUserView === "create"
+                            ? (locale === "en" ? "Add User" : "Kullanici Ekle")
+                            : (selectedAdminUser?.name ?? "-")}
+                        </h3>
                       </div>
                       <button className="secondary-button" type="button" onClick={() => setAdminUserView("list")}>
                         <ArrowLeft size={16} />
@@ -3294,18 +3426,80 @@ export default function Home() {
                       </button>
                     </div>
                     {adminUsersError ? <div className="error">{adminUsersError}</div> : null}
-                    {selectedAdminUser ? (
-                      <div className="case-stats">
-                        <div><span>ID</span><strong>{selectedAdminUser.id}</strong></div>
-                        <div><span>{locale === "en" ? "Name" : "Ad soyad"}</span><strong>{selectedAdminUser.name}</strong></div>
-                        <div><span>E-posta</span><strong>{selectedAdminUser.email}</strong></div>
-                        <div><span>{locale === "en" ? "Role" : "Rol"}</span><strong>{selectedAdminUser.role ?? "USER"}</strong></div>
-                        <div><span>{locale === "en" ? "Created" : "Olusturma"}</span><strong>{formatDateTime(selectedAdminUser.createdAt, locale, "-")}</strong></div>
-                        <div><span>{locale === "en" ? "Last login" : "Son giris"}</span><strong>{formatDateTime(selectedAdminUser.lastLoginAt, locale, "-")}</strong></div>
+                    <form className="settings-card" onSubmit={(event) => void handleSaveAdminUser(event)}>
+                      {selectedAdminUser ? (
+                        <div className="case-stats" style={{ marginBottom: "1rem" }}>
+                          <div><span>ID</span><strong>{selectedAdminUser.id}</strong></div>
+                          <div><span>{locale === "en" ? "Created" : "Olusturma"}</span><strong>{formatDateTime(selectedAdminUser.createdAt, locale, "-")}</strong></div>
+                          <div><span>{locale === "en" ? "Last login" : "Son giris"}</span><strong>{formatDateTime(selectedAdminUser.lastLoginAt, locale, "-")}</strong></div>
+                          <div><span>{locale === "en" ? "Verified at" : "Dogrulama"}</span><strong>{formatDateTime(selectedAdminUser.verifiedAt, locale, "-")}</strong></div>
+                        </div>
+                      ) : null}
+                      <label className="field-label">
+                        {locale === "en" ? "Name" : "Ad soyad"}
+                        <input
+                          required
+                          value={adminUserForm.name}
+                          onChange={(event) => setAdminUserForm((current) => ({ ...current, name: event.target.value }))}
+                        />
+                      </label>
+                      <label className="field-label">
+                        E-posta
+                        <input
+                          required
+                          type="email"
+                          value={adminUserForm.email}
+                          onChange={(event) => setAdminUserForm((current) => ({ ...current, email: event.target.value }))}
+                        />
+                      </label>
+                      <label className="field-label">
+                        {locale === "en" ? "Role" : "Rol"}
+                        <select
+                          value={adminUserForm.role}
+                          onChange={(event) => setAdminUserForm((current) => ({ ...current, role: event.target.value as "USER" | "ADMIN" }))}
+                        >
+                          <option value="USER">{locale === "en" ? "User" : "Kullanici"}</option>
+                          <option value="ADMIN">{locale === "en" ? "Admin" : "Yonetici"}</option>
+                        </select>
+                      </label>
+                      <label className="setting-row">
+                        <div>
+                          <strong>{locale === "en" ? "Email verified" : "E-posta dogrulandi"}</strong>
+                          <span>{locale === "en" ? "Allow login without email verification" : "E-posta dogrulamasi olmadan giris izni"}</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={adminUserForm.verified}
+                          onChange={(event) => setAdminUserForm((current) => ({ ...current, verified: event.target.checked }))}
+                        />
+                      </label>
+                      <label className="field-label">
+                        {adminUserView === "create"
+                          ? (locale === "en" ? "Password" : "Sifre")
+                          : (locale === "en" ? "New password (optional)" : "Yeni sifre (istege bagli)")}
+                        <input
+                          type="password"
+                          required={adminUserView === "create"}
+                          minLength={adminUserView === "create" ? 10 : undefined}
+                          value={adminUserForm.password}
+                          onChange={(event) => setAdminUserForm((current) => ({ ...current, password: event.target.value }))}
+                        />
+                      </label>
+                      <div className="admin-actions">
+                        <button disabled={adminUserSaving} type="submit">
+                          {adminUserSaving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+                          {adminUserView === "create"
+                            ? (locale === "en" ? "Create user" : "Kullanici olustur")
+                            : (locale === "en" ? "Save changes" : "Degisiklikleri kaydet")}
+                        </button>
+                        {adminUserView === "detail" && selectedAdminUserId && authUser?.id !== selectedAdminUserId ? (
+                          <button className="secondary-button" disabled={adminUserSaving} type="button" onClick={() => void handleDeleteAdminUser()}>
+                            <Trash2 size={17} />
+                            {locale === "en" ? "Delete user" : "Kullaniciyi sil"}
+                          </button>
+                        ) : null}
                       </div>
-                    ) : (
-                      <p className="empty">{locale === "en" ? "Select a user from the list." : "Listeden bir kullanici secin."}</p>
-                    )}
+                    </form>
                   </article>
                 )}
 
