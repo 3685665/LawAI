@@ -413,12 +413,12 @@
   },
   "document": {
     "title": "Dokuman yukle ve bilgi bankasina ekle",
-    "subtitle": "PDF dosyasi tek akista kaydedilir, metni cikarilir, chunklara bolunur ve arama sistemlerine yazilir.",
+    "subtitle": "PDF, Word ve metin dosyalari tek akista kaydedilir, metni cikarilir, chunklara bolunur ve arama sistemlerine yazilir.",
     "pipelineTitle": "Islem sirasi",
     "pipelineIntro": "Yukleme tamamlandiginda belge asagidaki hattin tamamindan gecmis olur.",
     "pipelineSteps": [
-      "PDF dosyasi local diske kaydedilir.",
-      "Metin Python PDF servisi ile cikarilir.",
+      "Dosya local diske kaydedilir.",
+      "Metin Python belge servisi ile cikarilir.",
       "Tam metin PostgreSQL legal_documents tablosuna yazilir.",
       "Metin chunklara bolunur ve PostgreSQL'e kaydedilir.",
       "Chunklar OpenSearch indeksine gonderilir.",
@@ -426,12 +426,12 @@
     ],
     "beforeUploadTitle": "Yuklemeden once",
     "beforeUploadItems": [
-      "Sadece metin secilebilir PDF dosyalari kullanin.",
+      "PDF, TXT, DOC ve DOCX dosyalari desteklenir.",
       "Taranmis goruntu PDF'lerinde OCR olmadigi icin metin cikmayabilir.",
       "Ayni dosyayi tekrar yuklerseniz sistem yeni bir belge kaydi olusturur."
     ],
     "chooseFile": "Dosyanizi secin",
-    "fileHint": "PDF - en fazla 25 MB",
+    "fileHint": "PDF, TXT, DOC, DOCX - en fazla 25 MB",
     "topic": "Konu basligi",
     "court": "Mahkeme (opsiyonel)",
     "analyze": "On kontrol",
@@ -456,7 +456,7 @@
     "errors": {
       "noFile": "Dosya secilmedi.",
       "selectFirst": "Once bir dosya secin.",
-      "unsupported": "Belge isleme hatti su an sadece PDF dosyalarini destekler.",
+      "unsupported": "Belge isleme hatti PDF, Word ve metin dosyalarini destekler.",
       "tooLarge": "Dosya 25 MB sinirini asiyor.",
       "empty": "Dosya bos gorunuyor."
     }

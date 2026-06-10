@@ -413,12 +413,12 @@
   },
   "document": {
     "title": "Upload document and add to knowledge base",
-    "subtitle": "The PDF is saved, text is extracted, split into chunks, and written to the search systems in one flow.",
+    "subtitle": "PDF, Word, and text files are saved, text is extracted, split into chunks, and written to the search systems in one flow.",
     "pipelineTitle": "Processing flow",
     "pipelineIntro": "After upload, the document passes through the full pipeline below.",
     "pipelineSteps": [
-      "The PDF file is saved to local disk.",
-      "Text is extracted by the Python PDF service.",
+      "The file is saved to local disk.",
+      "Text is extracted by the Python document service.",
       "Full text is stored in PostgreSQL legal_documents.",
       "Text is split into chunks and saved to PostgreSQL.",
       "Chunks are indexed in OpenSearch.",
@@ -426,12 +426,12 @@
     ],
     "beforeUploadTitle": "Before uploading",
     "beforeUploadItems": [
-      "Use PDFs with selectable text.",
+      "PDF, TXT, DOC, and DOCX files are supported.",
       "Scanned image PDFs may not produce text because OCR is not enabled.",
       "Uploading the same file again creates a new document record."
     ],
     "chooseFile": "Choose your file",
-    "fileHint": "PDF - up to 25 MB",
+    "fileHint": "PDF, TXT, DOC, DOCX - up to 25 MB",
     "topic": "Topic title",
     "court": "Court (optional)",
     "analyze": "Pre-check",
@@ -456,7 +456,7 @@
     "errors": {
       "noFile": "No file selected.",
       "selectFirst": "Select a file first.",
-      "unsupported": "The document processing pipeline currently supports PDF files only.",
+      "unsupported": "The document processing pipeline supports PDF, Word, and text files.",
       "tooLarge": "File exceeds the 25 MB limit.",
       "empty": "File appears to be empty."
     }

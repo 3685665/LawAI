@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Locale;
 
 @Service
 public class PdfTextExtractionClient {
@@ -39,7 +40,7 @@ public class PdfTextExtractionClient {
     };
 
     HttpHeaders fileHeaders = new HttpHeaders();
-    fileHeaders.setContentType(MediaType.APPLICATION_PDF);
+    fileHeaders.setContentType(contentTypeFor(filename));
     HttpEntity<ByteArrayResource> filePart = new HttpEntity<>(resource, fileHeaders);
 
     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -47,18 +48,32 @@ public class PdfTextExtractionClient {
 
     try {
       PdfTextExtractionResponse response = restClient.post()
-          .uri("/documents/extract-pdf-text")
+          .uri("/documents/extract-text")
           .contentType(MediaType.MULTIPART_FORM_DATA)
           .body(body)
           .retrieve()
           .body(PdfTextExtractionResponse.class);
       if (response == null || response.text() == null) {
-        throw new IllegalStateException("PDF metin servisi bos yanit dondu.");
+        throw new IllegalStateException("Metin cikarma servisi bos yanit dondu.");
       }
       return response.text().trim();
     } catch (Exception exception) {
-      throw new IllegalStateException("PDF metin cikarimi servisi hata verdi: " + readableMessage(exception), exception);
+      throw new IllegalStateException("Metin cikarma servisi hata verdi: " + readableMessage(exception), exception);
     }
+  }
+
+  private MediaType contentTypeFor(String filename) {
+    int dot = filename.lastIndexOf('.');
+    if (dot < 0) {
+      return MediaType.APPLICATION_OCTET_STREAM;
+    }
+    return switch (filename.substring(dot + 1).toLowerCase(Locale.ROOT)) {
+      case "pdf" -> MediaType.APPLICATION_PDF;
+      case "txt" -> MediaType.TEXT_PLAIN;
+      case "doc" -> MediaType.parseMediaType("application/msword");
+      case "docx" -> MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      default -> MediaType.APPLICATION_OCTET_STREAM;
+    };
   }
 
   private byte[] readBytes(MultipartFile file) {

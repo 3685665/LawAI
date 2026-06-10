@@ -22,10 +22,14 @@ MIN_EXTRACTED_CHARACTERS = 40
 
 class DocumentService:
     async def extract_pdf_text(self, file: UploadFile) -> PdfTextExtractionResponse:
+        return await self.extract_text(file)
+
+    async def extract_text(self, file: UploadFile) -> PdfTextExtractionResponse:
         content = await file.read()
-        filename = file.filename or "document.pdf"
-        if Path(filename).suffix.lower() != ".pdf":
-            raise ValueError("PDF metin cikarimi yalnizca PDF dosyalari icin kullanilir.")
+        filename = file.filename or "document"
+        extension = Path(filename).suffix.lower()
+        if extension not in SUPPORTED_EXTENSIONS:
+            raise ValueError("Bu asamada PDF, Word ve metin dosyalari desteklenir.")
         if not content:
             raise ValueError("Dosya bos gorunuyor.")
 

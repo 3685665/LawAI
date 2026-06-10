@@ -294,7 +294,7 @@ type UploadResponse = {
   warnings?: string[];
 };
 
-const acceptedExtensions = [".pdf"];
+const acceptedExtensions = [".pdf", ".txt", ".doc", ".docx"];
 const maxFileBytes = 25 * 1024 * 1024;
 
 const caseTypeLabels: Record<CaseType, string> = {

@@ -70,6 +70,16 @@ async def extract_pdf_text(file: UploadFile = File(...)) -> PdfTextExtractionRes
         raise HTTPException(status_code=502, detail=f"PDF text extraction failed: {exc}") from exc
 
 
+@app.post("/api/documents/extract-text", response_model=PdfTextExtractionResponse)
+async def extract_text(file: UploadFile = File(...)) -> PdfTextExtractionResponse:
+    try:
+        return await document_service.extract_text(file)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Document text extraction failed: {exc}") from exc
+
+
 @app.post("/api/knowledge/documents", response_model=KnowledgeIngestResponse)
 def ingest_knowledge(request: KnowledgeIngestRequest) -> KnowledgeIngestResponse:
     return legal_service.ingest_knowledge(request)

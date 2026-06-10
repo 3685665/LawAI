@@ -14,11 +14,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class DocumentProcessingService {
 
+  private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(".pdf", ".txt", ".doc", ".docx");
   private static final int MIN_TEXT_LENGTH = 40;
 
   private final DocumentProcessingProperties properties;
@@ -43,13 +45,13 @@ public class DocumentProcessingService {
 
   public DocumentUploadResponse upload(MultipartFile file) {
     String filename = safeFilename(file);
-    if (!filename.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-      throw new IllegalArgumentException("Belge isleme hatti su an PDF dosyalari icin tasarlandi.");
+    if (!isSupportedExtension(filename)) {
+      throw new IllegalArgumentException("Belge isleme hatti PDF, Word ve metin dosyalarini destekler.");
     }
     Path storedPath = store(file, filename);
     String text = pdfTextExtractionClient.extract(file, filename);
     if (text.length() < MIN_TEXT_LENGTH) {
-      throw new IllegalArgumentException("PDF'den yeterli metin cikarilamadi. OCR gerektiren taranmis PDF olabilir.");
+      throw new IllegalArgumentException("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.");
     }
 
     List<DocumentChunk> chunks = chunk(text).stream()
@@ -129,6 +131,11 @@ public class DocumentProcessingService {
     return chunks;
   }
 
+  private boolean isSupportedExtension(String filename) {
+    String lower = filename.toLowerCase(Locale.ROOT);
+    return SUPPORTED_EXTENSIONS.stream().anyMatch(lower::endsWith);
+  }
+
   private String safeFilename(MultipartFile file) {
     String original = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "document.pdf";
     String name = Path.of(original).getFileName().toString();
@@ -145,7 +152,7 @@ public class DocumentProcessingService {
 
   private String firstSentence(String text) {
     if (!StringUtils.hasText(text)) {
-      return "PDF icinden okunabilir metin cikarildi.";
+      return "Belgeden okunabilir metin cikarildi.";
     }
     int max = Math.min(text.length(), 700);
     int sentenceEnd = -1;
