@@ -7,15 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 public class DocumentProcessingService {
@@ -48,7 +44,6 @@ public class DocumentProcessingService {
     if (!isSupportedExtension(filename)) {
       throw new IllegalArgumentException("Belge isleme hatti PDF, Word ve metin dosyalarini destekler.");
     }
-    Path storedPath = store(file, filename);
     String text = pdfTextExtractionClient.extract(file, filename);
     if (text.length() < MIN_TEXT_LENGTH) {
       throw new IllegalArgumentException("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.");
@@ -62,7 +57,7 @@ public class DocumentProcessingService {
         filename,
         file.getContentType() == null ? "application/pdf" : file.getContentType(),
         file.getSize(),
-        storedPath.toString(),
+        "",
         text
     );
     List<StoredChunk> storedChunks = documentRepository.createChunks(documentId, chunks);
@@ -71,13 +66,13 @@ public class DocumentProcessingService {
     return new DocumentUploadResponse(
         documentId,
         filename,
-        storedPath.toString(),
+        null,
         text.length(),
         chunks.size(),
         storedChunks.size(),
         opensearchIndexed,
         storedChunks.size(),
-        "Belge diske kaydedildi, metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.",
+        "Belge bellek uzerinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.",
         summarize(text, filename, chunks.size()),
         preview(text, 1200)
     );
@@ -96,22 +91,6 @@ public class DocumentProcessingService {
   public DocumentSearchResponse searchWholeDocuments(String query, Integer requestedLimit) {
     int limit = Math.min(Math.max(requestedLimit == null ? 1 : requestedLimit, 1), 5);
     return new DocumentSearchResponse(query, "opensearch", openSearchClient.searchWholeDocuments(query, limit));
-  }
-
-  private Path store(MultipartFile file, String filename) {
-    try {
-      Path uploadDir = Path.of(properties.uploadDir()).toAbsolutePath().normalize();
-      Files.createDirectories(uploadDir);
-      String storedName = Instant.now().toEpochMilli() + "-" + UUID.randomUUID() + "-" + filename;
-      Path target = uploadDir.resolve(storedName).normalize();
-      if (!target.startsWith(uploadDir)) {
-        throw new IllegalArgumentException("Gecersiz dosya adi.");
-      }
-      file.transferTo(target);
-      return target;
-    } catch (IOException exception) {
-      throw new IllegalStateException("Dosya local diske kaydedilemedi: " + exception.getMessage(), exception);
-    }
   }
 
   private List<RawChunk> chunk(String text) {

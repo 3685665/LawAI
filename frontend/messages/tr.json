@@ -417,7 +417,7 @@
     "pipelineTitle": "Islem sirasi",
     "pipelineIntro": "Yukleme tamamlandiginda belge asagidaki hattin tamamindan gecmis olur.",
     "pipelineSteps": [
-      "Dosya local diske kaydedilir.",
+      "Dosya bellek uzerinden okunur; diske kaydedilmez.",
       "Metin Python belge servisi ile cikarilir.",
       "Tam metin PostgreSQL legal_documents tablosuna yazilir.",
       "Metin chunklara bolunur ve PostgreSQL'e kaydedilir.",

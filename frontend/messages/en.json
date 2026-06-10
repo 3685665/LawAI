@@ -417,7 +417,7 @@
     "pipelineTitle": "Processing flow",
     "pipelineIntro": "After upload, the document passes through the full pipeline below.",
     "pipelineSteps": [
-      "The file is saved to local disk.",
+      "The file is read in memory; it is not saved to disk.",
       "Text is extracted by the Python document service.",
       "Full text is stored in PostgreSQL legal_documents.",
       "Text is split into chunks and saved to PostgreSQL.",

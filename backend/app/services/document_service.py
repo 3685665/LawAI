@@ -129,12 +129,7 @@ class DocumentService:
         if extension == ".txt":
             return content.decode("utf-8", errors="ignore").strip()
         if extension in {".doc", ".docx"}:
-            temp_path = Path(".tmp-upload.docx")
-            temp_path.write_bytes(content)
-            try:
-                return docx2txt.process(str(temp_path)).strip()
-            finally:
-                temp_path.unlink(missing_ok=True)
+            return docx2txt.process(io.BytesIO(content)).strip()
         return ""
 
     def _preview(self, content: str, length: int) -> str:
