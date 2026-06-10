@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
+    username: ${DATABASE_USERNAME:lawai}
+    password: ${DATABASE_PASSWORD:lawai}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: 8082
+
+app:
+  services:
+    auth-base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    platform-base-url: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+  billing:
+    success-url: ${BILLING_SUCCESS_URL:http://localhost:3000/subscriptions?checkout=success}
+    cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/subscriptions?checkout=cancel}
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+
+management:
+  health:
+    mail:
+      enabled: false

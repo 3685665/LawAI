@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: lawai-api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Headers Access-Control-Allow-Methods, RETAIN_FIRST
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - http://localhost:3000
+              - http://127.0.0.1:3000
+              - http://localhost:3001
+              - http://127.0.0.1:3001
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 1800
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**,/internal/session/**
+        - id: billing-service
+          uri: ${BILLING_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/subscriptions,/api/subscriptions/**,/api/billing,/api/billing/**
+        - id: legal-service
+          uri: ${LEGAL_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/chat,/api/chat/**,/api/precedents/**,/api/petitions/**,/api/documents/**,/api/knowledge/**
+        - id: document-service
+          uri: ${DOCUMENT_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/upload,/api/search
+        - id: research-service
+          uri: ${RESEARCH_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/research/**
+        - id: platform-service
+          uri: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/activity-logs,/api/activity-logs/**,/api/feedback,/api/feedback/**
+        - id: case-service
+          uri: ${LEGAL_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/cases/**
+        - id: health-legal
+          uri: ${LEGAL_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/health
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

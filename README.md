@@ -15,7 +15,7 @@ Bu proje, web/API katmanini Spring Boot'a, AI/RAG katmanini Python'a ayiracak se
 
 - `frontend`: Next.js 15, React 19, TypeScript
 - `backend`: Python AI mikroservisi, LangChain, OpenAI/Gemini/Ollama adaptorleri
-- `springboot-backend`: Spring Boot ana API, dosya islemleri ve orkestrasyon
+- `springboot-backend`: Spring Boot microservices (gateway + domain servisleri); legacy monolit `monolith/` altında
 
 ## Python AI Servisi
 
@@ -55,20 +55,22 @@ copy .env.local.example .env.local
 npm.cmd run dev
 ```
 
-## Spring Boot API
+## Spring Boot API (Microservices)
+
+Varsayılan kurulum artık microservis mimarisidir. Detaylar için `springboot-backend/MICROSERVICES.md` dosyasına bakın.
 
 ```powershell
 cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd install -DskipTests
+start-microservices.bat
 ```
 
-Spring Boot ana API varsayilan olarak `http://localhost:8080`, Python AI servisi `http://localhost:8001/api` adresinde calisir.
+API Gateway `http://localhost:8080` üzerinden frontend ile konuşur.
 
-Manuel derleme icin:
+**Eski monolit** (tek JAR, geri dönüş için) — gateway ile aynı anda çalıştırmayın:
 
 ```powershell
-cd C:\Users\Asus\IdeaProjects\LawAI-NextLangChain\springboot-backend
-.\mvnw.cmd -DskipTests compile
+start-monolith.bat
 ```
 
 Frontend varsayilan olarak `http://localhost:3000`, ana API `http://localhost:8080/api` adresinde calisir.

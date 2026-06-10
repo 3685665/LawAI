@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
+    username: ${DATABASE_USERNAME:lawai}
+    password: ${DATABASE_PASSWORD:lawai}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: 8086
+
+app:
+  services:
+    auth-base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    platform-base-url: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+
+management:
+  health:
+    mail:
+      enabled: false

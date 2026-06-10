@@ -4,7 +4,6 @@
     <option name="sdkName" value="LawAI Backend .venv" />
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
-  <component name="KubernetesApiPersistence">{}</component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>

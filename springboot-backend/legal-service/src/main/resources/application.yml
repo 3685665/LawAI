@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
+    username: ${DATABASE_USERNAME:lawai}
+    password: ${DATABASE_PASSWORD:lawai}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      resolve-lazily: true
+      max-file-size: ${MAX_UPLOAD_MB:25}MB
+      max-request-size: ${MAX_UPLOAD_REQUEST_MB:30}MB
+
+server:
+  port: 8083
+  tomcat:
+    max-swallow-size: -1
+
+app:
+  ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
+  max-upload-mb: ${MAX_UPLOAD_MB:25}
+  data:
+    seed-enabled: ${DATA_SEED_ENABLED:false}
+  services:
+    auth-base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    platform-base-url: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+
+management:
+  health:
+    mail:
+      enabled: false

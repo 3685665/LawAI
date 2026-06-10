@@ -2,6 +2,5 @@
 <project version="4">
   <component name="DataSourcePerFileMappings">
     <file url="file://$PROJECT_DIR$/pdf_vector_ingest/pdf_vector_ingest/db.py" value="8e690b60-bbd8-4edb-892c-afd51a85713e" />
-    <file url="file://$PROJECT_DIR$/springboot-backend/src/main/java/com/lawai/document/service/DocumentRepository.java" value="8e690b60-bbd8-4edb-892c-afd51a85713e" />
   </component>
 </project>

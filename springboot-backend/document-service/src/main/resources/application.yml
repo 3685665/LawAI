@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
+    username: ${DATABASE_USERNAME:lawai}
+    password: ${DATABASE_PASSWORD:lawai}
+  servlet:
+    multipart:
+      resolve-lazily: true
+      max-file-size: ${MAX_UPLOAD_MB:25}MB
+      max-request-size: ${MAX_UPLOAD_REQUEST_MB:30}MB
+
+server:
+  port: 8084
+  tomcat:
+    max-swallow-size: -1
+
+app:
+  ai-base-url: ${AI_BASE_URL:http://localhost:8000/api}
+  document:
+    upload-dir: ${DOCUMENT_UPLOAD_DIR:uploads/documents}
+    chunk-size: ${DOCUMENT_CHUNK_SIZE:1200}
+    chunk-overlap: ${DOCUMENT_CHUNK_OVERLAP:150}
+    embedding-dimensions: ${LAWAI_EMBEDDING_DIMENSIONS:768}
+  opensearch:
+    enabled: ${OPENSEARCH_ENABLED:true}
+    base-url: ${OPENSEARCH_BASE_URL:http://localhost:9200}
+    index: ${OPENSEARCH_INDEX:legal-document-chunks}
+  services:
+    auth-base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    platform-base-url: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+
+management:
+  health:
+    mail:
+      enabled: false

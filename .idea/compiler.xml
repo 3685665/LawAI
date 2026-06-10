@@ -7,13 +7,28 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="lawai-springboot-backend" />
+        <module name="lawai-common" />
+        <module name="platform-service" />
+        <module name="auth-service" />
+        <module name="api-gateway" />
+        <module name="legal-service" />
+        <module name="billing-service" />
+        <module name="document-service" />
+        <module name="research-service" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="lawai-springboot-backend" options="-parameters" />
+      <module name="api-gateway" options="-parameters" />
+      <module name="auth-service" options="-parameters" />
+      <module name="billing-service" options="-parameters" />
+      <module name="document-service" options="-parameters" />
+      <module name="lawai-common" options="-parameters" />
+      <module name="lawai-springboot-backend" options="" />
+      <module name="legal-service" options="-parameters" />
+      <module name="platform-service" options="-parameters" />
+      <module name="research-service" options="-parameters" />
     </option>
   </component>
 </project>
