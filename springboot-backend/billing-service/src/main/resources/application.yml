@@ -20,9 +20,10 @@ app:
     cancel-url: ${BILLING_CANCEL_URL:http://localhost:3000/subscriptions?checkout=cancel}
     checkout-page-url: ${BILLING_CHECKOUT_PAGE_URL:http://localhost:3000/subscriptions/checkout}
     iyzico:
-      api-key: ${IYZICO_API_KEY:}
-      secret-key: ${IYZICO_SECRET_KEY:}
-      merchant-id: ${IYZICO_MERCHANT_ID:}
+      auto-sync: ${IYZICO_AUTO_SYNC:false}
+      api-key: ${IYZICO_API_KEY:sandbox-0KA1F9VxR8xKNSdedOOJCtJC3E7C2VyN}
+      secret-key: ${IYZICO_SECRET_KEY:sandbox-mt3PiBegmBSmmIYlK7Y1t6WtdHDBwf6P}
+      merchant-id: ${IYZICO_MERCHANT_ID:3428469}
       base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
       callback-url: ${IYZICO_CALLBACK_URL:http://localhost:8080/api/billing/iyzico/callback}
       default-gsm: ${IYZICO_DEFAULT_GSM:+905555555555}

@@ -18,6 +18,8 @@ import com.lawai.api.subscription.dto.UserSubscriptionDto;
 import com.lawai.api.subscription.model.SubscriptionPlanRecord;
 import com.lawai.api.subscription.model.UserSubscriptionRecord;
 import com.lawai.common.model.AuthenticatedUser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -31,8 +33,11 @@ import java.util.UUID;
 @Service
 public class IyzicoBillingService {
 
+  private static final Logger log = LoggerFactory.getLogger(IyzicoBillingService.class);
+
   private final ObjectMapper objectMapper;
   private final SubscriptionPlanService subscriptionPlanService;
+  private final IyzicoCatalogService iyzicoCatalogService;
   private final Options options;
   private final String merchantId;
   private final String callbackUrl;
@@ -49,6 +54,7 @@ public class IyzicoBillingService {
   public IyzicoBillingService(
       ObjectMapper objectMapper,
       SubscriptionPlanService subscriptionPlanService,
+      IyzicoCatalogService iyzicoCatalogService,
       @Value("${app.billing.iyzico.api-key:}") String apiKey,
       @Value("${app.billing.iyzico.secret-key:}") String secretKey,
       @Value("${app.billing.iyzico.base-url:https://sandbox-api.iyzipay.com}") String baseUrl,
@@ -66,6 +72,7 @@ public class IyzicoBillingService {
   ) {
     this.objectMapper = objectMapper;
     this.subscriptionPlanService = subscriptionPlanService;
+    this.iyzicoCatalogService = iyzicoCatalogService;
     this.merchantId = merchantId == null ? "" : merchantId.trim();
     this.callbackUrl = callbackUrl;
     this.checkoutPageUrl = checkoutPageUrl;
@@ -92,6 +99,7 @@ public class IyzicoBillingService {
       return new BillingCheckoutResponse(successUrl, "free-" + subscription.id(), subscription, "");
     }
     requireIyzicoConfigured();
+    plan = subscriptionPlanService.ensureIyzicoSynced(plan);
     String pricingPlanRef = subscriptionPlanService.requireIyzicoPricingPlanRef(plan, normalizedCycle);
     String conversationId = UUID.randomUUID().toString();
     InitializeSubscriptionCheckoutFormRequest request = new InitializeSubscriptionCheckoutFormRequest();
@@ -103,7 +111,15 @@ public class IyzicoBillingService {
     request.setLocale(Locale.TR.name());
     SubscriptionCheckoutFormInitialize response = SubscriptionCheckoutFormInitialize.create(request, options);
     if (!Status.SUCCESS.getValue().equals(response.getStatus())) {
-      throw new IllegalStateException("iyzico odeme formu olusturulamadi: " + safeError(response.getErrorMessage()));
+      log.warn(
+          "iyzico checkout basarisiz planId={} cycle={} pricingPlanRef={} errorCode={} error={}",
+          plan.id(),
+          normalizedCycle,
+          pricingPlanRef,
+          response.getErrorCode(),
+          response.getErrorMessage()
+      );
+      throw new IllegalStateException(iyzicoCatalogService.formatFailure("iyzico odeme formu olusturulamadi", response));
     }
     UserSubscriptionDto subscription = subscriptionPlanService.markIyzicoCheckoutPending(
         user,

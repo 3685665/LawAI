@@ -256,10 +256,13 @@ export default function AdminSubscriptionsPage() {
               <Input label="Kullanim hakki" value={form.usageLimit} onChange={(value) => setForm((current) => ({ ...current, usageLimit: value }))} />
               <Input label="Sira" type="number" value={form.sortOrder} onChange={(value) => setForm((current) => ({ ...current, sortOrder: value }))} />
               <Input label="Buton metni" value={form.ctaLabel} onChange={(value) => setForm((current) => ({ ...current, ctaLabel: value }))} />
-              <Input label="iyzico urun referansi" value={form.iyzicoProductRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoProductRef: value }))} placeholder="urun-ref" />
-              <Input label="iyzico aylik plan referansi" value={form.iyzicoMonthlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoMonthlyPlanRef: value }))} placeholder="plan-ref" />
-              <Input label="iyzico yillik plan referansi" value={form.iyzicoYearlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoYearlyPlanRef: value }))} placeholder="plan-ref" />
+              <Input label="iyzico urun referansi" value={form.iyzicoProductRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoProductRef: value }))} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              <Input label="iyzico aylik plan referansi" value={form.iyzicoMonthlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoMonthlyPlanRef: value }))} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              <Input label="iyzico yillik plan referansi" value={form.iyzicoYearlyPlanRef} onChange={(value) => setForm((current) => ({ ...current, iyzicoYearlyPlanRef: value }))} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
             </div>
+            <small>
+              Iyzico abonelik modulu merchant hesabinizda acik olmalidir. Urun ve odeme planlarini iyzico panelinden olusturup buradaki UUID referans kodlarini girin.
+            </small>
             <label className="field-label">Aciklama<textarea rows={3} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label>
             <div className="subscription-admin-grid textareas">
               <label className="field-label">Dahil olan ozellikler<textarea rows={10} value={form.featuresText} onChange={(event) => setForm((current) => ({ ...current, featuresText: event.target.value }))} placeholder="Her satira bir ozellik" /></label>

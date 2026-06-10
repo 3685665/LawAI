@@ -35,15 +35,18 @@ public class SubscriptionPlanService {
   private final SubscriptionPlanRepository subscriptionPlanRepository;
   private final UserSubscriptionRepository userSubscriptionRepository;
   private final BillingEventRepository billingEventRepository;
+  private final IyzicoCatalogService iyzicoCatalogService;
 
   public SubscriptionPlanService(
       SubscriptionPlanRepository subscriptionPlanRepository,
       UserSubscriptionRepository userSubscriptionRepository,
-      BillingEventRepository billingEventRepository
+      BillingEventRepository billingEventRepository,
+      IyzicoCatalogService iyzicoCatalogService
   ) {
     this.subscriptionPlanRepository = subscriptionPlanRepository;
     this.userSubscriptionRepository = userSubscriptionRepository;
     this.billingEventRepository = billingEventRepository;
+    this.iyzicoCatalogService = iyzicoCatalogService;
   }
 
   public List<SubscriptionPlanDto> listActive() {
@@ -63,7 +66,7 @@ public class SubscriptionPlanService {
     SubscriptionStorePayload store = loadStore();
     List<SubscriptionPlanRecord> plans = new ArrayList<>(store.plans());
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    SubscriptionPlanRecord record = fromRequest(UUID.randomUUID().toString(), request, now, now);
+    SubscriptionPlanRecord record = syncIyzicoIfNeeded(fromRequest(UUID.randomUUID().toString(), request, now, now));
     plans.add(record);
     saveStore(new SubscriptionStorePayload(plans, store.userSubscriptions(), store.billingEvents()));
     return toDto(record);
@@ -77,7 +80,7 @@ public class SubscriptionPlanService {
     List<SubscriptionPlanRecord> rewritten = new ArrayList<>(plans.size());
     for (SubscriptionPlanRecord plan : plans) {
       if (plan.id().equals(id)) {
-        rewritten.add(fromRequest(plan.id(), request, plan.createdAt(), OffsetDateTime.now(ZoneOffset.UTC)));
+        rewritten.add(syncIyzicoIfNeeded(fromRequest(plan.id(), request, plan.createdAt(), OffsetDateTime.now(ZoneOffset.UTC))));
         updated = true;
       } else {
         rewritten.add(plan);
@@ -204,13 +207,65 @@ public class SubscriptionPlanService {
     return normalizeBillingCycle(billingCycle);
   }
 
+  public SubscriptionPlanRecord ensureIyzicoSynced(SubscriptionPlanRecord plan) {
+    SubscriptionPlanRecord synced = syncIyzicoIfNeeded(plan);
+    if (synced == plan) {
+      return plan;
+    }
+    SubscriptionStorePayload store = loadStore();
+    List<SubscriptionPlanRecord> plans = new ArrayList<>();
+    boolean updated = false;
+    for (SubscriptionPlanRecord item : store.plans()) {
+      if (item.id().equals(synced.id())) {
+        plans.add(synced);
+        updated = true;
+      } else {
+        plans.add(item);
+      }
+    }
+    if (updated) {
+      saveStore(new SubscriptionStorePayload(plans, store.userSubscriptions(), store.billingEvents()));
+    }
+    return synced;
+  }
+
+  public boolean isIyzicoAutoSyncEnabled() {
+    return iyzicoCatalogService.isAutoSyncEnabled();
+  }
+
   public String requireIyzicoPricingPlanRef(SubscriptionPlanRecord plan, String billingCycle) {
     String normalizedCycle = normalizeBillingCycle(billingCycle);
     String planRef = "yearly".equals(normalizedCycle) ? clean(plan.iyzicoYearlyPlanRef()) : clean(plan.iyzicoMonthlyPlanRef());
     if (!StringUtils.hasText(planRef)) {
-      throw new IllegalArgumentException("Bu plan icin iyzico odeme plani referansi ayarlanmadi.");
+      throw new IllegalArgumentException(
+          "Bu plan icin iyzico odeme plani referansi ayarlanmadi. "
+              + "Iyzico merchant panelinde urun ve odeme plani olusturup admin > Abonelikler ekranindaki referans alanlarina UUID kodlarini girin."
+      );
+    }
+    if (!iyzicoCatalogService.isValidReference(planRef)) {
+      throw new IllegalArgumentException(
+          "Bu plan icin gecersiz iyzico odeme plani referansi ayarli. "
+              + "Iyzico panelinden alinan UUID formatindaki plan referansini admin abonelik sayfasina girin."
+      );
     }
     return planRef;
+  }
+
+  public void syncAllPaidPlansWithIyzico() {
+    if (!iyzicoCatalogService.isAutoSyncEnabled() || !iyzicoCatalogService.isConfigured()) {
+      return;
+    }
+    SubscriptionStorePayload store = loadStore();
+    List<SubscriptionPlanRecord> plans = new ArrayList<>();
+    boolean updated = false;
+    for (SubscriptionPlanRecord plan : store.plans()) {
+      SubscriptionPlanRecord synced = syncIyzicoIfNeeded(plan);
+      plans.add(synced);
+      updated = updated || synced != plan;
+    }
+    if (updated) {
+      saveStore(new SubscriptionStorePayload(plans, store.userSubscriptions(), store.billingEvents()));
+    }
   }
 
   public UserSubscriptionDto markIyzicoCheckoutPending(
@@ -607,5 +662,21 @@ public class SubscriptionPlanService {
   private String slugify(String value) {
     String normalized = Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     return normalized.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+  }
+
+  private SubscriptionPlanRecord syncIyzicoIfNeeded(SubscriptionPlanRecord plan) {
+    if (!iyzicoCatalogService.isAutoSyncEnabled()) {
+      return plan;
+    }
+    if (!plan.active() || (plan.monthlyPrice() <= 0 && plan.yearlyPrice() <= 0)) {
+      return plan;
+    }
+    boolean needsSync = !iyzicoCatalogService.isValidReference(plan.iyzicoProductRef())
+        || (plan.monthlyPrice() > 0 && !iyzicoCatalogService.isValidReference(plan.iyzicoMonthlyPlanRef()))
+        || (plan.yearlyPrice() > 0 && !iyzicoCatalogService.isValidReference(plan.iyzicoYearlyPlanRef()));
+    if (!needsSync) {
+      return plan;
+    }
+    return iyzicoCatalogService.syncPlan(plan);
   }
 }
