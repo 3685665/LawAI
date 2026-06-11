@@ -6744,23 +6744,54 @@ body[data-theme="dark"] .petition-linked-precedents li {
   margin-top: 1rem;
 }
 
+.precedent-sync-layout.form-open {
+  grid-template-columns: 1fr;
+}
+
+.precedent-sync-layout.form-open > * {
+  min-width: 0;
+}
+
 .precedent-sync-form {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 14px;
   display: grid;
-  gap: 0.85rem;
+  gap: 0.75rem;
   padding: 0.95rem 1rem;
+}
+
+.precedent-sync-form-full {
+  max-width: 1040px;
+  width: 100%;
+  justify-self: center;
 }
 
 .precedent-sync-form h4 {
   margin: 0;
 }
 
+.precedent-form-header {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.precedent-form-header-spread {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
 .precedent-sync-tasks-section {
   display: grid;
   gap: 0.65rem;
   min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.batch-history-section {
+  grid-column: 1 / -1;
 }
 
 .precedent-sync-panel .batch-section-title .status {
@@ -6829,6 +6860,42 @@ body[data-theme="dark"] .petition-linked-precedents li {
 }
 
 .batch-directory-picker button {
+  white-space: nowrap;
+}
+
+.precedent-sync-form .batch-court-chips {
+  gap: 0.4rem;
+}
+
+.precedent-sync-form .batch-court-chip {
+  padding-inline: 0.8rem;
+}
+
+.precedent-sync-form .batch-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.precedent-sync-form .batch-form-actions {
+  justify-content: flex-end;
+}
+
+.precedent-sync-form .batch-form-actions button {
+  min-width: 180px;
+}
+
+.precedent-sync-form .setting-row.compact {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+.precedent-sync-form .setting-row.compact > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.precedent-sync-form .setting-row.compact strong {
+  display: inline-block;
   white-space: nowrap;
 }
 

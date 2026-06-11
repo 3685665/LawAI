@@ -72,6 +72,7 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
   const [runs, setRuns] = useState<PrecedentSyncRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<PrecedentSyncRun | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<PrecedentSyncTaskPayload>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -189,6 +190,19 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
     setForm(EMPTY_FORM);
   }
 
+  function openCreateForm() {
+    setSelectedRun(null);
+    resetForm();
+    setError("");
+    setSuccess("");
+    setIsFormOpen(true);
+  }
+
+  function closeForm() {
+    resetForm();
+    setIsFormOpen(false);
+  }
+
   function startEdit(task: PrecedentSyncTask) {
     setEditingTaskId(task.id);
     setForm({
@@ -199,6 +213,7 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
       intervalMinutes: task.intervalMinutes,
       enabled: task.enabled
     });
+    setIsFormOpen(true);
     setSuccess("");
     setError("");
   }
@@ -232,7 +247,7 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
         await updatePrecedentSyncTask(editingTaskId, form);
         setSuccess(t.savedUpdate);
       }
-      resetForm();
+      closeForm();
       await loadData();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t.errors.saveFailed);
@@ -250,7 +265,7 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
     try {
       await deletePrecedentSyncTask(task.id);
       if (editingTaskId === task.id) {
-        resetForm();
+        closeForm();
       }
       setSuccess(t.deleted);
       await loadData();
@@ -288,20 +303,28 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
   return (
     <article className="panel admin-card precedent-sync-panel">
       <div className="section-head">
-        <div>
-          <span className="section-label">{t.eyebrow}</span>
-          <h3>{t.title}</h3>
-          <p className="section-copy">{t.subtitle}</p>
-        </div>
+        {!isFormOpen ? (
+          <div>
+            <span className="section-label">{t.eyebrow}</span>
+            <h3>{t.title}</h3>
+            <p className="section-copy">{t.subtitle}</p>
+          </div>
+        ) : (
+          <div aria-hidden="true" />
+        )}
         <div className="admin-actions">
-          <button className="secondary-button" type="button" onClick={() => void loadData()} disabled={loading}>
-            {loading ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}
-            {t.refresh}
-          </button>
-          <button className="secondary-button" type="button" onClick={resetForm}>
-            <Plus size={17} />
-            {t.newTask}
-          </button>
+          {!isFormOpen ? (
+            <>
+              <button className="secondary-button" type="button" onClick={() => void loadData()} disabled={loading}>
+                {loading ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}
+                {t.refresh}
+              </button>
+              <button className="secondary-button" type="button" onClick={openCreateForm}>
+                <Plus size={17} />
+                {t.newTask}
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -318,175 +341,183 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
         </div>
       ) : null}
 
-      <div className="precedent-sync-layout">
-        <form className="precedent-sync-form" onSubmit={(event) => void handleSubmit(event)}>
-          <h4>{editingTaskId == null ? t.form.createTitle : t.form.editTitle}</h4>
-
-          <div className="batch-form-section-label">{t.form.courts}</div>
-          <div className="batch-court-chips">
-            {PRECEDENT_COURTS.map((court) => {
-              const active = form.courts?.includes(court.value) ?? false;
-              return (
-                <button
-                  key={court.value}
-                  className={`batch-court-chip${active ? " active" : ""}`}
-                  type="button"
-                  onClick={() => toggleCourt(court.value)}
-                >
-                  {t.form[court.labelKey]}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="batch-form-grid">
-            <label className="field-label">
-              {t.form.dateFrom}
-              <input
-                required
-                type="date"
-                value={form.dateFrom}
-                onChange={(event) => setForm((current) => ({ ...current, dateFrom: event.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              {t.form.dateTo}
-              <input
-                required
-                type="date"
-                value={form.dateTo}
-                onChange={(event) => setForm((current) => ({ ...current, dateTo: event.target.value }))}
-              />
-            </label>
-            <label className="field-label">
-              {t.form.maxDocumentsPerRun}
-              <input
-                required
-                type="number"
-                min={1}
-                max={5000}
-                value={form.maxDocumentsPerRun ?? 500}
-                onChange={(event) => setForm((current) => ({ ...current, maxDocumentsPerRun: Number(event.target.value) }))}
-              />
-            </label>
-            <label className="field-label">
-              {t.form.intervalMinutes}
-              <input
-                required
-                type="number"
-                min={5}
-                max={1440}
-                value={form.intervalMinutes ?? 60}
-                onChange={(event) => setForm((current) => ({ ...current, intervalMinutes: Number(event.target.value) }))}
-              />
-            </label>
-          </div>
-          <small className="field-hint">{t.form.hint}</small>
-
-          <label className="setting-row compact">
-            <div>
-              <strong>{t.form.enabled}</strong>
-              <span>{t.form.enabledHint}</span>
+      {isFormOpen ? (
+        <div className="precedent-sync-layout form-open">
+          <form className="precedent-sync-form precedent-sync-form-full" onSubmit={(event) => void handleSubmit(event)}>
+            <div className="precedent-form-header">
+              <h4>{editingTaskId == null ? t.form.createTitle : t.form.editTitle}</h4>
             </div>
-            <input
-              type="checkbox"
-              checked={form.enabled}
-              onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
-            />
-          </label>
 
-          <div className="batch-form-actions">
-            <button disabled={saving} type="submit">
-              {saving ? <LoaderCircle className="spin" size={17} /> : <Gavel size={17} />}
-              {editingTaskId == null ? t.form.saveCreate : t.form.saveUpdate}
-            </button>
-            {editingTaskId != null ? (
-              <button className="secondary-button" type="button" onClick={resetForm}>
-                {t.form.cancelEdit}
+            <div className="batch-form-section">
+              <div className="batch-court-chips">
+                {PRECEDENT_COURTS.map((court) => {
+                  const active = form.courts?.includes(court.value) ?? false;
+                  return (
+                    <button
+                      key={court.value}
+                      className={`batch-court-chip${active ? " active" : ""}`}
+                      type="button"
+                      onClick={() => toggleCourt(court.value)}
+                    >
+                      {t.form[court.labelKey]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="batch-form-grid">
+              <label className="field-label">
+                {t.form.dateFrom}
+                <input
+                  required
+                  type="date"
+                  value={form.dateFrom}
+                  onChange={(event) => setForm((current) => ({ ...current, dateFrom: event.target.value }))}
+                />
+              </label>
+              <label className="field-label">
+                {t.form.dateTo}
+                <input
+                  required
+                  type="date"
+                  value={form.dateTo}
+                  onChange={(event) => setForm((current) => ({ ...current, dateTo: event.target.value }))}
+                />
+              </label>
+              <label className="field-label">
+                {t.form.maxDocumentsPerRun}
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  max={5000}
+                  value={form.maxDocumentsPerRun ?? 500}
+                  onChange={(event) => setForm((current) => ({ ...current, maxDocumentsPerRun: Number(event.target.value) }))}
+                />
+              </label>
+              <label className="field-label">
+                {t.form.intervalMinutes}
+                <input
+                  required
+                  type="number"
+                  min={5}
+                  max={1440}
+                  value={form.intervalMinutes ?? 60}
+                  onChange={(event) => setForm((current) => ({ ...current, intervalMinutes: Number(event.target.value) }))}
+                />
+              </label>
+            </div>
+
+            <label className="setting-row compact">
+              <div>
+                <strong>{t.form.enabled}</strong>
+              </div>
+              <input
+                type="checkbox"
+                checked={form.enabled}
+                onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
+              />
+            </label>
+
+            <div className="batch-form-actions">
+              <button disabled={saving} type="submit">
+                {saving ? <LoaderCircle className="spin" size={17} /> : <Gavel size={17} />}
+                {editingTaskId == null ? t.form.saveCreate : t.form.saveUpdate}
               </button>
-            ) : null}
-          </div>
-        </form>
-
-        <section className="precedent-sync-tasks-section">
-          <div className="batch-section-title">
-            <h4>{t.tasksSectionTitle}</h4>
-            <span className="status">{tasks.length} {t.tasksCount}</span>
-          </div>
-          <div className="feedback-datagrid-wrap">
-            <DataGrid
-              autoHeight
-              rows={tasks}
-              columns={[
-                ...taskColumns,
-                {
-                  field: "actions",
-                  headerName: t.columns.actions,
-                  width: 140,
-                  sortable: false,
-                  filterable: false,
-                  renderCell: (params) => (
-                    <div className="table-actions">
-                      <button
-                        className="secondary-button compact icon-only"
-                        type="button"
-                        onClick={() => startEdit(params.row)}
-                        title={t.actions.edit}
-                      >
-                        <PencilLine size={15} />
-                      </button>
-                      <button
-                        className="secondary-button compact"
-                        type="button"
-                        disabled={runningTaskId === params.row.id}
-                        onClick={() => void handleRun(params.row)}
-                      >
-                        {runningTaskId === params.row.id ? <LoaderCircle className="spin" size={15} /> : <Play size={15} />}
-                      </button>
-                      <button className="secondary-button compact danger" type="button" onClick={() => void handleDelete(params.row)}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  )
-                }
-              ]}
-              getRowId={(row) => row.id}
-              disableRowSelectionOnClick
-              initialState={{ pagination: { paginationModel: { page: 0, pageSize: 5 } } }}
-              pageSizeOptions={[5, 10]}
-              rowHeight={52}
-              columnHeaderHeight={40}
-              loading={loading}
-            />
-          </div>
-        </section>
-      </div>
-
-      <section className="batch-history-section">
-        <div className="batch-section-title">
-          <h4>{t.history.title}</h4>
-          <span className="status">
-            <Clock3 size={14} /> {runs.length}
-          </span>
+            </div>
+          </form>
         </div>
-        <div className="feedback-datagrid-wrap">
-          <DataGrid
-            autoHeight
-            rows={runs}
-            columns={runColumns}
-            getRowId={(row) => row.id}
-            disableRowSelectionOnClick
-            onRowClick={(params) => void openRun(params.row)}
-            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 6 } } }}
-            pageSizeOptions={[6, 12]}
-            rowHeight={48}
-            columnHeaderHeight={40}
-            loading={loading}
-          />
-        </div>
-      </section>
+      ) : (
+        <>
+          <div className="precedent-sync-layout">
+            <section className="precedent-sync-tasks-section">
+              <div className="batch-section-title">
+                <h4>{t.tasksSectionTitle}</h4>
+                <span className="status">
+                  {tasks.length} {t.tasksCount}
+                </span>
+              </div>
+              <div className="feedback-datagrid-wrap">
+                <DataGrid
+                  autoHeight
+                  rows={tasks}
+                  columns={[
+                    ...taskColumns,
+                    {
+                      field: "actions",
+                      headerName: t.columns.actions,
+                      width: 140,
+                      sortable: false,
+                      filterable: false,
+                      renderCell: (params) => (
+                        <div className="table-actions">
+                          <button
+                            className="secondary-button compact icon-only"
+                            type="button"
+                            onClick={() => startEdit(params.row)}
+                            title={t.actions.edit}
+                          >
+                            <PencilLine size={15} />
+                          </button>
+                          <button
+                            className="secondary-button compact"
+                            type="button"
+                            disabled={runningTaskId === params.row.id}
+                            onClick={() => void handleRun(params.row)}
+                          >
+                            {runningTaskId === params.row.id ? <LoaderCircle className="spin" size={15} /> : <Play size={15} />}
+                          </button>
+                          <button
+                            className="secondary-button compact danger"
+                            type="button"
+                            onClick={() => void handleDelete(params.row)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      )
+                    }
+                  ]}
+                  getRowId={(row) => row.id}
+                  disableRowSelectionOnClick
+                  initialState={{ pagination: { paginationModel: { page: 0, pageSize: 5 } } }}
+                  pageSizeOptions={[5, 10]}
+                  rowHeight={52}
+                  columnHeaderHeight={40}
+                  loading={loading}
+                />
+              </div>
+            </section>
+          </div>
 
-      {selectedRun ? (
+          <section className="batch-history-section">
+            <div className="batch-section-title">
+              <h4>{t.history.title}</h4>
+              <span className="status">
+                <Clock3 size={14} /> {runs.length}
+              </span>
+            </div>
+            <div className="feedback-datagrid-wrap">
+              <DataGrid
+                autoHeight
+                rows={runs}
+                columns={runColumns}
+                getRowId={(row) => row.id}
+                disableRowSelectionOnClick
+                onRowClick={(params) => void openRun(params.row)}
+                initialState={{ pagination: { paginationModel: { page: 0, pageSize: 6 } } }}
+                pageSizeOptions={[6, 12]}
+                rowHeight={48}
+                columnHeaderHeight={40}
+                loading={loading}
+              />
+            </div>
+          </section>
+        </>
+      )}
+
+      {!isFormOpen && selectedRun ? (
         <section className="batch-run-detail">
           <div className="batch-run-detail-head">
             <div>
