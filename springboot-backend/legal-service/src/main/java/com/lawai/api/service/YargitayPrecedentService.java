@@ -48,8 +48,26 @@ public class YargitayPrecedentService {
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
       List<YargitayRow> rows = advanced
-          ? searchDetailedRows(client, request, query, limit)
+          ? searchDetailedRows(client, request, query, limit, 1)
           : searchRows(client, query, limit);
+      List<PrecedentDto> results = new ArrayList<>();
+      for (YargitayRow row : rows) {
+        results.add(toListPrecedent(row));
+      }
+      return PrecedentSearchSupport.applyAdvancedFilters(request, results);
+    } catch (IOException | ParseException exception) {
+      throw new IllegalStateException("Yargitay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+    String query = request.query() == null ? "" : request.query().trim();
+    int limit = Math.min(Math.max(pageSize, 1), 100);
+    int page = Math.max(pageNumber, 1);
+    BasicCookieStore cookieStore = new BasicCookieStore();
+    try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
+      sendGet(client, BASE_URL);
+      List<YargitayRow> rows = searchDetailedRows(client, request, query, limit, page);
       List<PrecedentDto> results = new ArrayList<>();
       for (YargitayRow row : rows) {
         results.add(toListPrecedent(row));
@@ -86,7 +104,8 @@ public class YargitayPrecedentService {
       CloseableHttpClient client,
       PrecedentSearchRequest request,
       String query,
-      int limit
+      int limit,
+      int pageNumber
   ) throws IOException, ParseException {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("arananKelime", query);
@@ -106,7 +125,7 @@ public class YargitayPrecedentService {
     data.put("kararIlkSiraNo", karar[1]);
     data.put("kararSonSiraNo", "");
     data.put("pageSize", String.valueOf(limit));
-    data.put("pageNumber", "1");
+    data.put("pageNumber", String.valueOf(pageNumber));
     data.put("siralama", "3");
     data.put("siralamaDirection", "desc");
 

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public final class BatchJobNameGenerator {
 
@@ -19,7 +20,10 @@ public final class BatchJobNameGenerator {
     if (StringUtils.hasText(request.name())) {
       return request.name().trim();
     }
-    String folder = directory.getFileName() == null ? "batch" : directory.getFileName().toString();
+    BatchSourceType sourceType = parseSourceType(request.sourceType());
+    String prefix = sourceType == BatchSourceType.PRECEDENT
+        ? precedentPrefix(request)
+        : folderLabel(directory);
     String schedule = scheduleLabel(request.scheduleType());
     String time = request.scheduledTime().replace(":", "-");
     String suffix = switch (BatchScheduleType.valueOf(request.scheduleType().trim().toUpperCase(Locale.ROOT))) {
@@ -28,8 +32,35 @@ public final class BatchJobNameGenerator {
       case MONTHLY -> request.dayOfMonth() == null ? "ay" : "ay" + request.dayOfMonth();
       default -> "";
     };
-    String raw = suffix.isBlank() ? folder + "-" + schedule + "-" + time : folder + "-" + schedule + "-" + suffix + "-" + time;
+    String raw = suffix.isBlank() ? prefix + "-" + schedule + "-" + time : prefix + "-" + schedule + "-" + suffix + "-" + time;
     return sanitize(raw);
+  }
+
+  private static String precedentPrefix(BatchDocumentJobRequest request) {
+    String courts = request.precedentCourts() == null || request.precedentCourts().isEmpty()
+        ? "ictihat"
+        : request.precedentCourts().stream()
+            .map(value -> value.toLowerCase(Locale.ROOT))
+            .collect(Collectors.joining("-"));
+    if (request.precedentDateFrom() != null && request.precedentDateTo() != null) {
+      return courts + "-" + request.precedentDateFrom().format(DATE_FORMAT) + "-" + request.precedentDateTo().format(DATE_FORMAT);
+    }
+    return courts;
+  }
+
+  private static String folderLabel(Path directory) {
+    if (directory == null || directory.getFileName() == null) {
+      return "batch";
+    }
+    return directory.getFileName().toString();
+  }
+
+  private static BatchSourceType parseSourceType(String sourceType) {
+    try {
+      return BatchSourceType.valueOf(sourceType.trim().toUpperCase(Locale.ROOT));
+    } catch (Exception exception) {
+      return BatchSourceType.DIRECTORY;
+    }
   }
 
   private static String scheduleLabel(String scheduleType) {

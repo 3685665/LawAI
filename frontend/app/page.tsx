@@ -18,6 +18,7 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
+  Gavel,
   Printer,
   KeyRound,
   LoaderCircle,
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BatchDocumentJobsPanel } from "@/components/batch-document-jobs-panel";
+import { PrecedentSyncPanel } from "@/components/precedent-sync-panel";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import { findNavGroupForTab } from "@/lib/app-navigation";
 import { formatMessage, getMessages, isLocale, type Locale } from "@/lib/i18n";
@@ -249,7 +251,7 @@ function getPrecedentOutcome(item: Precedent) {
   }
   return "";
 }
-type AdminSection = "feedback" | "users" | "batchDocuments";
+type AdminSection = "feedback" | "users" | "batchDocuments" | "precedentSync";
 type AdminUserView = "list" | "detail" | "create";
 type AdminUserForm = {
   name: string;
@@ -614,6 +616,15 @@ export default function Home() {
             tab: "admin",
             onSelect: () => {
               setAdminSection("batchDocuments");
+            }
+          },
+          {
+            id: "admin-precedent-sync",
+            label: locale === "en" ? "Court Decision Sync" : "Mahkeme Karari Senkronu",
+            icon: Gavel,
+            tab: "admin",
+            onSelect: () => {
+              setAdminSection("precedentSync");
             }
           },
           {
@@ -2547,6 +2558,9 @@ export default function Home() {
           if (item.id === "admin-batch-documents") {
             return activeTab === "admin" && adminSection === "batchDocuments";
           }
+          if (item.id === "admin-precedent-sync") {
+            return activeTab === "admin" && adminSection === "precedentSync";
+          }
           return item.tab === activeTab;
         }}
         locale={locale}
@@ -3471,6 +3485,8 @@ export default function Home() {
                 )}
 
                 {adminSection === "batchDocuments" && <BatchDocumentJobsPanel locale={locale} />}
+
+                {adminSection === "precedentSync" && <PrecedentSyncPanel locale={locale} />}
 
                 {adminSection === "users" && adminUserView === "list" && (
                   <article className="panel admin-card">

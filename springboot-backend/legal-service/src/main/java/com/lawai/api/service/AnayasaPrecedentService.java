@@ -71,6 +71,33 @@ public class AnayasaPrecedentService {
     }
   }
 
+  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+    boolean advanced = PrecedentSearchSupport.isAdvanced(request)
+        || org.springframework.util.StringUtils.hasText(request.dateFrom())
+        || org.springframework.util.StringUtils.hasText(request.dateTo());
+    String query = resolveBatchQuery(request, advanced);
+    int limit = Math.min(Math.max(pageSize, 1), 100);
+    int page = Math.max(pageNumber, 1);
+    List<PrecedentDto> results = new ArrayList<>();
+    try {
+      JsonNode pageResults = searchPage(query, page, limit);
+      if (!pageResults.isArray()) {
+        return List.of();
+      }
+      for (JsonNode row : pageResults) {
+        PrecedentDto precedent = toListPrecedent(row);
+        if (precedent != null) {
+          results.add(precedent);
+        }
+      }
+      return PrecedentSearchSupport.applyAdvancedFilters(request, results.stream()
+          .distinct()
+          .toList());
+    } catch (IOException exception) {
+      throw new IllegalStateException("Anayasa Mahkemesi karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
   public PrecedentDto getDocument(String documentId) {
     String normalizedId = normalizeDocumentId(documentId);
     try {
@@ -222,6 +249,17 @@ public class AnayasaPrecedentService {
       return (kararTipi.isBlank() ? "AYM" : kararTipi) + "/" + id;
     }
     return "";
+  }
+
+  private String resolveBatchQuery(PrecedentSearchRequest request, boolean advanced) {
+    String query = request.query() == null ? "" : request.query().trim();
+    if (!query.isBlank()) {
+      return query;
+    }
+    if (advanced) {
+      return "";
+    }
+    return "anayasa";
   }
 
   private String resolveQuery(PrecedentSearchRequest request, boolean advanced) {

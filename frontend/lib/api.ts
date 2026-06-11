@@ -136,10 +136,19 @@ export type FeedbackUpdatePayload = {
 };
 export type BatchScheduleType = "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY";
 
+export type BatchSourceType = "DIRECTORY" | "PRECEDENT";
+export type PrecedentCourtType = "YARGITAY" | "DANISTAY" | "ANAYASA";
+
 export type BatchDocumentJob = {
   id: number;
   name: string;
-  directoryPath: string;
+  sourceType: BatchSourceType;
+  directoryPath?: string | null;
+  precedentCourts?: PrecedentCourtType[];
+  precedentQuery?: string | null;
+  precedentDateFrom?: string | null;
+  precedentDateTo?: string | null;
+  precedentMaxDocuments?: number | null;
   scheduleType: BatchScheduleType;
   scheduledTime: string;
   scheduledDate?: string | null;
@@ -198,12 +207,74 @@ export type DirectoryBrowseResponse = {
 
 export type BatchDocumentJobPayload = {
   name?: string | null;
-  directoryPath: string;
+  sourceType?: BatchSourceType;
+  directoryPath?: string | null;
+  precedentCourts?: PrecedentCourtType[];
+  precedentQuery?: string | null;
+  precedentDateFrom?: string | null;
+  precedentDateTo?: string | null;
+  precedentMaxDocuments?: number | null;
   scheduleType: BatchScheduleType;
   scheduledTime: string;
   scheduledDate?: string | null;
   dayOfWeek?: number | null;
   dayOfMonth?: number | null;
+  enabled: boolean;
+};
+
+export type PrecedentSyncTask = {
+  id: number;
+  name: string;
+  courts: PrecedentCourtType[];
+  dateFrom: string;
+  dateTo: string;
+  maxDocumentsPerRun: number;
+  intervalMinutes: number;
+  enabled: boolean;
+  status: "IDLE" | "RUNNING";
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PrecedentSyncRunFile = {
+  id: number;
+  filename: string;
+  storedPath: string;
+  status: "SUCCESS" | "FAILED" | "SKIPPED";
+  documentId?: number | null;
+  extractedChars?: number | null;
+  chunkCount?: number | null;
+  errorMessage?: string | null;
+  processedAt: string;
+};
+
+export type PrecedentSyncRun = {
+  id: number;
+  taskId: number;
+  taskName: string;
+  triggerType: "SCHEDULED" | "MANUAL";
+  status: "RUNNING" | "COMPLETED" | "PARTIAL" | "FAILED";
+  startedAt: string;
+  finishedAt?: string | null;
+  totalFiles: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  summaryMessage?: string | null;
+  files: PrecedentSyncRunFile[];
+};
+
+export type PrecedentSyncTaskPayload = {
+  name?: string | null;
+  courts: PrecedentCourtType[];
+  dateFrom: string;
+  dateTo: string;
+  maxDocumentsPerRun?: number;
+  intervalMinutes?: number;
   enabled: boolean;
 };
 
@@ -545,6 +616,47 @@ export async function listBatchDocumentRuns(jobId?: number, limit = 20): Promise
 
 export async function getBatchDocumentRun(runId: number): Promise<BatchDocumentRun> {
   return getJson<BatchDocumentRun>(`/batch-documents/runs/${runId}`);
+}
+
+export async function listPrecedentSyncTasks(): Promise<PrecedentSyncTask[]> {
+  return getJson<PrecedentSyncTask[]>("/precedent-sync/tasks");
+}
+
+export async function createPrecedentSyncTask(payload: PrecedentSyncTaskPayload): Promise<PrecedentSyncTask> {
+  return postJson<PrecedentSyncTask>("/precedent-sync/tasks", payload);
+}
+
+export async function updatePrecedentSyncTask(id: number, payload: PrecedentSyncTaskPayload): Promise<PrecedentSyncTask> {
+  const response = await fetch(`${API_BASE}/precedent-sync/tasks/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
+
+export async function deletePrecedentSyncTask(id: number): Promise<void> {
+  await deleteJson<void>(`/precedent-sync/tasks/${id}`);
+}
+
+export async function triggerPrecedentSyncTask(id: number): Promise<PrecedentSyncRun> {
+  return postJson<PrecedentSyncRun>(`/precedent-sync/tasks/${id}/run`, {});
+}
+
+export async function listPrecedentSyncRuns(taskId?: number, limit = 20): Promise<PrecedentSyncRun[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (taskId != null) {
+    query.set("taskId", String(taskId));
+  }
+  return getJson<PrecedentSyncRun[]>(`/precedent-sync/runs?${query.toString()}`);
+}
+
+export async function getPrecedentSyncRun(runId: number): Promise<PrecedentSyncRun> {
+  return getJson<PrecedentSyncRun>(`/precedent-sync/runs/${runId}`);
 }
 
 export async function listSubscriptions(): Promise<SubscriptionPlan[]> {

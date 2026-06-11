@@ -75,6 +75,28 @@ public class DocumentProcessingService {
     }
   }
 
+  public DocumentUploadResponse processText(String filename, String text, String storedPath) {
+    if (!StringUtils.hasText(text)) {
+      throw new IllegalArgumentException("Karar metni bos.");
+    }
+    String normalizedText = text.trim();
+    if (normalizedText.length() < MIN_TEXT_LENGTH) {
+      throw new IllegalArgumentException("Karar metninden yeterli icerik cikarilamadi.");
+    }
+    String safeName = StringUtils.hasText(filename) ? filename : "precedent.txt";
+    if (!safeName.toLowerCase(Locale.ROOT).endsWith(".txt")) {
+      safeName = safeName + ".txt";
+    }
+    byte[] content = normalizedText.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    return processContent(
+        safeName,
+        "text/plain",
+        content.length,
+        storedPath == null ? "" : storedPath,
+        content
+    );
+  }
+
   private DocumentUploadResponse processContent(
       String filename,
       String contentType,
@@ -100,7 +122,9 @@ public class DocumentProcessingService {
 
     String message = storedPath == null || storedPath.isBlank()
         ? "Belge bellek uzerinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
-        : "Belge dizinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.";
+        : storedPath.startsWith("precedent://")
+            ? "Ictihat karari cekilerek islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
+            : "Belge dizinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.";
 
     return new DocumentUploadResponse(
         documentId,

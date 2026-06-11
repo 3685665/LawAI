@@ -22,6 +22,19 @@ public class DocumentRepository {
     this.dimensions = properties.embeddingDimensions();
   }
 
+  public boolean existsByStoredPath(String storedPath) {
+    if (storedPath == null || storedPath.isBlank()) {
+      return false;
+    }
+    ensureSchema();
+    Integer count = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM legal_documents WHERE stored_path = ?",
+        Integer.class,
+        storedPath
+    );
+    return count != null && count > 0;
+  }
+
   public long createDocument(String filename, String contentType, long sizeBytes, String storedPath, String text) {
     ensureSchema();
     KeyHolder keyHolder = new GeneratedKeyHolder();

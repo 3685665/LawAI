@@ -14,6 +14,7 @@ import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
 
 import java.io.IOException;
@@ -52,6 +53,28 @@ public class DanistayPrecedentService {
       sendPost(client, BASE_URL + "/arama", objectMapper.writeValueAsString(Map.of("data", data)));
       data.put("pageSize", String.valueOf(limit));
       data.put("pageNumber", "1");
+      String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(Map.of("data", data)));
+      return PrecedentSearchSupport.applyAdvancedFilters(request, parseResults(json));
+    } catch (IOException | ParseException exception) {
+      throw new IllegalStateException("Danistay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+    boolean advanced = PrecedentSearchSupport.isAdvanced(request)
+        || StringUtils.hasText(request.dateFrom())
+        || StringUtils.hasText(request.dateTo());
+    String query = request.query() == null ? "" : request.query().trim();
+    int limit = Math.min(Math.max(pageSize, 1), 100);
+    int page = Math.max(pageNumber, 1);
+    BasicCookieStore cookieStore = new BasicCookieStore();
+
+    try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
+      sendGet(client, BASE_URL);
+      Map<String, Object> data = advanced ? detailedSearchPayload(request, query) : searchPayload(query);
+      sendPost(client, BASE_URL + "/arama", objectMapper.writeValueAsString(Map.of("data", data)));
+      data.put("pageSize", String.valueOf(limit));
+      data.put("pageNumber", String.valueOf(page));
       String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(Map.of("data", data)));
       return PrecedentSearchSupport.applyAdvancedFilters(request, parseResults(json));
     } catch (IOException | ParseException exception) {

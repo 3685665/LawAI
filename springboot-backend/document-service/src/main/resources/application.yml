@@ -28,6 +28,7 @@ app:
   services:
     auth-base-url: ${AUTH_SERVICE_URL:http://localhost:8081}
     platform-base-url: ${PLATFORM_SERVICE_URL:http://localhost:8086}
+    legal-base-url: ${LEGAL_SERVICE_URL:http://localhost:8083}
 
 management:
   health:

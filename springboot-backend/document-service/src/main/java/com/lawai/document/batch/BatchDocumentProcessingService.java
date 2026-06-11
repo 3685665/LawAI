@@ -5,7 +5,6 @@ import com.lawai.common.model.AuthenticatedUser;
 import com.lawai.document.batch.dto.BatchDocumentJobDto;
 import com.lawai.document.batch.dto.BatchDocumentJobRequest;
 import com.lawai.document.batch.dto.BatchDocumentRunDto;
-import com.lawai.document.batch.dto.BatchDocumentRunFileDto;
 import com.lawai.document.dto.DocumentUploadResponse;
 import com.lawai.document.service.DocumentProcessingService;
 import org.springframework.stereotype.Service;
@@ -26,18 +25,22 @@ import java.util.stream.Stream;
 public class BatchDocumentProcessingService {
 
   private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(".pdf", ".txt", ".doc", ".docx");
+  private static final int DEFAULT_PRECEDENT_MAX = 500;
 
   private final BatchDocumentJobRepository repository;
   private final DocumentProcessingService documentProcessingService;
+  private final BatchPrecedentIngestService batchPrecedentIngestService;
   private final ActivityLogClient activityLogClient;
 
   public BatchDocumentProcessingService(
       BatchDocumentJobRepository repository,
       DocumentProcessingService documentProcessingService,
+      BatchPrecedentIngestService batchPrecedentIngestService,
       ActivityLogClient activityLogClient
   ) {
     this.repository = repository;
     this.documentProcessingService = documentProcessingService;
+    this.batchPrecedentIngestService = batchPrecedentIngestService;
     this.activityLogClient = activityLogClient;
   }
 
@@ -51,12 +54,20 @@ public class BatchDocumentProcessingService {
     BatchScheduleType scheduleType = parseScheduleType(request.scheduleType());
     LocalTime scheduledTime = LocalTime.parse(request.scheduledTime());
     validateSchedule(scheduleType, request.scheduledDate(), request.dayOfWeek(), request.dayOfMonth());
-    Path directory = resolveDirectory(request.directoryPath());
+    BatchSourceType sourceType = parseSourceType(request.sourceType());
+    validateSource(sourceType, request);
+    Path directory = sourceType == BatchSourceType.DIRECTORY ? resolveDirectory(request.directoryPath()) : null;
     String jobName = BatchJobNameGenerator.resolveName(request, directory);
     Instant nextRunAt = resolveNextRunAt(scheduleType, scheduledTime, request);
     long id = repository.createJob(
         jobName,
-        directory.toString(),
+        sourceType,
+        directory == null ? null : directory.toString(),
+        PrecedentCourt.toCsv(parseCourts(request.precedentCourts())),
+        null,
+        request.precedentDateFrom(),
+        request.precedentDateTo(),
+        normalizeMaxDocuments(request.precedentMaxDocuments()),
         scheduleType,
         scheduledTime,
         request.scheduledDate(),
@@ -77,13 +88,21 @@ public class BatchDocumentProcessingService {
     BatchScheduleType scheduleType = parseScheduleType(request.scheduleType());
     LocalTime scheduledTime = LocalTime.parse(request.scheduledTime());
     validateSchedule(scheduleType, request.scheduledDate(), request.dayOfWeek(), request.dayOfMonth());
-    Path directory = resolveDirectory(request.directoryPath());
+    BatchSourceType sourceType = parseSourceType(request.sourceType());
+    validateSource(sourceType, request);
+    Path directory = sourceType == BatchSourceType.DIRECTORY ? resolveDirectory(request.directoryPath()) : null;
     String jobName = BatchJobNameGenerator.resolveName(request, directory);
     Instant nextRunAt = resolveNextRunAt(scheduleType, scheduledTime, request);
     repository.updateJob(
         id,
         jobName,
-        directory.toString(),
+        sourceType,
+        directory == null ? null : directory.toString(),
+        PrecedentCourt.toCsv(parseCourts(request.precedentCourts())),
+        null,
+        request.precedentDateFrom(),
+        request.precedentDateTo(),
+        normalizeMaxDocuments(request.precedentMaxDocuments()),
         scheduleType,
         scheduledTime,
         request.scheduledDate(),
@@ -135,6 +154,14 @@ public class BatchDocumentProcessingService {
   }
 
   private BatchDocumentRunDto executeJob(BatchDocumentJobDto job, String triggerType) {
+    BatchSourceType sourceType = parseSourceType(job.sourceType());
+    if (sourceType == BatchSourceType.PRECEDENT) {
+      return executePrecedentJob(job, triggerType);
+    }
+    return executeDirectoryJob(job, triggerType);
+  }
+
+  private BatchDocumentRunDto executeDirectoryJob(BatchDocumentJobDto job, String triggerType) {
     long runId = repository.createRun(job.id(), triggerType, BatchRunStatus.RUNNING);
     Path directory = Path.of(job.directoryPath());
     List<Path> files = listSupportedFiles(directory);
@@ -182,7 +209,88 @@ public class BatchDocumentProcessingService {
 
     int totalFiles = files.size();
     BatchRunStatus status = resolveStatus(totalFiles, successCount, failedCount);
-    String summary = buildSummary(totalFiles, successCount, failedCount, skippedCount);
+    String summary = buildDirectorySummary(totalFiles, successCount, failedCount, skippedCount);
+    return finishRun(job, runId, status, totalFiles, successCount, failedCount, skippedCount, summary);
+  }
+
+  private BatchDocumentRunDto executePrecedentJob(BatchDocumentJobDto job, String triggerType) {
+    long runId = repository.createRun(job.id(), triggerType, BatchRunStatus.RUNNING);
+    List<BatchPrecedentIngestService.PrecedentWorkItem> workItems;
+    try {
+      workItems = batchPrecedentIngestService.collectWorkItems(job);
+    } catch (Exception exception) {
+      repository.finishRun(runId, BatchRunStatus.FAILED, 0, 0, 0, 0, "Ictihat listesi alinamadi: " + exception.getMessage());
+      return repository.findRun(runId).orElseThrow(() -> new IllegalStateException("Calistirma kaydi olusturulamadi."));
+    }
+
+    int successCount = 0;
+    int failedCount = 0;
+    int skippedCount = 0;
+
+    for (BatchPrecedentIngestService.PrecedentWorkItem item : workItems) {
+      String filename = item.filename();
+      try {
+        String plainText = batchPrecedentIngestService.fetchPlainText(item.court(), item.sourceId());
+        if (!StringUtils.hasText(plainText)) {
+          skippedCount += 1;
+          repository.createRunFile(
+              runId,
+              filename,
+              item.storedPath(),
+              null,
+              BatchFileStatus.SKIPPED,
+              null,
+              null,
+              null,
+              "Karar metni bos."
+          );
+          continue;
+        }
+        DocumentUploadResponse response = documentProcessingService.processText(filename, plainText, item.storedPath());
+        repository.createRunFile(
+            runId,
+            filename,
+            item.storedPath(),
+            (long) plainText.length(),
+            BatchFileStatus.SUCCESS,
+            response.documentId(),
+            response.extractedCharacters(),
+            response.chunkCount(),
+            null
+        );
+        successCount += 1;
+      } catch (Exception exception) {
+        failedCount += 1;
+        repository.createRunFile(
+            runId,
+            filename,
+            item.storedPath(),
+            null,
+            BatchFileStatus.FAILED,
+            null,
+            null,
+            null,
+            exception.getMessage()
+        );
+      }
+    }
+
+    int totalFiles = workItems.size();
+    BatchRunStatus status = resolveStatus(totalFiles, successCount, failedCount);
+    String summary = buildPrecedentSummary(totalFiles, successCount, failedCount, skippedCount, job);
+    return finishRun(job, runId, status, totalFiles, successCount, failedCount, skippedCount, summary);
+  }
+
+  private BatchDocumentRunDto finishRun(
+      BatchDocumentJobDto job,
+      long runId,
+      BatchRunStatus status,
+      int totalFiles,
+      int successCount,
+      int failedCount,
+      int skippedCount,
+      String summary
+  ) {
     repository.finishRun(runId, status, totalFiles, successCount, failedCount, skippedCount, summary);
 
     Instant finishedAt = Instant.now();
@@ -206,11 +314,22 @@ public class BatchDocumentProcessingService {
     return BatchRunStatus.PARTIAL;
   }
 
-  private String buildSummary(int totalFiles, int successCount, int failedCount, int skippedCount) {
+  private String buildDirectorySummary(int totalFiles, int successCount, int failedCount, int skippedCount) {
     if (totalFiles == 0) {
       return "Dizinde islenecek desteklenen dosya bulunamadi.";
     }
     return successCount + " dosya basariyla islendi, " + failedCount + " basarisiz, " + skippedCount + " atlandi. Toplam " + totalFiles + " dosya tarandi.";
+  }
+
+  private String buildPrecedentSummary(int totalFiles, int successCount, int failedCount, int skippedCount, BatchDocumentJobDto job) {
+    if (totalFiles == 0) {
+      return "Secilen mahkeme ve tarih araliginda islenecek karar bulunamadi.";
+    }
+    String courts = job.precedentCourts() == null || job.precedentCourts().isEmpty()
+        ? "mahkeme"
+        : String.join(", ", job.precedentCourts());
+    return successCount + " ictihat basariyla islendi, " + failedCount + " basarisiz, " + skippedCount + " atlandi. "
+        + courts + " kaynaklarindan toplam " + totalFiles + " karar cekildi.";
   }
 
   private List<Path> listSupportedFiles(Path directory) {
@@ -240,6 +359,37 @@ public class BatchDocumentProcessingService {
       throw new IllegalArgumentException("Yol bir dizin olmali: " + path);
     }
     return path;
+  }
+
+  private void validateSource(BatchSourceType sourceType, BatchDocumentJobRequest request) {
+    if (sourceType == BatchSourceType.DIRECTORY) {
+      resolveDirectory(request.directoryPath());
+      return;
+    }
+    List<PrecedentCourt> courts = parseCourts(request.precedentCourts());
+    if (courts.isEmpty()) {
+      throw new IllegalArgumentException("En az bir mahkeme secin.");
+    }
+    if (request.precedentDateFrom() == null || request.precedentDateTo() == null) {
+      throw new IllegalArgumentException("Ictihat cekimi icin baslangic ve bitis tarihi gerekli.");
+    }
+    if (request.precedentDateFrom().isAfter(request.precedentDateTo())) {
+      throw new IllegalArgumentException("Baslangic tarihi bitis tarihinden sonra olamaz.");
+    }
+  }
+
+  private List<PrecedentCourt> parseCourts(List<String> courts) {
+    if (courts == null || courts.isEmpty()) {
+      return List.of();
+    }
+    List<PrecedentCourt> parsed = new ArrayList<>();
+    for (String court : courts) {
+      if (!StringUtils.hasText(court)) {
+        continue;
+      }
+      parsed.add(PrecedentCourt.valueOf(court.trim().toUpperCase(Locale.ROOT)));
+    }
+    return parsed;
   }
 
   private void validateSchedule(BatchScheduleType type, LocalDate scheduledDate, Integer dayOfWeek, Integer dayOfMonth) {
@@ -272,6 +422,17 @@ public class BatchDocumentProcessingService {
     }
   }
 
+  private BatchSourceType parseSourceType(String value) {
+    if (!StringUtils.hasText(value)) {
+      return BatchSourceType.DIRECTORY;
+    }
+    try {
+      return BatchSourceType.valueOf(value.trim().toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException exception) {
+      throw new IllegalArgumentException("Gecersiz kaynak tipi: " + value);
+    }
+  }
+
   private boolean isSupportedExtension(String filename) {
     String lower = filename.toLowerCase(Locale.ROOT);
     return SUPPORTED_EXTENSIONS.stream().anyMatch(lower::endsWith);
@@ -301,6 +462,17 @@ public class BatchDocumentProcessingService {
       throw new IllegalArgumentException("Tek seferlik gorev icin gelecekte bir tarih ve saat secin.");
     }
     return nextRunAt;
+  }
+
+  private Integer normalizeMaxDocuments(Integer value) {
+    if (value == null) {
+      return DEFAULT_PRECEDENT_MAX;
+    }
+    return Math.min(Math.max(value, 1), 5000);
+  }
+
+  private String normalizeOptionalText(String value) {
+    return value == null ? null : value.trim();
   }
 
   private void requireAdmin(AuthenticatedUser user) {

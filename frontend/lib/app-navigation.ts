@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileUp,
   FolderOpen,
+  Gavel,
   KeyRound,
   MessageSquareMore,
   Palette,
@@ -94,6 +95,7 @@ export function buildRouteNavGroups(locale: Locale, isAdmin: boolean): AppNavGro
         { id: "admin-user-subscriptions", label: locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri", icon: CreditCard, href: "/admin/user-subscriptions" },
         { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UsersRound, href: "/" },
         { id: "admin-batch-documents", label: locale === "en" ? "Batch Document Jobs" : "Toplu Belge Isleme", icon: FolderOpen, href: "/" },
+        { id: "admin-precedent-sync", label: locale === "en" ? "Court Decision Sync" : "Mahkeme Karari Senkronu", icon: Gavel, href: "/" },
         { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: ClipboardList, href: "/admin/activity-logs" }
       ]
     });

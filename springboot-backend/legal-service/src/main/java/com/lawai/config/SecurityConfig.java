@@ -9,6 +9,6 @@ import java.util.List;
 public class SecurityConfig extends MicroserviceSecurityConfig {
   @Override
   protected List<String> publicPaths() {
-    return List.of("/api/health");
+    return List.of("/api/health", "/internal/**");
   }
 }

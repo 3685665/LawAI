@@ -557,8 +557,9 @@
   "batchDocuments": {
     "eyebrow": "Zamanlanmis isleme",
     "title": "Toplu Belge Isleme",
-    "subtitle": "Belirli bir dizindeki PDF, Word ve metin dosyalarini gunluk, haftalik, aylik veya tek seferlik olarak otomatik isleyin.",
+    "subtitle": "Belirli bir dizindeki PDF, Word ve metin dosyalarini zamanlayarak toplu isleyin.",
     "jobsCount": "gorev",
+    "jobsSectionTitle": "Kayitli gorevler",
     "refresh": "Yenile",
     "newJob": "Yeni gorev",
     "enabledYes": "Aktif",
@@ -592,6 +593,20 @@
       "directory": "Kaynak dizin",
       "directoryPlaceholder": "Orn. C:\\LawAI\\incoming",
       "directoryManualHint": "Tam dosya yolunu yazin veya Dizin sec ile bilgisayarinizdan klasor secin. Secilen yol asagida gorunur.",
+      "sourceType": "Kaynak tipi",
+      "sourceDirectory": "Dizinden dosya",
+      "sourcePrecedent": "Mahkeme kararlari (ictihat)",
+      "courts": "Mahkemeler",
+      "courtYargitay": "Yargitay",
+      "courtDanistay": "Danistay",
+      "courtAnayasa": "Anayasa Mahkemesi",
+      "precedentIntro": "Secilen mahkeme ve tarih araligindaki tum kararlar cekilir; kelime filtresi uygulanmaz.",
+      "precedentDateFrom": "Baslangic tarihi",
+      "precedentDateTo": "Bitis tarihi",
+      "precedentMaxDocuments": "Maksimum karar sayisi",
+      "precedentHint": "Her mahkeme icin sayfalama ile tum kararlar taranir. Ust sinir guvenlik amaciyla uygulanir.",
+      "scheduleSection": "Zamanlama",
+      "cancelEdit": "Duzenlemeyi iptal et",
       "browseDirectory": "Dizin sec",
       "selectedDirectory": "Secilen dosya yolu",
       "browseTitle": "Dizin secici",
@@ -612,6 +627,8 @@
     },
     "columns": {
       "name": "Ad",
+      "source": "Kaynak",
+      "sourceDetail": "Kaynak detayi",
       "directory": "Dizin",
       "schedule": "Periyot",
       "time": "Saat",
@@ -627,7 +644,8 @@
     },
     "actions": {
       "edit": "Duzenle",
-      "runNow": "Simdi calistir"
+      "runNow": "Simdi calistir",
+      "delete": "Sil"
     },
     "trigger": {
       "manual": "Manuel",
@@ -644,7 +662,8 @@
       "failed": "Basarisiz",
       "skipped": "Atlanan",
       "startedAt": "Baslangic",
-      "finishedAt": "Bitis"
+      "finishedAt": "Bitis",
+      "close": "Kapat"
     },
     "fileColumns": {
       "name": "Dosya",
@@ -662,7 +681,103 @@
       "deleteFailed": "Gorev silinemedi.",
       "runFailed": "Gorev calistirilamadi.",
       "directoryRequired": "Once bir dizin secin.",
+      "courtsRequired": "En az bir mahkeme secin.",
+      "dateRangeRequired": "Ictihat cekimi icin baslangic ve bitis tarihi girin.",
       "browseFailed": "Dizinler listelenemedi."
+    }
+  },
+  "precedentSync": {
+    "eyebrow": "Arka plan senkronu",
+    "title": "Mahkeme Karari Senkronu",
+    "subtitle": "Yargitay, Danistay ve Anayasa Mahkemesi kararlarini secilen tarih araliginda arka planda surekli cekip bilgi bankasina ekler.",
+    "tasksCount": "gorev",
+    "tasksSectionTitle": "Arka plan gorevleri",
+    "refresh": "Yenile",
+    "newTask": "Yeni gorev",
+    "notScheduled": "Planlanmadi",
+    "savedCreate": "Senkron gorevi olusturuldu.",
+    "savedUpdate": "Senkron gorevi guncellendi.",
+    "deleted": "Senkron gorevi silindi.",
+    "runCompleted": "{success}/{total} karar islendi.",
+    "confirmDelete": "\"{name}\" senkron gorevini silmek istiyor musunuz?",
+    "intervalValue": "{minutes} dk",
+    "status": {
+      "active": "Aktif",
+      "paused": "Duraklatildi",
+      "running": "Calisiyor",
+      "activeTasks": "Aktif gorev",
+      "runningNow": "Simdiki calisma",
+      "backgroundHint": "Arka planda her dakika kontrol edilir; aktif gorevler belirlenen aralikla otomatik calisir."
+    },
+    "form": {
+      "createTitle": "Yeni senkron gorevi",
+      "editTitle": "Senkron gorevini duzenle",
+      "intro": "Secilen mahkeme ve tarih araligindaki tum kararlar cekilir. Daha once islenen kararlar atlanir.",
+      "courts": "Mahkemeler",
+      "courtYargitay": "Yargitay",
+      "courtDanistay": "Danistay",
+      "courtAnayasa": "Anayasa Mahkemesi",
+      "dateFrom": "Baslangic tarihi",
+      "dateTo": "Bitis tarihi",
+      "maxDocumentsPerRun": "Calisma basina maks. karar",
+      "intervalMinutes": "Tekrar araligi (dakika)",
+      "hint": "Ornek: 60 dakika aralikla gorev tekrar calisir ve tarih araligindaki yeni kararlari tarar.",
+      "enabled": "Arka plan gorevi aktif",
+      "enabledHint": "Aktif gorevler sunucu tarafinda otomatik calistirilir.",
+      "saveCreate": "Gorevi baslat",
+      "saveUpdate": "Guncelle",
+      "cancelEdit": "Iptal"
+    },
+    "columns": {
+      "name": "Ad",
+      "courts": "Mahkemeler",
+      "dateRange": "Tarih araligi",
+      "interval": "Aralik",
+      "status": "Durum",
+      "nextRun": "Sonraki calisma",
+      "actions": "Islemler",
+      "task": "Gorev",
+      "trigger": "Tetik",
+      "runStatus": "Durum",
+      "startedAt": "Baslangic",
+      "summary": "Ozet"
+    },
+    "actions": {
+      "edit": "Duzenle",
+      "runNow": "Simdi calistir",
+      "delete": "Sil"
+    },
+    "trigger": {
+      "manual": "Manuel",
+      "scheduled": "Otomatik"
+    },
+    "history": {
+      "eyebrow": "Gecmis",
+      "title": "Senkron gecmisi"
+    },
+    "runDetail": {
+      "eyebrow": "Son calistirma",
+      "total": "Toplam",
+      "success": "Basarili",
+      "failed": "Basarisiz",
+      "skipped": "Atlanan",
+      "close": "Kapat"
+    },
+    "fileColumns": {
+      "name": "Karar",
+      "status": "Durum",
+      "documentId": "Belge ID",
+      "chunks": "Parca",
+      "error": "Hata"
+    },
+    "runSummaryFallback": "{success} basarili, {failed} basarisiz / {total} karar",
+    "errors": {
+      "loadFailed": "Senkron gorevleri yuklenemedi.",
+      "saveFailed": "Gorev kaydedilemedi.",
+      "deleteFailed": "Gorev silinemedi.",
+      "runFailed": "Gorev calistirilamadi.",
+      "courtsRequired": "En az bir mahkeme secin.",
+      "dateRangeRequired": "Baslangic ve bitis tarihi girin."
     }
   },
   "common": {

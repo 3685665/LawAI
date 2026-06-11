@@ -557,8 +557,9 @@
   "batchDocuments": {
     "eyebrow": "Scheduled processing",
     "title": "Batch Document Processing",
-    "subtitle": "Automatically process PDF, Word, and text files from a directory on a daily, weekly, monthly, or one-time schedule.",
+    "subtitle": "Schedule batch processing for PDF, Word, and text files in a directory.",
     "jobsCount": "jobs",
+    "jobsSectionTitle": "Saved jobs",
     "refresh": "Refresh",
     "newJob": "New job",
     "enabledYes": "Active",
@@ -592,6 +593,20 @@
       "directory": "Source directory",
       "directoryPlaceholder": "e.g. C:\\LawAI\\incoming",
       "directoryManualHint": "Type the full file path or use Browse to pick a folder from your computer. The selected path is shown below.",
+      "sourceType": "Source type",
+      "sourceDirectory": "Files from directory",
+      "sourcePrecedent": "Court decisions (case law)",
+      "courts": "Courts",
+      "courtYargitay": "Court of Cassation",
+      "courtDanistay": "Council of State",
+      "courtAnayasa": "Constitutional Court",
+      "precedentIntro": "All decisions in the selected courts and date range are fetched; no keyword filter is applied.",
+      "precedentDateFrom": "Start date",
+      "precedentDateTo": "End date",
+      "precedentMaxDocuments": "Maximum decisions",
+      "precedentHint": "Each court is scanned page by page. The upper limit is a safety cap.",
+      "scheduleSection": "Schedule",
+      "cancelEdit": "Cancel edit",
       "browseDirectory": "Browse",
       "selectedDirectory": "Selected file path",
       "browseTitle": "Directory picker",
@@ -612,6 +627,8 @@
     },
     "columns": {
       "name": "Name",
+      "source": "Source",
+      "sourceDetail": "Source detail",
       "directory": "Directory",
       "schedule": "Frequency",
       "time": "Time",
@@ -627,7 +644,8 @@
     },
     "actions": {
       "edit": "Edit",
-      "runNow": "Run now"
+      "runNow": "Run now",
+      "delete": "Delete"
     },
     "trigger": {
       "manual": "Manual",
@@ -644,7 +662,8 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "startedAt": "Started",
-      "finishedAt": "Finished"
+      "finishedAt": "Finished",
+      "close": "Close"
     },
     "fileColumns": {
       "name": "File",
@@ -662,7 +681,103 @@
       "deleteFailed": "Job could not be deleted.",
       "runFailed": "Job could not be executed.",
       "directoryRequired": "Select a directory first.",
+      "courtsRequired": "Select at least one court.",
+      "dateRangeRequired": "Enter start and end dates for case-law fetch.",
       "browseFailed": "Directories could not be listed."
+    }
+  },
+  "precedentSync": {
+    "eyebrow": "Background sync",
+    "title": "Court Decision Sync",
+    "subtitle": "Continuously fetch Yargitay, Danistay, and Constitutional Court decisions for a date range and add them to the knowledge base.",
+    "tasksCount": "tasks",
+    "tasksSectionTitle": "Background tasks",
+    "refresh": "Refresh",
+    "newTask": "New task",
+    "notScheduled": "Not scheduled",
+    "savedCreate": "Sync task created.",
+    "savedUpdate": "Sync task updated.",
+    "deleted": "Sync task deleted.",
+    "runCompleted": "{success}/{total} decisions processed.",
+    "confirmDelete": "Delete sync task \"{name}\"?",
+    "intervalValue": "{minutes} min",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "running": "Running",
+      "activeTasks": "Active tasks",
+      "runningNow": "Running now",
+      "backgroundHint": "Checked every minute on the server; active tasks run automatically at the configured interval."
+    },
+    "form": {
+      "createTitle": "New sync task",
+      "editTitle": "Edit sync task",
+      "intro": "All decisions in the selected courts and date range are fetched. Previously processed decisions are skipped.",
+      "courts": "Courts",
+      "courtYargitay": "Court of Cassation",
+      "courtDanistay": "Council of State",
+      "courtAnayasa": "Constitutional Court",
+      "dateFrom": "Start date",
+      "dateTo": "End date",
+      "maxDocumentsPerRun": "Max decisions per run",
+      "intervalMinutes": "Repeat interval (minutes)",
+      "hint": "Example: with a 60-minute interval, the task reruns and scans for new decisions in the date range.",
+      "enabled": "Background task enabled",
+      "enabledHint": "Enabled tasks are executed automatically on the server.",
+      "saveCreate": "Start task",
+      "saveUpdate": "Update",
+      "cancelEdit": "Cancel"
+    },
+    "columns": {
+      "name": "Name",
+      "courts": "Courts",
+      "dateRange": "Date range",
+      "interval": "Interval",
+      "status": "Status",
+      "nextRun": "Next run",
+      "actions": "Actions",
+      "task": "Task",
+      "trigger": "Trigger",
+      "runStatus": "Status",
+      "startedAt": "Started",
+      "summary": "Summary"
+    },
+    "actions": {
+      "edit": "Edit",
+      "runNow": "Run now",
+      "delete": "Delete"
+    },
+    "trigger": {
+      "manual": "Manual",
+      "scheduled": "Automatic"
+    },
+    "history": {
+      "eyebrow": "History",
+      "title": "Sync history"
+    },
+    "runDetail": {
+      "eyebrow": "Latest run",
+      "total": "Total",
+      "success": "Succeeded",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "close": "Close"
+    },
+    "fileColumns": {
+      "name": "Decision",
+      "status": "Status",
+      "documentId": "Document ID",
+      "chunks": "Chunks",
+      "error": "Error"
+    },
+    "runSummaryFallback": "{success} succeeded, {failed} failed / {total} decisions",
+    "errors": {
+      "loadFailed": "Sync tasks could not be loaded.",
+      "saveFailed": "Task could not be saved.",
+      "deleteFailed": "Task could not be deleted.",
+      "runFailed": "Task could not be executed.",
+      "courtsRequired": "Select at least one court.",
+      "dateRangeRequired": "Enter start and end dates."
     }
   },
   "common": {

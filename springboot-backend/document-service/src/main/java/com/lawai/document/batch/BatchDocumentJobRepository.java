@@ -16,12 +16,22 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 @Repository
 public class BatchDocumentJobRepository {
+
+  private static final String JOB_SELECT = """
+      SELECT id, name, source_type, directory_path, precedent_courts, precedent_query,
+             precedent_date_from, precedent_date_to, precedent_max_documents,
+             schedule_type, scheduled_time::text, scheduled_date,
+             day_of_week, day_of_month, enabled, created_by_user_id, created_by_user_name,
+             last_run_at, next_run_at, created_at, updated_at
+      FROM batch_document_jobs
+      """;
 
   private final JdbcTemplate jdbcTemplate;
   private boolean ready;
@@ -33,13 +43,7 @@ public class BatchDocumentJobRepository {
   public List<BatchDocumentJobDto> listJobs() {
     ensureSchema();
     return jdbcTemplate.query(
-        """
-        SELECT id, name, directory_path, schedule_type, scheduled_time::text, scheduled_date,
-               day_of_week, day_of_month, enabled, created_by_user_id, created_by_user_name,
-               last_run_at, next_run_at, created_at, updated_at
-        FROM batch_document_jobs
-        ORDER BY created_at DESC
-        """,
+        JOB_SELECT + " ORDER BY created_at DESC",
         this::mapJob
     );
   }
@@ -47,13 +51,7 @@ public class BatchDocumentJobRepository {
   public Optional<BatchDocumentJobDto> findJob(long id) {
     ensureSchema();
     List<BatchDocumentJobDto> rows = jdbcTemplate.query(
-        """
-        SELECT id, name, directory_path, schedule_type, scheduled_time::text, scheduled_date,
-               day_of_week, day_of_month, enabled, created_by_user_id, created_by_user_name,
-               last_run_at, next_run_at, created_at, updated_at
-        FROM batch_document_jobs
-        WHERE id = ?
-        """,
+        JOB_SELECT + " WHERE id = ?",
         this::mapJob,
         id
     );
@@ -63,11 +61,7 @@ public class BatchDocumentJobRepository {
   public List<BatchDocumentJobDto> findDueJobs(Instant now) {
     ensureSchema();
     return jdbcTemplate.query(
-        """
-        SELECT id, name, directory_path, schedule_type, scheduled_time::text, scheduled_date,
-               day_of_week, day_of_month, enabled, created_by_user_id, created_by_user_name,
-               last_run_at, next_run_at, created_at, updated_at
-        FROM batch_document_jobs
+        JOB_SELECT + """
         WHERE enabled = TRUE
           AND next_run_at IS NOT NULL
           AND next_run_at <= ?
@@ -80,7 +74,13 @@ public class BatchDocumentJobRepository {
 
   public long createJob(
       String name,
+      BatchSourceType sourceType,
       String directoryPath,
+      String precedentCourts,
+      String precedentQuery,
+      LocalDate precedentDateFrom,
+      LocalDate precedentDateTo,
+      Integer precedentMaxDocuments,
       BatchScheduleType scheduleType,
       LocalTime scheduledTime,
       LocalDate scheduledDate,
@@ -97,39 +97,60 @@ public class BatchDocumentJobRepository {
       PreparedStatement statement = connection.prepareStatement(
           """
           INSERT INTO batch_document_jobs (
-            name, directory_path, schedule_type, scheduled_time, scheduled_date,
+            name, source_type, directory_path, precedent_courts, precedent_query,
+            precedent_date_from, precedent_date_to, precedent_max_documents,
+            schedule_type, scheduled_time, scheduled_date,
             day_of_week, day_of_month, enabled, created_by_user_id, created_by_user_name, next_run_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           new String[] {"id"}
       );
-      statement.setString(1, name);
-      statement.setString(2, directoryPath);
-      statement.setString(3, scheduleType.name());
-      statement.setTime(4, java.sql.Time.valueOf(scheduledTime));
-      if (scheduledDate == null) {
-        statement.setNull(5, Types.DATE);
+      int index = 1;
+      statement.setString(index++, name);
+      statement.setString(index++, sourceType.name());
+      statement.setString(index++, directoryPath);
+      statement.setString(index++, precedentCourts);
+      statement.setString(index++, precedentQuery);
+      if (precedentDateFrom == null) {
+        statement.setNull(index++, Types.DATE);
       } else {
-        statement.setDate(5, java.sql.Date.valueOf(scheduledDate));
+        statement.setDate(index++, java.sql.Date.valueOf(precedentDateFrom));
+      }
+      if (precedentDateTo == null) {
+        statement.setNull(index++, Types.DATE);
+      } else {
+        statement.setDate(index++, java.sql.Date.valueOf(precedentDateTo));
+      }
+      if (precedentMaxDocuments == null) {
+        statement.setNull(index++, Types.INTEGER);
+      } else {
+        statement.setInt(index++, precedentMaxDocuments);
+      }
+      statement.setString(index++, scheduleType.name());
+      statement.setTime(index++, java.sql.Time.valueOf(scheduledTime));
+      if (scheduledDate == null) {
+        statement.setNull(index++, Types.DATE);
+      } else {
+        statement.setDate(index++, java.sql.Date.valueOf(scheduledDate));
       }
       if (dayOfWeek == null) {
-        statement.setNull(6, Types.SMALLINT);
+        statement.setNull(index++, Types.SMALLINT);
       } else {
-        statement.setInt(6, dayOfWeek);
+        statement.setInt(index++, dayOfWeek);
       }
       if (dayOfMonth == null) {
-        statement.setNull(7, Types.SMALLINT);
+        statement.setNull(index++, Types.SMALLINT);
       } else {
-        statement.setInt(7, dayOfMonth);
+        statement.setInt(index++, dayOfMonth);
       }
-      statement.setBoolean(8, enabled);
-      statement.setString(9, createdByUserId);
-      statement.setString(10, createdByUserName);
+      statement.setBoolean(index++, enabled);
+      statement.setString(index++, createdByUserId);
+      statement.setString(index++, createdByUserName);
       if (nextRunAt == null) {
-        statement.setNull(11, Types.TIMESTAMP_WITH_TIMEZONE);
+        statement.setNull(index, Types.TIMESTAMP_WITH_TIMEZONE);
       } else {
-        statement.setTimestamp(11, Timestamp.from(nextRunAt));
+        statement.setTimestamp(index, Timestamp.from(nextRunAt));
       }
       return statement;
     }, keyHolder);
@@ -139,7 +160,13 @@ public class BatchDocumentJobRepository {
   public void updateJob(
       long id,
       String name,
+      BatchSourceType sourceType,
       String directoryPath,
+      String precedentCourts,
+      String precedentQuery,
+      LocalDate precedentDateFrom,
+      LocalDate precedentDateTo,
+      Integer precedentMaxDocuments,
       BatchScheduleType scheduleType,
       LocalTime scheduledTime,
       LocalDate scheduledDate,
@@ -152,12 +179,20 @@ public class BatchDocumentJobRepository {
     jdbcTemplate.update(
         """
         UPDATE batch_document_jobs
-        SET name = ?, directory_path = ?, schedule_type = ?, scheduled_time = ?, scheduled_date = ?,
+        SET name = ?, source_type = ?, directory_path = ?, precedent_courts = ?, precedent_query = ?,
+            precedent_date_from = ?, precedent_date_to = ?, precedent_max_documents = ?,
+            schedule_type = ?, scheduled_time = ?, scheduled_date = ?,
             day_of_week = ?, day_of_month = ?, enabled = ?, next_run_at = ?, updated_at = now()
         WHERE id = ?
         """,
         name,
+        sourceType.name(),
         directoryPath,
+        precedentCourts,
+        precedentQuery,
+        precedentDateFrom == null ? null : java.sql.Date.valueOf(precedentDateFrom),
+        precedentDateTo == null ? null : java.sql.Date.valueOf(precedentDateTo),
+        precedentMaxDocuments,
         scheduleType.name(),
         java.sql.Time.valueOf(scheduledTime),
         scheduledDate == null ? null : java.sql.Date.valueOf(scheduledDate),
@@ -363,10 +398,20 @@ public class BatchDocumentJobRepository {
   }
 
   private BatchDocumentJobDto mapJob(ResultSet rs, int rowNum) throws SQLException {
+    String courtsValue = rs.getString("precedent_courts");
+    List<String> courts = courtsValue == null || courtsValue.isBlank()
+        ? List.of()
+        : Arrays.stream(courtsValue.split(",")).map(String::trim).filter(value -> !value.isBlank()).toList();
     return new BatchDocumentJobDto(
         rs.getLong("id"),
         rs.getString("name"),
+        rs.getString("source_type"),
         rs.getString("directory_path"),
+        courts,
+        rs.getString("precedent_query"),
+        rs.getDate("precedent_date_from") == null ? null : rs.getDate("precedent_date_from").toLocalDate(),
+        rs.getDate("precedent_date_to") == null ? null : rs.getDate("precedent_date_to").toLocalDate(),
+        (Integer) rs.getObject("precedent_max_documents"),
         rs.getString("schedule_type"),
         rs.getString("scheduled_time"),
         rs.getDate("scheduled_date") == null ? null : rs.getDate("scheduled_date").toLocalDate(),
@@ -428,7 +473,13 @@ public class BatchDocumentJobRepository {
         CREATE TABLE IF NOT EXISTS batch_document_jobs (
           id bigserial PRIMARY KEY,
           name text NOT NULL,
-          directory_path text NOT NULL,
+          source_type text NOT NULL DEFAULT 'DIRECTORY',
+          directory_path text,
+          precedent_courts text,
+          precedent_query text,
+          precedent_date_from date,
+          precedent_date_to date,
+          precedent_max_documents integer DEFAULT 500,
           schedule_type text NOT NULL,
           scheduled_time time NOT NULL,
           scheduled_date date,
@@ -444,6 +495,13 @@ public class BatchDocumentJobRepository {
         )
         """
     );
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS source_type text NOT NULL DEFAULT 'DIRECTORY'");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS precedent_courts text");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS precedent_query text");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS precedent_date_from date");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS precedent_date_to date");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ADD COLUMN IF NOT EXISTS precedent_max_documents integer DEFAULT 500");
+    jdbcTemplate.execute("ALTER TABLE batch_document_jobs ALTER COLUMN directory_path DROP NOT NULL");
     jdbcTemplate.execute(
         """
         CREATE TABLE IF NOT EXISTS batch_document_runs (
