@@ -3449,14 +3449,6 @@ export default function Home() {
 
         {activeTab === "admin" && authUser.role === "ADMIN" && (
           <section className="admin-workspace">
-            <header className="panel admin-header">
-              <div>
-                <span className="eyebrow">{t.adminPanel.eyebrow}</span>
-                <h1>{t.adminPanel.title}</h1>
-                <p>{t.adminPanel.subtitle}</p>
-              </div>
-            </header>
-
             <section className="settings-content admin-content">
                 {adminSection === "feedback" && (
                   <article className="panel admin-card">

@@ -100,9 +100,6 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
     return () => window.clearInterval(timer);
   }, [loadData]);
 
-  const activeTasks = useMemo(() => tasks.filter((task) => task.enabled), [tasks]);
-  const runningTasks = useMemo(() => tasks.filter((task) => task.status === "RUNNING"), [tasks]);
-
   const taskColumns = useMemo<GridColDef<PrecedentSyncTask>[]>(
     () => [
       { field: "name", headerName: t.columns.name, flex: 1, minWidth: 130 },
@@ -307,21 +304,6 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
         </div>
       </div>
 
-      <div className="precedent-sync-status-row">
-        <div className="precedent-sync-status-card">
-          <span>{t.status.activeTasks}</span>
-          <strong>{activeTasks.length}</strong>
-        </div>
-        <div className="precedent-sync-status-card">
-          <span>{t.status.runningNow}</span>
-          <strong>{runningTasks.length}</strong>
-        </div>
-        <div className="precedent-sync-status-card info">
-          <Gavel size={18} />
-          <span>{t.status.backgroundHint}</span>
-        </div>
-      </div>
-
       {error ? (
         <div className="inline-error">
           <AlertCircle size={18} />
@@ -338,7 +320,6 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
       <div className="precedent-sync-layout">
         <form className="precedent-sync-form" onSubmit={(event) => void handleSubmit(event)}>
           <h4>{editingTaskId == null ? t.form.createTitle : t.form.editTitle}</h4>
-          <p className="precedent-sync-intro">{t.form.intro}</p>
 
           <div className="batch-form-section-label">{t.form.courts}</div>
           <div className="batch-court-chips">
@@ -477,10 +458,7 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
 
       <section className="batch-history-section">
         <div className="batch-section-title">
-          <div>
-            <span className="section-label">{t.history.eyebrow}</span>
-            <h4>{t.history.title}</h4>
-          </div>
+          <h4>{t.history.title}</h4>
           <span className="status">
             <Clock3 size={14} /> {runs.length}
           </span>
@@ -506,7 +484,6 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
         <section className="batch-run-detail">
           <div className="batch-run-detail-head">
             <div>
-              <span className="section-label">{t.runDetail.eyebrow}</span>
               <h4>{selectedRun.taskName}</h4>
               <p className="section-copy">{selectedRun.summaryMessage}</p>
             </div>

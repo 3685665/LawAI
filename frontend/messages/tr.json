@@ -395,9 +395,6 @@
     "emptySelection": "Listeden bir kayit secin."
   },
   "adminPanel": {
-    "eyebrow": "Yonetici alani",
-    "title": "Yonetim Merkezi",
-    "subtitle": "Sistem durumu, geri bildirimler, bilgi bankasi, test verileri ve erisim ayarlari tek yerde.",
     "userRequests": "Kullanici talepleri",
     "openFeedback": "Acik kayit",
     "resolvedFeedback": "Cozulen",

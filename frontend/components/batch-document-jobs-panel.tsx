@@ -45,39 +45,6 @@ const EMPTY_FORM: BatchDocumentJobPayload = {
   enabled: true
 };
 
-function folderNameFromPath(directoryPath: string) {
-  const normalized = directoryPath.replace(/[\\/]+$/, "");
-  const parts = normalized.split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] ?? "batch";
-}
-
-function generateAutoJobName(form: BatchDocumentJobPayload) {
-  const prefix = folderNameFromPath(form.directoryPath ?? "");
-  const schedule =
-    form.scheduleType === "ONCE"
-      ? "tek"
-      : form.scheduleType === "DAILY"
-        ? "gunluk"
-        : form.scheduleType === "WEEKLY"
-          ? "haftalik"
-          : "aylik";
-  const time = form.scheduledTime.replace(":", "-");
-  let suffix = "";
-  if (form.scheduleType === "ONCE" && form.scheduledDate) {
-    suffix = form.scheduledDate;
-  } else if (form.scheduleType === "WEEKLY" && form.dayOfWeek) {
-    suffix = `gun${form.dayOfWeek}`;
-  } else if (form.scheduleType === "MONTHLY" && form.dayOfMonth) {
-    suffix = `ay${form.dayOfMonth}`;
-  }
-  const raw = suffix ? `${prefix}-${schedule}-${suffix}-${time}` : `${prefix}-${schedule}-${time}`;
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 function formatDateTime(value: string | null | undefined, locale: Locale, fallback: string) {
   if (!value) return fallback;
   return new Date(value).toLocaleString(locale === "en" ? "en-US" : "tr-TR");
@@ -235,8 +202,6 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
     setForm(EMPTY_FORM);
   }
 
-  const autoJobName = useMemo(() => (form.directoryPath ? generateAutoJobName(form) : ""), [form]);
-
   function pickDirectoryManually() {
     setError("");
     folderInputRef.current?.click();
@@ -393,11 +358,6 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
         <form className="batch-job-form" onSubmit={(event) => void handleSubmit(event)}>
           <div className="batch-form-header">
             <h4>{editingJobId == null ? t.form.createTitle : t.form.editTitle}</h4>
-            {autoJobName ? (
-              <span className="batch-form-job-name">
-                {t.form.autoName}: <strong>{autoJobName}</strong>
-              </span>
-            ) : null}
           </div>
 
           <div className="batch-form-section">
@@ -426,7 +386,6 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
                   onChange={handleNativeFolderPick}
                 />
               </div>
-              <small className="field-hint">{t.form.directoryManualHint}</small>
             </label>
           </div>
 
@@ -574,10 +533,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
 
       <section className="batch-history-section">
         <div className="batch-section-title">
-          <div>
-            <span className="section-label">{t.history.eyebrow}</span>
-            <h4>{t.history.title}</h4>
-          </div>
+          <h4>{t.history.title}</h4>
           <span className="status">
             <Clock3 size={14} /> {runs.length}
           </span>
@@ -603,7 +559,6 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
         <section className="batch-run-detail">
           <div className="batch-run-detail-head">
             <div>
-              <span className="section-label">{t.runDetail.eyebrow}</span>
               <h4>{selectedRun.jobName}</h4>
               <p className="section-copy">{selectedRun.summaryMessage}</p>
             </div>

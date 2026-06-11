@@ -395,9 +395,6 @@
     "emptySelection": "Select a record from the list."
   },
   "adminPanel": {
-    "eyebrow": "Admin area",
-    "title": "Management Center",
-    "subtitle": "System status, feedback, knowledge base, test data and access settings in one place.",
     "userRequests": "User requests",
     "openFeedback": "Open records",
     "resolvedFeedback": "Resolved",
