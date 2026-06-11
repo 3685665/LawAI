@@ -603,6 +603,7 @@
       "precedentMaxDocuments": "Maksimum karar sayisi",
       "precedentHint": "Her mahkeme icin sayfalama ile tum kararlar taranir. Ust sinir guvenlik amaciyla uygulanir.",
       "scheduleSection": "Zamanlama",
+      "back": "Geri",
       "cancelEdit": "Duzenlemeyi iptal et",
       "browseDirectory": "Dizin sec",
       "selectedDirectory": "Secilen dosya yolu",

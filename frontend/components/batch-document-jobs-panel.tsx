@@ -4,13 +4,14 @@ import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useSta
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
   AlertCircle,
-  CalendarClock,
   CheckCircle2,
   Clock3,
+  ArrowLeft,
   FolderOpen,
   LoaderCircle,
   Play,
   Plus,
+  PencilLine,
   RefreshCw,
   Trash2,
   X
@@ -57,6 +58,25 @@ function formatBytes(bytes: number | null | undefined) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function resolvePickedDirectoryPath(file: File & { path?: string }) {
+  if (typeof file.path === "string" && file.path.trim()) {
+    const normalized = file.path.trim();
+    const lastSlash = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
+    return lastSlash >= 0 ? normalized.slice(0, lastSlash) : normalized;
+  }
+
+  if (file.webkitRelativePath) {
+    const segments = file.webkitRelativePath.split("/").filter(Boolean);
+    if (segments.length > 1) {
+      segments.pop();
+      return segments.join("/");
+    }
+    return segments[0] ?? "";
+  }
+
+  return "";
+}
+
 function statusClass(status: string) {
   if (status === "COMPLETED" || status === "SUCCESS") return "status-pill success";
   if (status === "PARTIAL") return "status-pill warning";
@@ -70,6 +90,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
   const [runs, setRuns] = useState<BatchDocumentRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<BatchDocumentRun | null>(null);
   const [editingJobId, setEditingJobId] = useState<number | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<BatchDocumentJobPayload>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -202,6 +223,19 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
     setForm(EMPTY_FORM);
   }
 
+  function openCreateForm() {
+    setSelectedRun(null);
+    resetForm();
+    setSuccess("");
+    setError("");
+    setIsFormOpen(true);
+  }
+
+  function closeForm() {
+    resetForm();
+    setIsFormOpen(false);
+  }
+
   function pickDirectoryManually() {
     setError("");
     folderInputRef.current?.click();
@@ -213,12 +247,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
       return;
     }
     const first = files[0] as File & { path?: string };
-    let pickedPath = "";
-    if (typeof first.path === "string" && first.path.trim()) {
-      pickedPath = first.path.replace(/[\\/][^\\/]+$/, "");
-    } else if (first.webkitRelativePath) {
-      pickedPath = first.webkitRelativePath.split("/")[0] ?? "";
-    }
+    const pickedPath = resolvePickedDirectoryPath(first);
     if (pickedPath) {
       setForm((current) => ({ ...current, directoryPath: pickedPath }));
       setSuccess("");
@@ -239,6 +268,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
       dayOfMonth: job.dayOfMonth ?? 1,
       enabled: job.enabled
     });
+    setIsFormOpen(true);
     setSuccess("");
     setError("");
   }
@@ -268,7 +298,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
         await updateBatchDocumentJob(editingJobId, payload);
         setSuccess(t.savedUpdate);
       }
-      resetForm();
+      closeForm();
       await loadData();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t.errors.saveFailed);
@@ -286,7 +316,7 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
     try {
       await deleteBatchDocumentJob(job.id);
       if (editingJobId === job.id) {
-        resetForm();
+        closeForm();
       }
       setSuccess(t.deleted);
       await loadData();
@@ -324,20 +354,28 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
   return (
     <article className="panel admin-card batch-documents-panel">
       <div className="section-head">
-        <div>
-          <span className="section-label">{t.eyebrow}</span>
-          <h3>{t.title}</h3>
-          <p className="section-copy">{t.subtitle}</p>
-        </div>
+        {!isFormOpen ? (
+          <div>
+            <span className="section-label">{t.eyebrow}</span>
+            <h3>{t.title}</h3>
+            <p className="section-copy">{t.subtitle}</p>
+          </div>
+        ) : (
+          <div aria-hidden="true" />
+        )}
         <div className="admin-actions">
-          <button className="secondary-button" type="button" onClick={() => void loadData()} disabled={loading}>
-            {loading ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}
-            {t.refresh}
-          </button>
-          <button className="secondary-button" type="button" onClick={resetForm}>
-            <Plus size={17} />
-            {t.newJob}
-          </button>
+          {!isFormOpen ? (
+            <>
+              <button className="secondary-button" type="button" onClick={() => void loadData()} disabled={loading}>
+                {loading ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}
+                {t.refresh}
+              </button>
+              <button className="secondary-button" type="button" onClick={openCreateForm}>
+                <Plus size={17} />
+                {t.newJob}
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -354,208 +392,219 @@ export function BatchDocumentJobsPanel({ locale }: BatchDocumentJobsPanelProps) 
         </div>
       ) : null}
 
-      <div className="batch-documents-layout">
-        <form className="batch-job-form" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="batch-form-header">
-            <h4>{editingJobId == null ? t.form.createTitle : t.form.editTitle}</h4>
-          </div>
-
-          <div className="batch-form-section">
-            <label className="field-label">
-              {t.form.directory}
-              <div className="batch-directory-picker">
-                <input
-                  required
-                  value={form.directoryPath ?? ""}
-                  placeholder={t.form.directoryPlaceholder}
-                  spellCheck={false}
-                  onChange={(event) => setForm((current) => ({ ...current, directoryPath: event.target.value }))}
-                />
-                <button className="secondary-button" type="button" onClick={pickDirectoryManually}>
-                  <FolderOpen size={17} />
-                  {t.form.browseDirectory}
-                </button>
-                <input
-                  ref={folderInputRef}
-                  hidden
-                  type="file"
-                  // @ts-expect-error webkitdirectory is supported by Chromium-based browsers
-                  webkitdirectory=""
-                  directory=""
-                  multiple
-                  onChange={handleNativeFolderPick}
-                />
-              </div>
-            </label>
-          </div>
-
-          <div className="batch-form-section">
-            <div className="batch-form-section-label">
-              <CalendarClock size={15} />
-              {t.form.scheduleSection}
+      {isFormOpen ? (
+        <div className="batch-documents-layout form-open">
+          <form className="batch-job-form batch-job-form-full" onSubmit={(event) => void handleSubmit(event)}>
+            <div className="batch-form-header batch-form-header-spread">
+              <h4>{editingJobId == null ? t.form.createTitle : t.form.editTitle}</h4>
+              <button className="secondary-button" type="button" onClick={closeForm}>
+                <ArrowLeft size={17} />
+                {t.form.back}
+              </button>
             </div>
-            <div className="batch-form-grid">
+
+            <div className="batch-form-section">
               <label className="field-label">
-                {t.form.scheduleType}
-                <select
-                  value={form.scheduleType}
-                  onChange={(event) => setForm((current) => ({ ...current, scheduleType: event.target.value as BatchScheduleType }))}
-                >
-                  <option value="ONCE">{t.schedule.once}</option>
-                  <option value="DAILY">{t.schedule.daily}</option>
-                  <option value="WEEKLY">{t.schedule.weekly}</option>
-                  <option value="MONTHLY">{t.schedule.monthly}</option>
-                </select>
-              </label>
-              <label className="field-label">
-                {t.form.time}
-                <input
-                  required
-                  type="time"
-                  value={form.scheduledTime}
-                  onChange={(event) => setForm((current) => ({ ...current, scheduledTime: event.target.value }))}
-                />
-              </label>
-              {form.scheduleType === "ONCE" ? (
-                <label className="field-label">
-                  {t.form.date}
+                {t.form.directory}
+                <div className="batch-directory-picker">
                   <input
                     required
-                    type="date"
-                    value={form.scheduledDate ?? ""}
-                    onChange={(event) => setForm((current) => ({ ...current, scheduledDate: event.target.value || null }))}
+                    value={form.directoryPath ?? ""}
+                    placeholder={t.form.directoryPlaceholder}
+                    spellCheck={false}
+                    onChange={(event) => setForm((current) => ({ ...current, directoryPath: event.target.value }))}
                   />
-                </label>
-              ) : null}
-              {form.scheduleType === "WEEKLY" ? (
+                  <button className="secondary-button" type="button" onClick={pickDirectoryManually}>
+                    <FolderOpen size={17} />
+                    {t.form.browseDirectory}
+                  </button>
+                  <input
+                    ref={folderInputRef}
+                    hidden
+                    type="file"
+                    // @ts-expect-error webkitdirectory is supported by Chromium-based browsers
+                    webkitdirectory=""
+                    directory=""
+                    multiple
+                    onChange={handleNativeFolderPick}
+                  />
+                </div>
+              </label>
+            </div>
+
+            <div className="batch-form-section">
+              <div className="batch-form-grid">
                 <label className="field-label">
-                  {t.form.weekday}
+                  {t.form.scheduleType}
                   <select
-                    value={form.dayOfWeek ?? 1}
-                    onChange={(event) => setForm((current) => ({ ...current, dayOfWeek: Number(event.target.value) }))}
+                    value={form.scheduleType}
+                    onChange={(event) => setForm((current) => ({ ...current, scheduleType: event.target.value as BatchScheduleType }))}
                   >
-                    {weekDays.map((day) => (
-                      <option key={day.value} value={day.value}>
-                        {day.label}
-                      </option>
-                    ))}
+                    <option value="ONCE">{t.schedule.once}</option>
+                    <option value="DAILY">{t.schedule.daily}</option>
+                    <option value="WEEKLY">{t.schedule.weekly}</option>
+                    <option value="MONTHLY">{t.schedule.monthly}</option>
                   </select>
                 </label>
-              ) : null}
-              {form.scheduleType === "MONTHLY" ? (
                 <label className="field-label">
-                  {t.form.monthDay}
+                  {t.form.time}
                   <input
                     required
-                    type="number"
-                    min={1}
-                    max={31}
-                    value={form.dayOfMonth ?? 1}
-                    onChange={(event) => setForm((current) => ({ ...current, dayOfMonth: Number(event.target.value) }))}
+                    type="time"
+                    value={form.scheduledTime}
+                    onChange={(event) => setForm((current) => ({ ...current, scheduledTime: event.target.value }))}
                   />
                 </label>
-              ) : null}
-            </div>
-            <label className="setting-row compact">
-              <div>
-                <strong>{t.form.enabled}</strong>
-                <span>{t.form.enabledHint}</span>
+                {form.scheduleType === "ONCE" ? (
+                  <label className="field-label">
+                    {t.form.date}
+                    <input
+                      required
+                      type="date"
+                      value={form.scheduledDate ?? ""}
+                      onChange={(event) => setForm((current) => ({ ...current, scheduledDate: event.target.value || null }))}
+                    />
+                  </label>
+                ) : null}
+                {form.scheduleType === "WEEKLY" ? (
+                  <label className="field-label">
+                    {t.form.weekday}
+                    <select
+                      value={form.dayOfWeek ?? 1}
+                      onChange={(event) => setForm((current) => ({ ...current, dayOfWeek: Number(event.target.value) }))}
+                    >
+                      {weekDays.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {form.scheduleType === "MONTHLY" ? (
+                  <label className="field-label">
+                    {t.form.monthDay}
+                    <input
+                      required
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={form.dayOfMonth ?? 1}
+                      onChange={(event) => setForm((current) => ({ ...current, dayOfMonth: Number(event.target.value) }))}
+                    />
+                  </label>
+                ) : null}
               </div>
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
-              />
-            </label>
-          </div>
+              <label className="setting-row compact">
+                <div>
+                  <strong>{t.form.enabled}</strong>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={form.enabled}
+                  onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
+                />
+              </label>
+            </div>
 
-          <div className="batch-form-actions">
-            <button disabled={saving} type="submit">
-              {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
-              {editingJobId == null ? t.form.saveCreate : t.form.saveUpdate}
-            </button>
-            {editingJobId != null ? (
-              <button className="secondary-button" type="button" onClick={resetForm}>
-                {t.form.cancelEdit}
+            <div className="batch-form-actions">
+              <button disabled={saving} type="submit">
+                {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
+                {editingJobId == null ? t.form.saveCreate : t.form.saveUpdate}
               </button>
-            ) : null}
-          </div>
-        </form>
-
-        <section className="batch-jobs-section">
-          <div className="batch-section-title">
-            <h4>{t.jobsSectionTitle}</h4>
-            <span className="status">{jobs.length} {t.jobsCount}</span>
-          </div>
-          <div className="feedback-datagrid-wrap">
-            <DataGrid
-              autoHeight
-              rows={jobs}
-              columns={[
-                ...jobColumns,
-                {
-                  field: "actions",
-                  headerName: t.columns.actions,
-                  width: 150,
-                  sortable: false,
-                  filterable: false,
-                  renderCell: (params) => (
-                    <div className="table-actions">
-                      <button className="secondary-button compact" type="button" onClick={() => startEdit(params.row)}>
-                        {t.actions.edit}
-                      </button>
-                      <button
-                        className="secondary-button compact"
-                        type="button"
-                        disabled={runningJobId === params.row.id}
-                        onClick={() => void handleRun(params.row)}
-                      >
-                        {runningJobId === params.row.id ? <LoaderCircle className="spin" size={15} /> : <Play size={15} />}
-                      </button>
-                      <button className="secondary-button compact danger" type="button" onClick={() => void handleDelete(params.row)}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  )
-                }
-              ]}
-              getRowId={(row) => row.id}
-              disableRowSelectionOnClick
-              initialState={{ pagination: { paginationModel: { page: 0, pageSize: 5 } } }}
-              pageSizeOptions={[5, 10]}
-              rowHeight={52}
-              columnHeaderHeight={40}
-              loading={loading}
-            />
-          </div>
-        </section>
-      </div>
-
-      <section className="batch-history-section">
-        <div className="batch-section-title">
-          <h4>{t.history.title}</h4>
-          <span className="status">
-            <Clock3 size={14} /> {runs.length}
-          </span>
+            </div>
+          </form>
         </div>
-        <div className="feedback-datagrid-wrap">
-          <DataGrid
-            autoHeight
-            rows={runs}
-            columns={runColumns}
-            getRowId={(row) => row.id}
-            disableRowSelectionOnClick
-            onRowClick={(params) => void openRun(params.row)}
-            initialState={{ pagination: { paginationModel: { page: 0, pageSize: 6 } } }}
-            pageSizeOptions={[6, 12]}
-            rowHeight={48}
-            columnHeaderHeight={40}
-            loading={loading}
-          />
-        </div>
-      </section>
+      ) : (
+        <>
+          <div className="batch-documents-layout">
+            <section className="batch-jobs-section">
+              <div className="batch-section-title">
+                <h4>{t.jobsSectionTitle}</h4>
+                <span className="status">
+                  {jobs.length} {t.jobsCount}
+                </span>
+              </div>
+              <div className="feedback-datagrid-wrap">
+                <DataGrid
+                  autoHeight
+                  rows={jobs}
+                  columns={[
+                    ...jobColumns,
+                    {
+                      field: "actions",
+                      headerName: t.columns.actions,
+                      width: 150,
+                      sortable: false,
+                      filterable: false,
+                      renderCell: (params) => (
+                        <div className="table-actions">
+                          <button
+                            className="secondary-button compact icon-only"
+                            type="button"
+                            onClick={() => startEdit(params.row)}
+                            title={t.actions.edit}
+                          >
+                            <PencilLine size={15} />
+                          </button>
+                          <button
+                            className="secondary-button compact"
+                            type="button"
+                            disabled={runningJobId === params.row.id}
+                            onClick={() => void handleRun(params.row)}
+                          >
+                            {runningJobId === params.row.id ? <LoaderCircle className="spin" size={15} /> : <Play size={15} />}
+                          </button>
+                          <button
+                            className="secondary-button compact danger"
+                            type="button"
+                            onClick={() => void handleDelete(params.row)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      )
+                    }
+                  ]}
+                  getRowId={(row) => row.id}
+                  disableRowSelectionOnClick
+                  initialState={{ pagination: { paginationModel: { page: 0, pageSize: 5 } } }}
+                  pageSizeOptions={[5, 10]}
+                  rowHeight={52}
+                  columnHeaderHeight={40}
+                  loading={loading}
+                />
+              </div>
+            </section>
+          </div>
 
-      {selectedRun ? (
+          <section className="batch-history-section">
+            <div className="batch-section-title">
+              <h4>{t.history.title}</h4>
+              <span className="status">
+                <Clock3 size={14} /> {runs.length}
+              </span>
+            </div>
+            <div className="feedback-datagrid-wrap">
+              <DataGrid
+                autoHeight
+                rows={runs}
+                columns={runColumns}
+                getRowId={(row) => row.id}
+                disableRowSelectionOnClick
+                onRowClick={(params) => void openRun(params.row)}
+                initialState={{ pagination: { paginationModel: { page: 0, pageSize: 6 } } }}
+                pageSizeOptions={[6, 12]}
+                rowHeight={48}
+                columnHeaderHeight={40}
+                loading={loading}
+              />
+            </div>
+          </section>
+        </>
+      )}
+
+      {!isFormOpen && selectedRun ? (
         <section className="batch-run-detail">
           <div className="batch-run-detail-head">
             <div>

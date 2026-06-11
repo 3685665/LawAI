@@ -603,6 +603,7 @@
       "precedentMaxDocuments": "Maximum decisions",
       "precedentHint": "Each court is scanned page by page. The upper limit is a safety cap.",
       "scheduleSection": "Schedule",
+      "back": "Back",
       "cancelEdit": "Cancel edit",
       "browseDirectory": "Browse",
       "selectedDirectory": "Selected file path",

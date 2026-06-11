@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   Play,
   Plus,
+  PencilLine,
   RefreshCw,
   Trash2,
   X
@@ -426,8 +427,13 @@ export function PrecedentSyncPanel({ locale }: PrecedentSyncPanelProps) {
                   filterable: false,
                   renderCell: (params) => (
                     <div className="table-actions">
-                      <button className="secondary-button compact" type="button" onClick={() => startEdit(params.row)}>
-                        {t.actions.edit}
+                      <button
+                        className="secondary-button compact icon-only"
+                        type="button"
+                        onClick={() => startEdit(params.row)}
+                        title={t.actions.edit}
+                      >
+                        <PencilLine size={15} />
                       </button>
                       <button
                         className="secondary-button compact"
