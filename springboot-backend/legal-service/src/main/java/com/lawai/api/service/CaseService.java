@@ -37,78 +37,35 @@ public class CaseService {
           "Genel hukuk",
           "Genel hukuk dosyasi",
           "Nobetci Asliye Hukuk Mahkemesi",
-          List.of(
-              doc("genel-vekalet", "Vekaletname / yetki belgesi", "Musteri vekaleti ve temsil yetkisini gosteren ana belge.", true, "Yetki"),
-              doc("genel-kimlik", "Taraf kimlik ve iletisim bilgileri", "TCKN / VKN, adres, telefon ve tebligat bilgileri.", true, "Taraf bilgileri"),
-              doc("genel-dilekce", "Dava dilekcesi", "Talep sonucu, vakialar ve hukuki nedenler.", true, "Dava evraki"),
-              doc("genel-delil", "Delil listesi", "Belgeler, taniklar, bilirkiisi ve diger ispat vasitalari.", true, "Dava evraki"),
-              doc("genel-ekler", "Ekler klasoru", "Belgelerin numarali ve duzenli sekilde dosyalanmis hali.", true, "Ekler"),
-              doc("genel-harc", "Harc ve gider avansi makbuzlari", "Basvuru harci, pesin harc ve gider avansi kayitlari.", true, "Usul"),
-              doc("genel-arabuluculuk", "Arabuluculuk son tutanagi", "Zorunlu dava sartina tabi dosyalarda eklenir.", false, "Usul"),
-              doc("genel-tebligat", "Tebligat / ihtarname evraki", "Karsi tarafa gonderilen ihtar ve tebligat belgeleri.", false, "Ekler")
-          )
+          List.of()
       ),
       "is", new CaseTemplateDefinition(
           "is",
           "Is hukuku",
           "Is hukuku dosyasi",
           "Is Mahkemesi",
-          List.of(
-              doc("is-vekalet", "Vekaletname / yetki belgesi", "Avukatlik yetkisini ve temsil kapsamini gosterir.", true, "Yetki"),
-              doc("is-hizmet", "Hizmet dokumu / SGK kayitlari", "Calisma suresi ve prim kayitlarini teyit eder.", true, "Calisma kaydi"),
-              doc("is-fesih", "Fesih bildirimi / cikis evragi", "Fesih tarihini ve sebebini netlestirir.", true, "Fesih"),
-              doc("is-bordro", "Bordro ve ucret belgeleri", "Maas, fazla mesai ve kesintilerin ispatinda kullanilir.", true, "Ucret"),
-              doc("is-sozlesme", "Is sozlesmesi / gorev tanimi", "Gorev, unvan ve calisma duzenini ortaya koyar.", true, "Calisma kaydi"),
-              doc("is-arabuluculuk", "Arabuluculuk son tutanagi", "Dava sartidir; sure ve taraf bilgileri kontrol edilmelidir.", true, "Usul"),
-              doc("is-izin", "Izin ve puantaj kayitlari", "Yillik izin, devamsizlik ve fazla mesai icin destek belge.", false, "Ekler"),
-              doc("is-tanik", "Tanik listesi", "Calisma kosullari ve alacaklar icin taniklar.", false, "Delil")
-          )
+          List.of()
       ),
       "sozlesme", new CaseTemplateDefinition(
           "sozlesme",
           "Sozlesme / alacak",
           "Sozlesme / alacak dosyasi",
           "Nobetci Asliye Hukuk Mahkemesi",
-          List.of(
-              doc("s-vekalet", "Vekaletname / yetki belgesi", "Temsil yetkisini ve dava acma yetkisini gosterir.", true, "Yetki"),
-              doc("s-sozlesme", "Sozlesme / siparis formu", "Taraflar arasindaki borc ve edimleri belirler.", true, "Sozlesme"),
-              doc("s-fatura", "Fatura / irsaliye / teslim belgeleri", "Edimin yerine getirildigini veya alacagin dogdugunu destekler.", true, "Delil"),
-              doc("s-dekont", "Odeme dekontlari / cari hesap", "Yapilan veya yapilmayan odemeleri gosteren belgeler.", true, "Delil"),
-              doc("s-ihtar", "Ihtarname ve tebligat evraki", "Temerrut, ihtar ve bildirimin ispatinda kullanilir.", true, "Usul"),
-              doc("s-delil", "Ek deliller klasoru", "Mail yazismalari, teslim tutanaklari, WhatsApp ciktilari vb.", true, "Ekler"),
-              doc("s-arabuluculuk", "Arabuluculuk son tutanagi", "Konuya gore zorunlu olabilir.", false, "Usul"),
-              doc("s-hesap", "Hesap cetveli", "Faiz ve ana para hesabini tablo halinde verir.", false, "Delil")
-          )
+          List.of()
       ),
       "icra", new CaseTemplateDefinition(
           "icra",
           "Icra takibi",
           "Icra takibi dosyasi",
           "Icra Mudurlugu / Icra Hukuk Mahkemesi",
-          List.of(
-              doc("i-dayanak", "Takip dayanagi belge", "Ilam, senet, sozlesme veya faturaya dayali evrak.", true, "Dayanak"),
-              doc("i-vekalet", "Vekaletname / yetki belgesi", "Icra islemlerinde temsil yetkisi icin gerekir.", true, "Yetki"),
-              doc("i-hesap", "Hesap cetveli", "Faiz, vekalet ucreti ve toplam alacak hesabi.", true, "Hesap"),
-              doc("i-tebligat", "Tebligat / ihtar evraki", "Borc bildirimi ve temerrut icin kullanilir.", true, "Usul"),
-              doc("i-senet", "Senet / cek / bono", "Ilamsiz takipte dayanak olarak kullanilir.", false, "Dayanak"),
-              doc("i-kesinlesme", "Kesinlesme / ilam serhi", "Ilamli takipte gerektiginde eklenir.", false, "Dayanak"),
-              doc("i-adres", "Alacakli / borclu adres bilgileri", "Tebligat ve takip islemleri icin gerekir.", true, "Taraf bilgileri")
-          )
+          List.of()
       ),
       "aile", new CaseTemplateDefinition(
           "aile",
           "Aile hukuku",
           "Aile hukuku dosyasi",
           "Aile Mahkemesi",
-          List.of(
-              doc("a-vekalet", "Vekaletname / yetki belgesi", "Temsil yetkisini gosterir.", true, "Yetki"),
-              doc("a-nufus", "Nufus kayit ornegi", "Taraflarin aile bagini ve baglantili kayitlarini ortaya koyar.", true, "Kimlik"),
-              doc("a-evlilik", "Evlilik / bosanma belgeleri", "Nikah, bosanma, ayrilik veya aile birligi belgeleri.", true, "Aile kaydi"),
-              doc("a-velayet", "Velayet / nafaka destek belgeleri", "Cocuklarin bakimi, egitimi ve giderlerine iliskin belgeler.", true, "Cocuk ve destek"),
-              doc("a-gelir", "Gelir ve gider belgeleri", "Nafaka veya katilma alacagi taleplerinde kullanilir.", false, "Mali durum"),
-              doc("a-sosyal", "Sosyal inceleme / adres belgeleri", "Gerekirse mahkemeye sunulacak destek evraki.", false, "Ekler"),
-              doc("a-tedbir", "Tedbir / koruma talebi belgeleri", "Acil koruma, uzaklastirma veya gecici onlem icin.", false, "Usul")
-          )
+          List.of()
       )
   );
 
@@ -275,9 +232,7 @@ public class CaseService {
   }
 
   private CaseRecordResponse toResponse(CaseRecordSnapshot snapshot) {
-    List<CaseDocumentDto> documents = snapshot.documents().stream()
-        .map(document -> new CaseDocumentDto(document.id(), document.title(), document.detail(), document.required(), document.group(), document.completed()))
-        .toList();
+    List<CaseDocumentDto> documents = List.of();
     int requiredDocumentCount = (int) documents.stream().filter(CaseDocumentDto::required).count();
     int completedRequiredDocumentCount = (int) documents.stream().filter(document -> document.required() && document.completed()).count();
     int progress = requiredDocumentCount == 0 ? 100 : Math.round((completedRequiredDocumentCount * 100.0f) / requiredDocumentCount);
@@ -395,10 +350,6 @@ public class CaseService {
 
   private void save(List<CaseRecordSnapshot> cases) {
     legalCaseRepository.saveAll(cases.stream().map(LegalCaseEntity::fromSnapshot).toList());
-  }
-
-  private static CaseDocumentSnapshot doc(String id, String title, String detail, boolean required, String group) {
-    return new CaseDocumentSnapshot(id, title, detail, required, group, false);
   }
 
   private CaseRecordSnapshot sampleCase(
