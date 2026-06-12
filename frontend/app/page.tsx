@@ -85,6 +85,7 @@ import {
   getJson,
   getUser,
   postJson,
+  putJson,
   listFeedback,
   listUsers,
   updateUser,
@@ -4181,14 +4182,17 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   }, []);
 
   useEffect(() => {
-    setCourtName(selectedTemplate.courtHint);
-  }, [selectedTemplate]);
+    if (caseScreen === "create") {
+      setCourtName(selectedTemplate.courtHint);
+    }
+  }, [caseScreen, selectedTemplate]);
 
   async function openCase(caseId: string) {
     setLocalError("");
     try {
       const detail = await getJson<CaseRecord>(`/cases/${caseId}`);
       setSelectedCase(detail);
+      fillCaseForm(detail);
       setCaseAiResult(null);
       setCaseScreen("detail");
     } catch (error) {
@@ -4196,9 +4200,37 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     }
   }
 
+  function fillCaseForm(caseRecord: CaseRecord) {
+    setCaseType((caseRecord.caseType as CaseType) || "genel");
+    setFileTitle(caseRecord.fileTitle ?? "");
+    setCaseNumber(caseRecord.caseNumber ?? "");
+    setCourtName(caseRecord.courtName ?? "");
+    setCity(caseRecord.city ?? "");
+    setNotes(caseRecord.notes ?? "");
+    setParties((caseRecord.parties ?? []).map((party) => ({
+      ...party,
+      draftId: party.id ?? createCaseDraftId("party")
+    })));
+    setExpenses((caseRecord.expenses ?? []).map((expense) => ({
+      ...expense,
+      draftId: expense.id ?? createCaseDraftId("expense")
+    })));
+    setCaseNotes((caseRecord.caseNotes ?? []).map((caseNote) => ({
+      ...caseNote,
+      draftId: caseNote.id ?? createCaseDraftId("note")
+    })));
+    setPartyForm(emptyCasePartyForm);
+    setPartyClientSearch("");
+    setPartyModalOpen(false);
+    setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseModalOpen(false);
+  }
+
   function openCreateScreen() {
     setCaseScreen("create");
     setLocalError("");
+    setSelectedCase(null);
+    setCaseAiResult(null);
     setCaseType("genel");
     setFileTitle("");
     setCaseNumber("");
@@ -4303,47 +4335,58 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     setCaseNotes((current) => current.filter((caseNote) => caseNote.draftId !== draftId));
   }
 
+  function buildCasePayload(): CaseCreatePayload {
+    return {
+      caseType,
+      fileTitle,
+      caseNumber,
+      courtName,
+      city,
+      notes,
+      completedDocumentIds: caseScreen === "detail"
+        ? selectedCase?.documents?.filter((document) => document.completed).map((document) => document.id) ?? []
+        : [],
+      parties: parties.map((party) => ({
+        id: party.id,
+        name: party.name,
+        role: party.role,
+        contact: party.contact,
+        identityNumber: party.identityNumber,
+        phone: party.phone,
+        email: party.email,
+        startDate: party.startDate,
+        endDate: party.endDate
+      })),
+      expenses: expenses.map((expense) => ({
+        id: expense.id,
+        title: expense.title,
+        amount: expense.amount,
+        description: expense.description,
+        category: expense.category,
+        expenseDate: expense.expenseDate,
+        paid: expense.paid
+      })),
+      caseNotes: caseNotes.map((caseNote) => ({ id: caseNote.id, title: caseNote.title, text: caseNote.text }))
+    };
+  }
+
   async function submitCase(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setLocalError("");
     try {
-      const payload: CaseCreatePayload = {
-        caseType,
-        fileTitle,
-        caseNumber,
-        courtName,
-        city,
-        notes,
-        completedDocumentIds: [],
-        parties: parties.map((party) => ({
-          name: party.name,
-          role: party.role,
-          contact: party.contact,
-          identityNumber: party.identityNumber,
-          phone: party.phone,
-          email: party.email,
-          startDate: party.startDate,
-          endDate: party.endDate
-        })),
-        expenses: expenses.map((expense) => ({
-          title: expense.title,
-          amount: expense.amount,
-          description: expense.description,
-          category: expense.category,
-          expenseDate: expense.expenseDate,
-          paid: expense.paid
-        })),
-        caseNotes: caseNotes.map((caseNote) => ({ title: caseNote.title, text: caseNote.text }))
-      };
-      const created = await postJson<CaseRecord>("/cases", payload);
+      const payload = buildCasePayload();
+      const saved = caseScreen === "detail" && selectedCase
+        ? await putJson<CaseRecord>(`/cases/${selectedCase.id}`, payload)
+        : await postJson<CaseRecord>("/cases", payload);
       const caseList = await getJson<CaseRecord[]>("/cases");
       setSavedCases(caseList);
-      const nextSelected = caseList.find((item) => item.id === created.id) ?? null;
+      const nextSelected = caseList.find((item) => item.id === saved.id) ?? saved;
       setSelectedCase(nextSelected);
+      fillCaseForm(nextSelected);
       setCaseAiResult(null);
       setCaseScreen("detail");
-      setCaseType(created.caseType as CaseType);
+      setCaseType(saved.caseType as CaseType);
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.save);
     } finally {
@@ -4506,19 +4549,19 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         </div>
       )}
 
-      {caseScreen === "create" && (
+      {(caseScreen === "create" || (caseScreen === "detail" && selectedCase)) && (
         <section className="cases-create-layout">
           <form className="panel primary-panel case-form" onSubmit={submitCase}>
             <div className="case-detail-head">
-              <PanelTitle icon={<FolderOpen size={20} />} title={t.addCase} />
-              <button className="secondary-button" type="button" onClick={() => setCaseScreen("list")}>
+              <PanelTitle icon={<FolderOpen size={20} />} title={caseScreen === "detail" ? t.view : t.addCase} />
+              <button className="secondary-button" type="button" onClick={openListScreen}>
                 <ArrowLeft size={17} />
                 {t.backList}
               </button>
             </div>
             <div className="case-template">
               <strong>{t.uploadDocument}</strong>
-              <p>{t.saveNotice}</p>
+              <p>{caseScreen === "detail" ? t.updateNotice : t.saveNotice}</p>
               <small>{t.caseUploadHint}</small>
             </div>
             <div className="upload-actions">
@@ -4652,10 +4695,81 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               <strong>{selectedTemplate.title}</strong>
               <small>{t.courtHint.replace("{court}", selectedTemplate.courtHint)}</small>
             </div>
+            {caseScreen === "detail" && selectedCase ? (
+              <section className="case-ai-workspace">
+                <div className="case-ai-head">
+                  <div>
+                    <span className="case-ai-kicker"><Sparkles size={16} /> AI Dava Asistani</span>
+                    <h3>Dosyadaki bilgilerle hizli islem uret</h3>
+                    <p>Strateji, risk, belge kontrolu ve muvekkil bilgilendirmesi gibi ciktilar secili dava baglamiyla hazirlanir.</p>
+                  </div>
+                  <div className="case-ai-status">
+                    <strong>{selectedCase.progress}%</strong>
+                    <span>dosya hazirligi</span>
+                  </div>
+                </div>
+                <div className="case-ai-grid">
+                  {caseAiActions.map((action) => {
+                    const Icon = action.icon;
+                    const running = activeCaseAiAction === action.key;
+                    return (
+                      <button
+                        className={`case-ai-card tone-${action.tone}`}
+                        disabled={Boolean(activeCaseAiAction)}
+                        key={action.key}
+                        onClick={() => void runCaseAiAction(action.key)}
+                        type="button"
+                      >
+                        <span className="case-ai-card-icon">
+                          {running ? <LoaderCircle className="spin" size={20} /> : <Icon size={20} />}
+                        </span>
+                        <strong>{action.title}</strong>
+                        <small>{action.description}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className={`case-ai-output ${caseAiResult ? "ready" : ""}`}>
+                  {activeCaseAiAction ? (
+                    <div className="case-ai-loading">
+                      <LoaderCircle className="spin" size={20} />
+                      <span>AI dava dosyasini analiz ediyor...</span>
+                    </div>
+                  ) : caseAiResult ? (
+                    <>
+                      <div className="case-ai-output-head">
+                        <span><Bot size={18} /> {caseAiResult.title}</span>
+                        <button className="secondary-button compact" type="button" onClick={() => setCaseAiResult(null)}>
+                          <X size={16} />
+                          Kapat
+                        </button>
+                      </div>
+                      <pre>{caseAiResult.answer}</pre>
+                      {caseAiResult.nextSteps?.length ? (
+                        <div className="case-ai-next">
+                          <strong>Sonraki adimlar</strong>
+                          <ul>
+                            {caseAiResult.nextSteps.map((step, index) => (
+                              <li key={`${step}-${index}`}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {caseAiResult.disclaimer ? <small className="case-ai-disclaimer">{caseAiResult.disclaimer}</small> : null}
+                    </>
+                  ) : (
+                    <div className="case-ai-empty">
+                      <Bot size={22} />
+                      <span>Bir islem secildiginde AI ciktisi burada gorunecek.</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : null}
             <div className="upload-actions">
               <button disabled={saving} type="submit">
                 {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
-                {t.saveAndList}
+                {caseScreen === "detail" ? t.saveChanges : t.saveAndList}
               </button>
             </div>
           </form>
@@ -4724,178 +4838,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                     {t.addCase}
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {caseScreen === "detail" && (
-        <section className="feedback-admin-layout feedback-admin-layout-detail">
-          <div className="panel case-detail-panel feedback-admin-detail">
-            <div className="case-detail-head">
-              <div>
-                <h2>{t.view}</h2>
-                <p>{selectedCase?.caseLabel ?? t.selectCase}</p>
-              </div>
-              <div className="case-detail-actions">
-                <button className="secondary-button" onClick={openListScreen} type="button">
-                  <ArrowLeft size={16} />
-                  {t.backList}
-                </button>
-                {selectedCase ? <button className="danger-button" onClick={() => void deleteCase(selectedCase.id)} type="button">{t.delete}</button> : null}
-              </div>
-            </div>
-            {selectedCase ? (
-              <>
-                <div className="case-score compact">
-                  <strong>{selectedCase.progress}%</strong>
-                  <span>{t.overallCompletion}</span>
-                </div>
-                <div className="meter" aria-hidden="true">
-                  <div className="meter-fill" style={{ width: `${selectedCase.progress}%` }} />
-                </div>
-                <div className="case-stats case-detail-stats">
-                  <div><span>{t.fileTitle}</span><strong>{selectedCase.fileTitle}</strong></div>
-                  <div><span>{t.caseNumber}</span><strong>{selectedCase.caseNumber}</strong></div>
-                  <div><span>{t.city}</span><strong>{selectedCase.city}</strong></div>
-                  <div><span>{t.court}</span><strong>{selectedCase.courtName}</strong></div>
-                </div>
-                <p>{selectedCase.notes}</p>
-                <section className="case-ai-workspace">
-                  <div className="case-ai-head">
-                    <div>
-                      <span className="case-ai-kicker"><Sparkles size={16} /> AI Dava Asistanı</span>
-                      <h3>Dosyadaki bilgilerle hızlı işlem üret</h3>
-                      <p>Strateji, risk, belge kontrolü ve müvekkil bilgilendirmesi gibi çıktılar seçili dava bağlamıyla hazırlanır.</p>
-                    </div>
-                    <div className="case-ai-status">
-                      <strong>{selectedCase.progress}%</strong>
-                      <span>dosya hazırlığı</span>
-                    </div>
-                  </div>
-                  <div className="case-ai-grid">
-                    {caseAiActions.map((action) => {
-                      const Icon = action.icon;
-                      const running = activeCaseAiAction === action.key;
-                      return (
-                        <button
-                          className={`case-ai-card tone-${action.tone}`}
-                          disabled={Boolean(activeCaseAiAction)}
-                          key={action.key}
-                          onClick={() => void runCaseAiAction(action.key)}
-                          type="button"
-                        >
-                          <span className="case-ai-card-icon">
-                            {running ? <LoaderCircle className="spin" size={20} /> : <Icon size={20} />}
-                          </span>
-                          <strong>{action.title}</strong>
-                          <small>{action.description}</small>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className={`case-ai-output ${caseAiResult ? "ready" : ""}`}>
-                    {activeCaseAiAction ? (
-                      <div className="case-ai-loading">
-                        <LoaderCircle className="spin" size={20} />
-                        <span>AI dava dosyasını analiz ediyor...</span>
-                      </div>
-                    ) : caseAiResult ? (
-                      <>
-                        <div className="case-ai-output-head">
-                          <span><Bot size={18} /> {caseAiResult.title}</span>
-                          <button className="secondary-button compact" type="button" onClick={() => setCaseAiResult(null)}>
-                            <X size={16} />
-                            Kapat
-                          </button>
-                        </div>
-                        <pre>{caseAiResult.answer}</pre>
-                        {caseAiResult.nextSteps?.length ? (
-                          <div className="case-ai-next">
-                            <strong>Sonraki adımlar</strong>
-                            <ul>
-                              {caseAiResult.nextSteps.map((step, index) => (
-                                <li key={`${step}-${index}`}>{step}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                        {caseAiResult.disclaimer ? <small className="case-ai-disclaimer">{caseAiResult.disclaimer}</small> : null}
-                      </>
-                    ) : (
-                      <div className="case-ai-empty">
-                        <Bot size={22} />
-                        <span>Bir işlem seçildiğinde AI çıktısı burada görünecek.</span>
-                      </div>
-                    )}
-                  </div>
-                </section>
-                <div className="case-collection-stack compact">
-                  <section className="case-collection-panel">
-                    <div className="case-collection-head">
-                      <div>
-                        <span className="case-collection-icon"><UsersRound size={19} /></span>
-                        <strong>{t.partiesTitle.replace("{count}", String(selectedCase.parties?.length ?? 0))}</strong>
-                      </div>
-                    </div>
-                    {selectedCase.parties?.length ? (
-                      <div className="case-saved-items">
-                        {selectedCase.parties.map((party) => (
-                          <div className="case-saved-item" key={party.id ?? `${party.name}-${party.role}`}>
-                            <strong>{party.name || "-"}</strong>
-                            <span>{party.role || "-"}</span>
-                            <small>{[party.identityNumber, party.phone, party.email].filter(Boolean).join(" / ") || party.contact || "-"}</small>
-                            <small>{[party.startDate, party.endDate].filter(Boolean).join(" - ") || "-"}</small>
-                          </div>
-                        ))}
-                      </div>
-                    ) : <p className="case-collection-empty">{t.noParties}</p>}
-                  </section>
-                  <section className="case-collection-panel">
-                    <div className="case-collection-head">
-                      <div>
-                        <span className="case-collection-icon expense"><CreditCard size={19} /></span>
-                        <strong>{t.expensesTitle}</strong>
-                      </div>
-                    </div>
-                    {selectedCase.expenses?.length ? (
-                      <div className="case-saved-items">
-                        {selectedCase.expenses.map((expense) => (
-                          <div className="case-saved-item" key={expense.id ?? `${expense.title}-${expense.amount}`}>
-                            <strong>{expense.title || "-"}</strong>
-                            <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL · {expense.category || "Diger"}</span>
-                            <small>{[expense.expenseDate, expense.paid ? t.expensePaid : null].filter(Boolean).join(" / ") || "-"}</small>
-                            <small>{expense.description || "-"}</small>
-                          </div>
-                        ))}
-                      </div>
-                    ) : <p className="case-collection-empty">{t.noExpenses}</p>}
-                  </section>
-                  <section className="case-collection-panel">
-                    <div className="case-collection-head">
-                      <div>
-                        <span className="case-collection-icon note"><FileText size={19} /></span>
-                        <strong>{t.caseNotesTitle.replace("{count}", String(selectedCase.caseNotes?.length ?? 0))}</strong>
-                      </div>
-                    </div>
-                    {selectedCase.caseNotes?.length ? (
-                      <div className="case-saved-items">
-                        {selectedCase.caseNotes.map((caseNote) => (
-                          <div className="case-saved-item" key={caseNote.id ?? `${caseNote.title}-${caseNote.text}`}>
-                            <strong>{caseNote.title || "-"}</strong>
-                            <small>{caseNote.text || "-"}</small>
-                          </div>
-                        ))}
-                      </div>
-                    ) : <p className="case-collection-empty">{t.noCaseNotes}</p>}
-                  </section>
-                </div>
-              </>
-            ) : (
-              <div className="case-empty-detail">
-                <p>{t.selectCase}</p>
-                <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
               </div>
             )}
           </div>

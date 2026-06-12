@@ -138,40 +138,31 @@ public class CaseService {
 
   @Transactional
   public CaseRecordResponse createCase(CaseCreateRequest request) {
-    CaseTemplateDefinition template = requireTemplate(request.caseType());
-    Map<String, Boolean> completedDocumentIds = request.completedDocumentIds() == null
-        ? Map.of()
-        : request.completedDocumentIds().stream()
-            .filter(StringUtils::hasText)
-            .map(value -> value.trim())
-            .collect(Collectors.toMap(Function.identity(), ignored -> true, (left, right) -> left, LinkedHashMap::new));
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    CaseRecordSnapshot snapshot = new CaseRecordSnapshot(
+    CaseRecordSnapshot snapshot = buildSnapshot(
         UUID.randomUUID().toString(),
-        template.caseType(),
-        request.fileTitle().trim(),
-        request.caseNumber().trim(),
-        request.courtName().trim(),
-        request.city().trim(),
-        request.notes().trim(),
-        template.documents().stream()
-            .map(document -> new CaseDocumentSnapshot(
-                document.id(),
-                document.title(),
-                document.detail(),
-                document.required(),
-                document.group(),
-                completedDocumentIds.getOrDefault(document.id(), false)
-            ))
-            .toList(),
-        normalizeParties(request.parties()),
-        normalizeExpenses(request.expenses()),
-        normalizeCaseNotes(request.caseNotes()),
+        request,
         now,
         now
     );
     legalCaseRepository.save(LegalCaseEntity.fromSnapshot(snapshot));
     return toResponse(snapshot);
+  }
+
+  @Transactional
+  public CaseRecordResponse updateCase(String id, CaseCreateRequest request) {
+    LegalCaseEntity legalCase = legalCaseRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    CaseRecordSnapshot existing = legalCase.toSnapshot();
+    CaseRecordSnapshot snapshot = buildSnapshot(
+        id,
+        request,
+        existing.createdAt(),
+        OffsetDateTime.now(ZoneOffset.UTC)
+    );
+    legalCase.replaceFromSnapshot(snapshot);
+    LegalCaseEntity saved = legalCaseRepository.save(legalCase);
+    return toResponse(saved.toSnapshot());
   }
 
   @Transactional(readOnly = true)
@@ -232,7 +223,16 @@ public class CaseService {
   }
 
   private CaseRecordResponse toResponse(CaseRecordSnapshot snapshot) {
-    List<CaseDocumentDto> documents = List.of();
+    List<CaseDocumentDto> documents = snapshot.documents().stream()
+        .map(document -> new CaseDocumentDto(
+            document.id(),
+            document.title(),
+            document.detail(),
+            document.required(),
+            document.group(),
+            document.completed()
+        ))
+        .toList();
     int requiredDocumentCount = (int) documents.stream().filter(CaseDocumentDto::required).count();
     int completedRequiredDocumentCount = (int) documents.stream().filter(document -> document.required() && document.completed()).count();
     int progress = requiredDocumentCount == 0 ? 100 : Math.round((completedRequiredDocumentCount * 100.0f) / requiredDocumentCount);
@@ -332,6 +332,45 @@ public class CaseService {
             safe(caseNote.text()).trim()
         ))
         .toList();
+  }
+
+  private CaseRecordSnapshot buildSnapshot(
+      String id,
+      CaseCreateRequest request,
+      OffsetDateTime createdAt,
+      OffsetDateTime updatedAt
+  ) {
+    CaseTemplateDefinition template = requireTemplate(request.caseType());
+    Map<String, Boolean> completedDocumentIds = request.completedDocumentIds() == null
+        ? Map.of()
+        : request.completedDocumentIds().stream()
+            .filter(StringUtils::hasText)
+            .map(value -> value.trim())
+            .collect(Collectors.toMap(Function.identity(), ignored -> true, (left, right) -> left, LinkedHashMap::new));
+    return new CaseRecordSnapshot(
+        id,
+        template.caseType(),
+        request.fileTitle().trim(),
+        request.caseNumber().trim(),
+        request.courtName().trim(),
+        request.city().trim(),
+        request.notes().trim(),
+        template.documents().stream()
+            .map(document -> new CaseDocumentSnapshot(
+                document.id(),
+                document.title(),
+                document.detail(),
+                document.required(),
+                document.group(),
+                completedDocumentIds.getOrDefault(document.id(), false)
+            ))
+            .toList(),
+        normalizeParties(request.parties()),
+        normalizeExpenses(request.expenses()),
+        normalizeCaseNotes(request.caseNotes()),
+        createdAt,
+        updatedAt
+    );
   }
 
   private CaseTemplateDefinition requireTemplate(String caseType) {

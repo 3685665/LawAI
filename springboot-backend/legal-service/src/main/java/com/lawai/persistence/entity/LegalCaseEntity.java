@@ -110,6 +110,41 @@ public class LegalCaseEntity {
     return entity;
   }
 
+  public void replaceFromSnapshot(CaseRecordSnapshot snapshot) {
+    this.caseType = snapshot.caseType();
+    this.fileTitle = snapshot.fileTitle();
+    this.caseNumber = snapshot.caseNumber();
+    this.courtName = snapshot.courtName();
+    this.city = snapshot.city();
+    this.notes = snapshot.notes();
+    this.updatedAt = snapshot.updatedAt();
+
+    this.documents.clear();
+    if (snapshot.documents() != null) {
+      for (var document : snapshot.documents()) {
+        this.documents.add(CaseDocumentEntity.fromSnapshot(document, this));
+      }
+    }
+    this.parties.clear();
+    if (snapshot.parties() != null) {
+      for (var party : snapshot.parties()) {
+        this.parties.add(CasePartyEntity.fromSnapshot(party, this));
+      }
+    }
+    this.expenses.clear();
+    if (snapshot.expenses() != null) {
+      for (var expense : snapshot.expenses()) {
+        this.expenses.add(CaseExpenseEntity.fromSnapshot(expense, this));
+      }
+    }
+    this.caseNotes.clear();
+    if (snapshot.caseNotes() != null) {
+      for (var caseNote : snapshot.caseNotes()) {
+        this.caseNotes.add(CaseNoteEntity.fromSnapshot(caseNote, this));
+      }
+    }
+  }
+
   public CaseRecordSnapshot toSnapshot() {
     List<CaseDocumentSnapshot> documentSnapshots = documents.stream()
         .map(CaseDocumentEntity::toSnapshot)
