@@ -48,7 +48,7 @@ public class YargitayPrecedentService {
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
       List<YargitayRow> rows = advanced
-          ? searchDetailedRows(client, request, query, limit, 1)
+          ? searchDetailedRows(client, request, query, limit, 1).rows()
           : searchRows(client, query, limit);
       List<PrecedentDto> results = new ArrayList<>();
       for (YargitayRow row : rows) {
@@ -60,19 +60,22 @@ public class YargitayPrecedentService {
     }
   }
 
-  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+  public PrecedentBatchPageResult searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
     String query = request.query() == null ? "" : request.query().trim();
     int limit = Math.min(Math.max(pageSize, 1), 100);
     int page = Math.max(pageNumber, 1);
     BasicCookieStore cookieStore = new BasicCookieStore();
     try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
       sendGet(client, BASE_URL);
-      List<YargitayRow> rows = searchDetailedRows(client, request, query, limit, page);
+      BatchPage batchPage = searchDetailedRows(client, request, query, limit, page);
       List<PrecedentDto> results = new ArrayList<>();
-      for (YargitayRow row : rows) {
+      for (YargitayRow row : batchPage.rows()) {
         results.add(toListPrecedent(row));
       }
-      return PrecedentSearchSupport.applyAdvancedFilters(request, results);
+      return new PrecedentBatchPageResult(
+          PrecedentSearchSupport.applyAdvancedFilters(request, results),
+          batchPage.hasMore()
+      );
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Yargitay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }
@@ -100,7 +103,7 @@ public class YargitayPrecedentService {
     }
   }
 
-  private List<YargitayRow> searchDetailedRows(
+  private BatchPage searchDetailedRows(
       CloseableHttpClient client,
       PrecedentSearchRequest request,
       String query,
@@ -130,7 +133,7 @@ public class YargitayPrecedentService {
     data.put("siralamaDirection", "desc");
 
     String json = sendPost(client, BASE_URL + "/aramadetaylist", objectMapper.writeValueAsString(Map.of("data", data)));
-    return parseRows(json);
+    return parseRows(json, limit);
   }
 
   private void applyChamber(Map<String, Object> data, String chamber) {
@@ -160,10 +163,33 @@ public class YargitayPrecedentService {
 
     Map<String, Object> payload = Map.of("data", data);
     String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(payload));
-    return parseRows(json);
+    return parseRawRows(json);
   }
 
-  private List<YargitayRow> parseRows(String json) throws IOException {
+  private BatchPage parseRows(String json, int limit) throws IOException {
+    JsonNode rows = objectMapper.readTree(json).path("data").path("data");
+    if (!rows.isArray()) {
+      return new BatchPage(List.of(), false);
+    }
+    List<YargitayRow> results = new ArrayList<>();
+    for (JsonNode row : rows) {
+      String id = text(row, "id");
+      if (id.isBlank()) {
+        continue;
+      }
+      results.add(new YargitayRow(
+          id,
+          text(row, "daire"),
+          text(row, "esasNo"),
+          text(row, "kararNo"),
+          text(row, "kararTarihi"),
+          text(row, "arananKelime")
+      ));
+    }
+    return new BatchPage(results, rows.size() >= limit);
+  }
+
+  private List<YargitayRow> parseRawRows(String json) throws IOException {
     JsonNode rows = objectMapper.readTree(json).path("data").path("data");
     if (!rows.isArray()) {
       return List.of();
@@ -338,5 +364,8 @@ public class YargitayPrecedentService {
       String date,
       String query
   ) {
+  }
+
+  private record BatchPage(List<YargitayRow> rows, boolean hasMore) {
   }
 }

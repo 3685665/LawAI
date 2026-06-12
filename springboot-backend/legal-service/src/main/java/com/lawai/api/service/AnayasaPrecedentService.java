@@ -71,7 +71,7 @@ public class AnayasaPrecedentService {
     }
   }
 
-  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+  public PrecedentBatchPageResult searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
     boolean advanced = PrecedentSearchSupport.isAdvanced(request)
         || org.springframework.util.StringUtils.hasText(request.dateFrom())
         || org.springframework.util.StringUtils.hasText(request.dateTo());
@@ -82,7 +82,7 @@ public class AnayasaPrecedentService {
     try {
       JsonNode pageResults = searchPage(query, page, limit);
       if (!pageResults.isArray()) {
-        return List.of();
+        return new PrecedentBatchPageResult(List.of(), false);
       }
       for (JsonNode row : pageResults) {
         PrecedentDto precedent = toListPrecedent(row);
@@ -90,9 +90,12 @@ public class AnayasaPrecedentService {
           results.add(precedent);
         }
       }
-      return PrecedentSearchSupport.applyAdvancedFilters(request, results.stream()
-          .distinct()
-          .toList());
+      return new PrecedentBatchPageResult(
+          PrecedentSearchSupport.applyAdvancedFilters(request, results.stream()
+              .distinct()
+              .toList()),
+          pageResults.size() >= limit
+      );
     } catch (IOException exception) {
       throw new IllegalStateException("Anayasa Mahkemesi karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }

@@ -60,7 +60,7 @@ public class DanistayPrecedentService {
     }
   }
 
-  public List<PrecedentDto> searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
+  public PrecedentBatchPageResult searchBatchPage(PrecedentSearchRequest request, int pageNumber, int pageSize) {
     boolean advanced = PrecedentSearchSupport.isAdvanced(request)
         || StringUtils.hasText(request.dateFrom())
         || StringUtils.hasText(request.dateTo());
@@ -76,7 +76,10 @@ public class DanistayPrecedentService {
       data.put("pageSize", String.valueOf(limit));
       data.put("pageNumber", String.valueOf(page));
       String json = sendPost(client, BASE_URL + "/aramalist", objectMapper.writeValueAsString(Map.of("data", data)));
-      return PrecedentSearchSupport.applyAdvancedFilters(request, parseResults(json));
+      return new PrecedentBatchPageResult(
+          PrecedentSearchSupport.applyAdvancedFilters(request, parseResults(json)),
+          hasMore(json, limit)
+      );
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Danistay karar arama servisine baglanilamadi: " + exception.getMessage(), exception);
     }
@@ -183,6 +186,11 @@ public class DanistayPrecedentService {
       ));
     }
     return results;
+  }
+
+  private boolean hasMore(String json, int limit) throws IOException {
+    JsonNode rows = objectMapper.readTree(json).path("data").path("data");
+    return rows.isArray() && rows.size() >= limit;
   }
 
   private String sendGet(CloseableHttpClient client, String url) throws IOException, ParseException {

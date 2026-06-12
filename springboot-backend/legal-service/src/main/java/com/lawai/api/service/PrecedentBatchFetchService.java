@@ -34,16 +34,16 @@ public class PrecedentBatchFetchService {
   public PrecedentBatchPageResponse fetchPage(PrecedentBatchPageRequest request) {
     int pageSize = normalizePageSize(request.pageSize());
     PrecedentSearchRequest searchRequest = toSearchRequest(request);
-    List<PrecedentDto> results = switch (normalizeCourt(request.court())) {
+    PrecedentBatchPageResult pageResult = switch (normalizeCourt(request.court())) {
       case "YARGITAY" -> yargitayPrecedentService.searchBatchPage(searchRequest, request.page(), pageSize);
       case "DANISTAY" -> danistayPrecedentService.searchBatchPage(searchRequest, request.page(), pageSize);
       case "ANAYASA" -> anayasaPrecedentService.searchBatchPage(searchRequest, request.page(), pageSize);
       default -> throw new IllegalArgumentException("Desteklenmeyen mahkeme: " + request.court());
     };
-    List<PrecedentBatchItemDto> items = results.stream()
+    List<PrecedentBatchItemDto> items = pageResult.items().stream()
         .map(this::toBatchItem)
         .toList();
-    return new PrecedentBatchPageResponse(items, items.size() >= pageSize);
+    return new PrecedentBatchPageResponse(items, pageResult.hasMore());
   }
 
   public PrecedentBatchContentResponse fetchContent(String court, String sourceId) {
