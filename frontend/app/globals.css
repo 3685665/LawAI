@@ -5405,6 +5405,73 @@ body[data-theme="dark"] .petition-linked-precedents li {
   color: var(--muted);
 }
 
+.case-form-tabs {
+  background: #f8fbfd;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 6px;
+}
+
+.case-form-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  box-shadow: none;
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  min-height: 58px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.case-form-tabs button svg {
+  color: var(--accent-strong);
+  flex: 0 0 auto;
+}
+
+.case-form-tabs button span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.case-form-tabs button strong,
+.case-form-tabs button small {
+  overflow-wrap: anywhere;
+}
+
+.case-form-tabs button strong {
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.case-form-tabs button small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.case-form-tabs button.active {
+  background: #fff;
+  border-color: rgba(31, 79, 122, 0.18);
+  box-shadow: 0 8px 22px rgba(20, 37, 63, 0.08);
+  color: var(--ink);
+}
+
+.case-form-tab-panel {
+  display: grid;
+  gap: 14px;
+}
+
 .case-ai-workspace {
   background: linear-gradient(180deg, #f8fbfd 0%, #f2f6f9 100%);
   border: 1px solid var(--line);
@@ -5886,6 +5953,16 @@ body[data-theme="dark"] .case-saved-item,
 body[data-theme="dark"] .case-party-preview {
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .case-form-tabs {
+  background: #0f1723;
+}
+
+body[data-theme="dark"] .case-form-tabs button.active {
+  background: #121b27;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
 body[data-theme="dark"] .case-ai-workspace,
@@ -6410,6 +6487,15 @@ body[data-theme="dark"] .icon-danger-button {
   .case-list-actions,
   .case-detail-actions {
     flex-wrap: wrap;
+  }
+
+  .case-form-tabs {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .case-form-tabs button {
+    flex: 0 0 min(260px, 82vw);
   }
 
   .feedback-toolbar {

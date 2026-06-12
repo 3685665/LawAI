@@ -272,6 +272,7 @@ const emptyAdminUserForm = (): AdminUserForm => ({
 type ThemeMode = "original" | "light" | "dark";
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
+type CaseFormTab = "overview" | "people" | "notes";
 type CasePartyDraft = CaseParty & { draftId: string };
 type CaseExpenseDraft = CaseExpense & { draftId: string };
 type CaseNoteDraft = CaseNote & { draftId: string };
@@ -3991,6 +3992,7 @@ function createCaseDraftId(prefix: string) {
 function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocuments: () => void }) {
   const t = getMessages(locale).cases;
   const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
+  const [activeCaseFormTab, setActiveCaseFormTab] = useState<CaseFormTab>("overview");
   const [caseType, setCaseType] = useState<CaseType>("genel");
   const [fileTitle, setFileTitle] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
@@ -4014,6 +4016,11 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [loadingCases, setLoadingCases] = useState(true);
 
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
+  const caseFormTabs = useMemo<Array<{ key: CaseFormTab; label: string; description: string; icon: LucideIcon }>>(() => [
+    { key: "overview", label: t.tabOverview, description: t.tabOverviewDesc, icon: FolderOpen },
+    { key: "people", label: t.tabPeople, description: t.tabPeopleDesc, icon: UsersRound },
+    { key: "notes", label: t.tabNotes, description: t.tabNotesDesc, icon: FileText }
+  ], [t]);
   const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
     {
       field: "fileTitle",
@@ -4120,6 +4127,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       setSelectedCase(detail);
       fillCaseForm(detail);
       setCaseAiResult(null);
+      setActiveCaseFormTab("overview");
       setCaseScreen("detail");
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.open);
@@ -4154,6 +4162,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
   function openCreateScreen() {
     setCaseScreen("create");
+    setActiveCaseFormTab("overview");
     setLocalError("");
     setSelectedCase(null);
     setCaseAiResult(null);
@@ -4471,48 +4480,77 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                 {t.backList}
               </button>
             </div>
-            <div className="case-template">
-              <strong>{t.uploadDocument}</strong>
-              <p>{caseScreen === "detail" ? t.updateNotice : t.saveNotice}</p>
-              <small>{t.caseUploadHint}</small>
+            <div className="case-form-tabs" role="tablist" aria-label={t.formTabsLabel}>
+              {caseFormTabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeCaseFormTab === tab.key;
+                return (
+                  <button
+                    aria-selected={active}
+                    className={active ? "active" : ""}
+                    key={tab.key}
+                    onClick={() => setActiveCaseFormTab(tab.key)}
+                    role="tab"
+                    type="button"
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    <span>
+                      <strong>{tab.label}</strong>
+                      <small>{tab.description}</small>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="upload-actions">
-              <button className="secondary-button" type="button" onClick={onGoToDocuments}>
-                <Upload size={17} />
-                {t.uploadDocument}
-              </button>
-            </div>
-            <div className="cases-form-grid">
-              <label className="field-label">
-                {t.fileTitle}
-                <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder={t.fileTitlePlaceholder} />
-              </label>
-              <label className="field-label">
-                {t.caseNumber}
-                <input value={caseNumber} onChange={(event) => setCaseNumber(event.target.value)} placeholder={t.caseNumberPlaceholder} />
-              </label>
-              <label className="field-label">
-                {t.caseType}
-                <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
-                  {Object.entries(caseTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field-label">
-                {t.court}
-                <input value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder={t.courtPlaceholder} />
-              </label>
-              <label className="field-label">
-                {t.city}
-                <input value={city} onChange={(event) => setCity(event.target.value)} placeholder={t.cityPlaceholder} />
-              </label>
-            </div>
-            <label className="field-label">
-              {t.notes}
-              <textarea rows={5} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t.notesPlaceholder} />
-            </label>
-            <div className="case-collection-stack">
+
+            {activeCaseFormTab === "overview" ? (
+              <div className="case-form-tab-panel" role="tabpanel">
+                <div className="case-template">
+                  <strong>{t.uploadDocument}</strong>
+                  <p>{caseScreen === "detail" ? t.updateNotice : t.saveNotice}</p>
+                  <small>{t.caseUploadHint}</small>
+                </div>
+                <div className="upload-actions">
+                  <button className="secondary-button" type="button" onClick={onGoToDocuments}>
+                    <Upload size={17} />
+                    {t.uploadDocument}
+                  </button>
+                </div>
+                <div className="cases-form-grid">
+                  <label className="field-label">
+                    {t.fileTitle}
+                    <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder={t.fileTitlePlaceholder} />
+                  </label>
+                  <label className="field-label">
+                    {t.caseNumber}
+                    <input value={caseNumber} onChange={(event) => setCaseNumber(event.target.value)} placeholder={t.caseNumberPlaceholder} />
+                  </label>
+                  <label className="field-label">
+                    {t.caseType}
+                    <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
+                      {Object.entries(caseTypeLabels).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field-label">
+                    {t.court}
+                    <input value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder={t.courtPlaceholder} />
+                  </label>
+                  <label className="field-label">
+                    {t.city}
+                    <input value={city} onChange={(event) => setCity(event.target.value)} placeholder={t.cityPlaceholder} />
+                  </label>
+                </div>
+                <label className="field-label">
+                  {t.notes}
+                  <textarea rows={5} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t.notesPlaceholder} />
+                </label>
+              </div>
+            ) : null}
+
+            {activeCaseFormTab === "people" ? (
+              <div className="case-collection-stack case-form-tab-panel" role="tabpanel">
               <section className="case-collection-panel">
                 <div className="case-collection-head">
                   <div>
@@ -4574,7 +4612,11 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <p className="case-collection-empty">{t.noExpenses}</p>
                 )}
               </section>
+              </div>
+            ) : null}
 
+            {activeCaseFormTab === "notes" ? (
+              <div className="case-collection-stack case-form-tab-panel" role="tabpanel">
               <section className="case-collection-panel">
                 <div className="case-collection-head">
                   <div>
@@ -4602,8 +4644,9 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <p className="case-collection-empty">{t.noCaseNotes}</p>
                 )}
               </section>
-            </div>
-            {caseScreen === "detail" && selectedCase ? (
+              </div>
+            ) : null}
+            {activeCaseFormTab === "notes" && caseScreen === "detail" && selectedCase ? (
               <section className="case-ai-workspace">
                 <div className="case-ai-head">
                   <div>
