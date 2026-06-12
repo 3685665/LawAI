@@ -4,17 +4,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lawai.api.dto.PrecedentBatchPageRequest;
 import com.lawai.api.dto.PrecedentBatchPageResponse;
 import com.lawai.api.dto.PrecedentDto;
+import com.lawai.api.service.AiServiceClient;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class PrecedentBatchFetchServiceTest {
 
   @Test
   void fetchPageUsesSourceHasMoreFlag() {
-    YargitayPrecedentService yargitay = new YargitayPrecedentService(new ObjectMapper()) {
+    YargitayPrecedentService yargitay = new YargitayPrecedentService(new ObjectMapper(), mock(AiServiceClient.class)) {
       @Override
       public PrecedentBatchPageResult searchBatchPage(com.lawai.api.dto.PrecedentSearchRequest request, int pageNumber, int pageSize) {
         return new PrecedentBatchPageResult(
@@ -34,13 +36,13 @@ class PrecedentBatchFetchServiceTest {
         );
       }
     };
-    DanistayPrecedentService danistay = new DanistayPrecedentService(new ObjectMapper()) {
+    DanistayPrecedentService danistay = new DanistayPrecedentService(new ObjectMapper(), mock(AiServiceClient.class)) {
       @Override
       public PrecedentBatchPageResult searchBatchPage(com.lawai.api.dto.PrecedentSearchRequest request, int pageNumber, int pageSize) {
         return new PrecedentBatchPageResult(List.of(), false);
       }
     };
-    AnayasaPrecedentService anayasa = new AnayasaPrecedentService(new ObjectMapper()) {
+    AnayasaPrecedentService anayasa = new AnayasaPrecedentService(new ObjectMapper(), mock(AiServiceClient.class)) {
       @Override
       public PrecedentBatchPageResult searchBatchPage(com.lawai.api.dto.PrecedentSearchRequest request, int pageNumber, int pageSize) {
         return new PrecedentBatchPageResult(List.of(), false);

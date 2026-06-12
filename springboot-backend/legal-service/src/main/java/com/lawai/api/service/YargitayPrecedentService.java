@@ -2,8 +2,14 @@ package com.lawai.api.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lawai.api.dto.KnowledgeDocumentRequest;
+import com.lawai.api.dto.KnowledgeIngestRequest;
+import com.lawai.api.dto.KnowledgeIngestResponse;
 import com.lawai.api.dto.PrecedentDto;
 import com.lawai.api.dto.PrecedentSearchRequest;
+import com.lawai.api.dto.PrecedentSyncRequest;
+import com.lawai.api.dto.PrecedentSyncResponse;
+import com.lawai.api.service.AiServiceClient;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.cookie.BasicCookieStore;
@@ -21,23 +27,33 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class YargitayPrecedentService {
 
   private static final String BASE_URL = "https://karararama.yargitay.gov.tr";
+  private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
   private static final int DEFAULT_LIMIT = 10;
   private static final int MAX_LIMIT = 20;
+  private static final int SYNC_PAGE_LIMIT = 100;
+  private static final int SYNC_MAX_PAGES = 40;
 
   private final ObjectMapper objectMapper;
+  private final AiServiceClient aiServiceClient;
 
-  public YargitayPrecedentService(ObjectMapper objectMapper) {
+  public YargitayPrecedentService(ObjectMapper objectMapper, AiServiceClient aiServiceClient) {
     this.objectMapper = objectMapper;
+    this.aiServiceClient = aiServiceClient;
   }
 
   public List<PrecedentDto> search(PrecedentSearchRequest request) {
@@ -100,6 +116,72 @@ public class YargitayPrecedentService {
       ), contentHtml, plainText);
     } catch (IOException | ParseException exception) {
       throw new IllegalStateException("Yargitay karar detayi alinamadi: " + exception.getMessage(), exception);
+    }
+  }
+
+  public PrecedentSyncResponse sync(PrecedentSyncRequest request) {
+    validateCourt(request.court(), "Yargitay");
+    SyncWindow window = resolveSyncWindow(request);
+    int pageSize = normalizeSyncLimit(request.pageSize());
+    int maxPages = normalizeSyncPages(request.maxPages());
+    Set<String> seenIds = new LinkedHashSet<>();
+    List<KnowledgeDocumentRequest> documents = new ArrayList<>();
+    BasicCookieStore cookieStore = new BasicCookieStore();
+
+    try (CloseableHttpClient client = HttpClients.custom().setDefaultCookieStore(cookieStore).build()) {
+      sendGet(client, BASE_URL);
+      for (int page = 1; page <= maxPages; page++) {
+        BatchPage batchPage = searchDetailedRows(client, toSearchRequest(request), "", pageSize, page);
+        if (batchPage.rows().isEmpty()) {
+          break;
+        }
+        boolean reachedLowerBound = false;
+        for (YargitayRow row : batchPage.rows()) {
+          LocalDateTime decisionTime = parseDateTime(row.date());
+          if (decisionTime != null) {
+            if (decisionTime.atZone(ISTANBUL).isAfter(window.to().atZone(ISTANBUL))) {
+              continue;
+            }
+            if (decisionTime.atZone(ISTANBUL).isBefore(window.from().atZone(ISTANBUL))) {
+              reachedLowerBound = true;
+              break;
+            }
+          }
+
+          String sourceId = row.id();
+          if (sourceId.isBlank() || !seenIds.add(sourceId)) {
+            continue;
+          }
+          PrecedentDto detail = getDocument(sourceId);
+          documents.add(toKnowledgeDocument(detail));
+        }
+        if (reachedLowerBound || !batchPage.hasMore()) {
+          break;
+        }
+      }
+      if (documents.isEmpty()) {
+        return new PrecedentSyncResponse(
+            "Yargitay",
+            window.from().atZone(ISTANBUL),
+            window.to().atZone(ISTANBUL),
+            0,
+            0,
+            "",
+            "Secilen aralikta karar bulunamadi."
+        );
+      }
+      KnowledgeIngestResponse ingestResponse = aiServiceClient.ingestKnowledge(new KnowledgeIngestRequest(documents));
+      return new PrecedentSyncResponse(
+          "Yargitay",
+          window.from().atZone(ISTANBUL),
+          window.to().atZone(ISTANBUL),
+          documents.size(),
+          ingestResponse.indexed(),
+          ingestResponse.storage(),
+          ingestResponse.message()
+      );
+    } catch (IOException | ParseException exception) {
+      throw new IllegalStateException("Yargitay karar senkronu tamamlanamadi: " + exception.getMessage(), exception);
     }
   }
 
@@ -325,6 +407,93 @@ public class YargitayPrecedentService {
     return content.substring(0, maxLength) + "...";
   }
 
+  private PrecedentSearchRequest toSearchRequest(PrecedentSyncRequest request) {
+    return new PrecedentSearchRequest(
+        "",
+        "Yargitay",
+        null,
+        null,
+        null,
+        request.dateFrom(),
+        request.dateTo(),
+        SYNC_PAGE_LIMIT
+    );
+  }
+
+  private KnowledgeDocumentRequest toKnowledgeDocument(PrecedentDto precedent) {
+    return new KnowledgeDocumentRequest(
+        "precedent",
+        precedent.court(),
+        precedent.chamber(),
+        precedent.docketNo(),
+        precedent.decisionNo(),
+        precedent.date(),
+        precedent.topic(),
+        precedent.summary() == null ? "" : precedent.summary(),
+        precedent.content() == null ? "" : precedent.content()
+    );
+  }
+
+  private SyncWindow resolveSyncWindow(PrecedentSyncRequest request) {
+    LocalDateTime to = parseDateTime(request.dateTo());
+    LocalDateTime from = parseDateTime(request.dateFrom());
+    Integer minutesBack = request.minutesBack();
+    if (to == null) {
+      to = LocalDateTime.now(ISTANBUL);
+    }
+    if (from == null && minutesBack != null && minutesBack > 0) {
+      from = to.minusMinutes(minutesBack);
+    }
+    if (from == null) {
+      throw new IllegalArgumentException("Senkron icin baslangic zamani girin veya minutesBack kullanin.");
+    }
+    if (to.isBefore(from)) {
+      throw new IllegalArgumentException("Bitis zamani baslangic zamanindan once olamaz.");
+    }
+    return new SyncWindow(from, to);
+  }
+
+  private LocalDateTime parseDateTime(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    String trimmed = value.trim();
+    try {
+      return LocalDateTime.parse(trimmed);
+    } catch (Exception ignored) {
+      // try next format
+    }
+    try {
+      return LocalDate.parse(trimmed).atStartOfDay();
+    } catch (Exception ignored) {
+      return null;
+    }
+  }
+
+  private int normalizeSyncLimit(Integer limit) {
+    if (limit == null || limit <= 0) {
+      return SYNC_PAGE_LIMIT;
+    }
+    return Math.min(limit, SYNC_PAGE_LIMIT);
+  }
+
+  private int normalizeSyncPages(Integer maxPages) {
+    if (maxPages == null || maxPages <= 0) {
+      return SYNC_MAX_PAGES;
+    }
+    return Math.min(maxPages, SYNC_MAX_PAGES);
+  }
+
+  private void validateCourt(String court, String expected) {
+    if (court == null || court.isBlank()) {
+      return;
+    }
+    String normalized = court.trim().toLowerCase(Locale.ROOT);
+    if (!normalized.contains(expected.toLowerCase(Locale.ROOT))) {
+      throw new IllegalArgumentException("Bu endpoint sadece " + expected + " icin calisir.");
+    }
+  }
+
   private String text(JsonNode node, String field) {
     return repairMojibake(node.path(field).asText("").trim());
   }
@@ -354,6 +523,9 @@ public class YargitayPrecedentService {
   }
 
   private record YargitayHeader(String chamber, String docketNo, String decisionNo) {
+  }
+
+  private record SyncWindow(LocalDateTime from, LocalDateTime to) {
   }
 
   private record YargitayRow(

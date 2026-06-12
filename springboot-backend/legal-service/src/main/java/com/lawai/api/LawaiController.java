@@ -16,6 +16,8 @@ import com.lawai.api.dto.PrecedentApplyRequest;
 import com.lawai.api.dto.PrecedentApplyResponse;
 import com.lawai.api.dto.PrecedentSummarizeRequest;
 import com.lawai.api.dto.PrecedentSummarizeResponse;
+import com.lawai.api.dto.PrecedentSyncRequest;
+import com.lawai.api.dto.PrecedentSyncResponse;
 import com.lawai.api.service.AiServiceClient;
 import com.lawai.common.client.ActivityLogClient;
 import com.lawai.api.service.ChatHistoryService;
@@ -41,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api")
@@ -130,6 +133,32 @@ public class LawaiController {
     return result;
   }
 
+  @PostMapping("/precedents/aym/sync")
+  public PrecedentSyncResponse syncAnayasaPrecedents(@Valid @RequestBody PrecedentSyncRequest request, Authentication authentication) {
+    PrecedentSyncResponse response = anayasaPrecedentService.sync(request);
+    String range = (request.dateFrom() == null ? "" : request.dateFrom()) + " -> " + (request.dateTo() == null ? "" : request.dateTo());
+    activityLogClient.logBackend(requireUser(authentication), "case-law-sync", "Ictihat Senkron", "Anayasa Mahkemesi karar senkronu tamamlandi. Aralik: " + range, "/api/precedents/aym/sync");
+    return response;
+  }
+
+  @PostMapping("/precedents/sync")
+  public PrecedentSyncResponse syncPrecedents(@Valid @RequestBody PrecedentSyncRequest request, Authentication authentication) {
+    PrecedentSyncResponse response = switch (normalizeCourt(request.court())) {
+      case "YARGITAY" -> yargitayPrecedentService.sync(request);
+      case "DANISTAY" -> danistayPrecedentService.sync(request);
+      case "ANAYASA" -> anayasaPrecedentService.sync(request);
+      default -> throw new IllegalArgumentException("Desteklenmeyen mahkeme: " + request.court());
+    };
+    activityLogClient.logBackend(
+        requireUser(authentication),
+        "case-law-sync",
+        "Ictihat Senkron",
+        normalizeCourt(request.court()) + " karar senkronu tamamlandi.",
+        "/api/precedents/sync"
+    );
+    return response;
+  }
+
   @PostMapping("/precedents/summarize")
   public PrecedentSummarizeResponse summarizePrecedent(@Valid @RequestBody PrecedentSummarizeRequest request, Authentication authentication) {
     PrecedentSummarizeResponse response = aiServiceClient.summarizePrecedent(request);
@@ -190,6 +219,10 @@ public class LawaiController {
       return user;
     }
     throw new BadCredentialsException("Oturum gerekli.");
+  }
+
+  private String normalizeCourt(String court) {
+    return court == null ? "" : court.trim().toUpperCase(Locale.ROOT);
   }
 
 }

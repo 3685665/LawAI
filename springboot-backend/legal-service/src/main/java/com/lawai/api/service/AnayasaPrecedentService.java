@@ -2,8 +2,14 @@ package com.lawai.api.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lawai.api.dto.KnowledgeDocumentRequest;
+import com.lawai.api.dto.KnowledgeIngestRequest;
+import com.lawai.api.dto.KnowledgeIngestResponse;
 import com.lawai.api.dto.PrecedentDto;
 import com.lawai.api.dto.PrecedentSearchRequest;
+import com.lawai.api.dto.PrecedentSyncRequest;
+import com.lawai.api.dto.PrecedentSyncResponse;
+import com.lawai.api.service.AiServiceClient;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -14,28 +20,37 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class AnayasaPrecedentService {
 
   private static final String BASE_URL = "https://kararlarbilgibankasi.anayasa.gov.tr";
   private static final String SEARCH_URL = BASE_URL + "/api/core/public/search";
+  private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
   private static final int DEFAULT_LIMIT = 10;
   private static final int MAX_LIMIT = 20;
   private static final int MAX_PAGES = 5;
+  private static final int SYNC_PAGE_LIMIT = 100;
+  private static final int SYNC_MAX_PAGES = 40;
 
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final AiServiceClient aiServiceClient;
 
-  public AnayasaPrecedentService(ObjectMapper objectMapper) {
+  public AnayasaPrecedentService(ObjectMapper objectMapper, AiServiceClient aiServiceClient) {
     this.objectMapper = objectMapper;
+    this.aiServiceClient = aiServiceClient;
     this.httpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.NORMAL)
         .build();
@@ -136,6 +151,81 @@ public class AnayasaPrecedentService {
     }
   }
 
+  public PrecedentSyncResponse sync(PrecedentSyncRequest request) {
+    if (request != null && request.court() != null && !request.court().isBlank()) {
+      String normalizedCourt = request.court().trim().toLowerCase(Locale.ROOT);
+      if (!normalizedCourt.contains("aym") && !normalizedCourt.contains("anayasa")) {
+        throw new IllegalArgumentException("Bu endpoint sadece Anayasa Mahkemesi icin calisir.");
+      }
+    }
+    SyncWindow window = resolveSyncWindow(request);
+    int pageSize = normalizeSyncLimit(request.pageSize());
+    int maxPages = normalizeSyncPages(request.maxPages());
+    Set<String> seenSourceIds = new LinkedHashSet<>();
+    List<KnowledgeDocumentRequest> documents = new ArrayList<>();
+
+    try {
+      for (int page = 1; page <= maxPages; page++) {
+        JsonNode pageResults = searchSyncPage(page, pageSize);
+        if (!pageResults.isArray() || pageResults.isEmpty()) {
+          break;
+        }
+
+        boolean reachedLowerBound = false;
+        for (JsonNode row : pageResults) {
+          InstantResult publish = parsePublishedAt(text(row, "yayinTarihi"));
+          if (publish != null) {
+            if (publish.instant().isAfter(window.to().toInstant())) {
+              continue;
+            }
+            if (publish.instant().isBefore(window.from().toInstant())) {
+              reachedLowerBound = true;
+              break;
+            }
+          }
+
+          String sourceId = resolveSourceId(row);
+          if (sourceId.isBlank() || !seenSourceIds.add(sourceId)) {
+            continue;
+          }
+          PrecedentDto detail = getDocument(sourceId);
+          documents.add(toKnowledgeDocument(detail, publish));
+        }
+
+        if (reachedLowerBound || pageResults.size() < pageSize) {
+          break;
+        }
+      }
+
+      if (documents.isEmpty()) {
+        return new PrecedentSyncResponse(
+            "Anayasa Mahkemesi",
+            window.from(),
+            window.to(),
+            0,
+            0,
+            "",
+            "Secilen aralikta karar bulunamadi."
+        );
+      }
+
+      KnowledgeIngestResponse ingestResponse = aiServiceClient.ingestKnowledge(new KnowledgeIngestRequest(documents));
+      return new PrecedentSyncResponse(
+          "Anayasa Mahkemesi",
+          window.from(),
+          window.to(),
+          documents.size(),
+          ingestResponse.indexed(),
+          ingestResponse.storage(),
+          ingestResponse.message()
+      );
+    } catch (IllegalArgumentException exception) {
+      throw exception;
+    } catch (IOException exception) {
+      throw new IllegalStateException("Anayasa Mahkemesi karar senkronu tamamlanamadi: " + exception.getMessage(), exception);
+    }
+  }
+
   private JsonNode searchPage(String query, int page, int limit) throws IOException {
     Map<String, Object> filter = new LinkedHashMap<>();
     filter.put("query", query);
@@ -144,6 +234,22 @@ public class AnayasaPrecedentService {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("page", page);
     body.put("size", Math.min(limit, MAX_LIMIT));
+    body.put("filter", filter);
+
+    JsonNode response = postSearch(body);
+    return response.path("data");
+  }
+
+  private JsonNode searchSyncPage(int page, int limit) throws IOException {
+    Map<String, Object> filter = new LinkedHashMap<>();
+    filter.put("query", "");
+    filter.put("_timestamp", System.currentTimeMillis());
+
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("page", page);
+    body.put("size", Math.min(limit, SYNC_PAGE_LIMIT));
+    body.put("sort", "yayinTarihi");
+    body.put("order", "desc");
     body.put("filter", filter);
 
     JsonNode response = postSearch(body);
@@ -353,5 +459,106 @@ public class AnayasaPrecedentService {
       return content;
     }
     return content.substring(0, maxLength) + "...";
+  }
+
+  private KnowledgeDocumentRequest toKnowledgeDocument(PrecedentDto precedent, InstantResult publish) {
+    return new KnowledgeDocumentRequest(
+        "precedent",
+        precedent.court(),
+        precedent.chamber(),
+        precedent.docketNo(),
+        precedent.decisionNo(),
+        publish == null ? precedent.date() : publish.isoText(),
+        precedent.topic(),
+        precedent.summary() == null ? "" : precedent.summary(),
+        precedent.content() == null ? "" : precedent.content()
+    );
+  }
+
+  private SyncWindow resolveSyncWindow(PrecedentSyncRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("Senkron istegi bos olamaz.");
+    }
+    LocalDateTime to = parseDateTime(request.dateTo());
+    LocalDateTime from = parseDateTime(request.dateFrom());
+    Integer minutesBack = request.minutesBack();
+
+    if (to == null) {
+      to = LocalDateTime.now(ISTANBUL);
+    }
+    if (from == null && minutesBack != null && minutesBack > 0) {
+      from = to.minusMinutes(minutesBack);
+    }
+    if (from == null) {
+      throw new IllegalArgumentException("Senkron icin baslangic zamani girin veya minutesBack kullanin.");
+    }
+    if (to.isBefore(from)) {
+      throw new IllegalArgumentException("Bitis zamani baslangic zamanindan once olamaz.");
+    }
+    return new SyncWindow(from.atZone(ISTANBUL), to.atZone(ISTANBUL));
+  }
+
+  private LocalDateTime parseDateTime(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    String trimmed = value.trim();
+    try {
+      return LocalDateTime.parse(trimmed);
+    } catch (DateTimeParseException ignored) {
+      // try next format
+    }
+    try {
+      return LocalDate.parse(trimmed).atStartOfDay();
+    } catch (DateTimeParseException ignored) {
+      // try next format
+    }
+    try {
+      return java.time.OffsetDateTime.parse(trimmed).atZoneSameInstant(ISTANBUL).toLocalDateTime();
+    } catch (DateTimeParseException ignored) {
+      return null;
+    }
+  }
+
+  private InstantResult parsePublishedAt(String rawValue) {
+    if (rawValue == null || rawValue.isBlank()) {
+      return null;
+    }
+    String trimmed = rawValue.trim();
+    try {
+      return new InstantResult(java.time.OffsetDateTime.parse(trimmed).toInstant(), trimmed);
+    } catch (DateTimeParseException ignored) {
+      // try next format
+    }
+    try {
+      return new InstantResult(LocalDateTime.parse(trimmed).atZone(ISTANBUL).toInstant(), trimmed);
+    } catch (DateTimeParseException ignored) {
+      // try next format
+    }
+    try {
+      return new InstantResult(LocalDate.parse(trimmed).atStartOfDay(ISTANBUL).toInstant(), trimmed);
+    } catch (DateTimeParseException ignored) {
+      return null;
+    }
+  }
+
+  private int normalizeSyncLimit(Integer limit) {
+    if (limit == null || limit <= 0) {
+      return SYNC_PAGE_LIMIT;
+    }
+    return Math.min(limit, SYNC_PAGE_LIMIT);
+  }
+
+  private int normalizeSyncPages(Integer maxPages) {
+    if (maxPages == null || maxPages <= 0) {
+      return SYNC_MAX_PAGES;
+    }
+    return Math.min(maxPages, SYNC_MAX_PAGES);
+  }
+
+  private record SyncWindow(java.time.ZonedDateTime from, java.time.ZonedDateTime to) {
+  }
+
+  private record InstantResult(java.time.Instant instant, String isoText) {
   }
 }
