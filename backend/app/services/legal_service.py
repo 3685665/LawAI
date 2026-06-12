@@ -24,10 +24,10 @@ from app.models.schemas import (
     LegalResearchSynthesizeResponse,
     ResearchSourceFinding,
 )
+from app.i18n import ai_language_instruction, current_language, t
 from app.services.vector_store import normalize, vector_store
 from app.settings import settings
 
-DISCLAIMER = "Bu yanit hukuki danismanlik degildir; avukat denetimi ve guncel mevzuat kontrolu gerekir."
 AI_REQUEST_TIMEOUT_SECONDS = 90
 
 PETITION_META_LINE_PATTERNS = (
@@ -239,22 +239,22 @@ class LegalService:
             try:
                 answer = self._answer_with_ai(request, citations)
             except Exception as exc:
-                answer += f"\nAI saglayicisi su anda yanit vermedi; yerel analiz modu kullanildi. Detay: {exc}"
+                answer += f"\n{t('ai_answer_fallback', detail=exc)}"
 
         if request.mode.lower() == "draft":
-            answer += "\nDilekce modunda, olay ozetini 'vakialar', 'hukuki nedenler' ve 'sonuc-talep' basliklarina donusturebilirim."
+            answer += f"\n{t('draft_mode_hint')}"
         if request.privateMode:
-            answer += "\n\nGizli mod acik: Bu MVP, soruyu kaydetmez; kalici sohbet gecmisi eklenirse ayrica sifreleme uygulanmali."
+            answer += f"\n\n{t('private_mode_hint')}"
 
         return ChatResponse(
             answer=answer,
             citations=citations,
             nextSteps=[
-                "Soruda PDF icindeki ayirt edici ifadeleri, tarihleri ve taraf adlarini kullanin.",
-                "Beklenen cevap cikmiyorsa dokumani daha temiz metin iceren PDF/TXT olarak tekrar yukleyin.",
-                "Daha guclu yorumlama icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin.",
+                t("next_step_specific_terms"),
+                t("next_step_clean_document"),
+                t("next_step_enable_provider"),
             ],
-            disclaimer=DISCLAIMER,
+            disclaimer=t("disclaimer"),
         )
 
     def summarize_precedent(self, request: PrecedentSummarizeRequest) -> PrecedentSummarizeResponse:
@@ -263,14 +263,14 @@ class LegalService:
         if self.chat_model:
             try:
                 summary = self._summarize_precedent_with_ai(metadata, content)
-                return PrecedentSummarizeResponse(summary=summary, disclaimer=DISCLAIMER)
+                return PrecedentSummarizeResponse(summary=summary, disclaimer=t("disclaimer"))
             except Exception as exc:
                 fallback = self._local_precedent_summary(metadata, content)
-                fallback += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel ozet modu kullanildi. Detay: {exc}"
-                return PrecedentSummarizeResponse(summary=fallback, disclaimer=DISCLAIMER)
+                fallback += f"\n\n{t('ai_summary_fallback', detail=exc)}"
+                return PrecedentSummarizeResponse(summary=fallback, disclaimer=t("disclaimer"))
         return PrecedentSummarizeResponse(
             summary=self._local_precedent_summary(metadata, content),
-            disclaimer=DISCLAIMER,
+            disclaimer=t("disclaimer"),
         )
 
     def apply_precedent_to_petition(self, request: PrecedentApplyRequest) -> PrecedentApplyResponse:
@@ -286,17 +286,17 @@ class LegalService:
                     legalGroundsSnippet=applied["legalGroundsSnippet"],
                     factsLinkSnippet=applied["factsLinkSnippet"],
                     citationLine=citation_line,
-                    disclaimer=DISCLAIMER,
+                    disclaimer=t("disclaimer"),
                 )
             except Exception as exc:
                 fallback = self._local_precedent_application(metadata, content, case_context, citation_line)
-                fallback["applicationNote"] += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel eslestirme modu kullanildi. Detay: {exc}"
+                fallback["applicationNote"] += f"\n\n{t('ai_apply_fallback', detail=exc)}"
                 return PrecedentApplyResponse(
                     applicationNote=fallback["applicationNote"],
                     legalGroundsSnippet=fallback["legalGroundsSnippet"],
                     factsLinkSnippet=fallback["factsLinkSnippet"],
                     citationLine=citation_line,
-                    disclaimer=DISCLAIMER,
+                    disclaimer=t("disclaimer"),
                 )
         fallback = self._local_precedent_application(metadata, content, case_context, citation_line)
         return PrecedentApplyResponse(
@@ -304,7 +304,7 @@ class LegalService:
             legalGroundsSnippet=fallback["legalGroundsSnippet"],
             factsLinkSnippet=fallback["factsLinkSnippet"],
             citationLine=citation_line,
-            disclaimer=DISCLAIMER,
+            disclaimer=t("disclaimer"),
         )
 
     def generate_petition(self, request: PetitionRequest) -> PetitionResponse:
@@ -315,22 +315,22 @@ class LegalService:
             try:
                 body = self._petition_with_ai(request)
             except Exception as exc:
-                body += f"\n\nNOT: AI saglayicisi su anda yanit vermedigi icin yerel taslak modu kullanildi. Detay: {exc}"
+                body += f"\n\n{t('ai_petition_fallback', detail=exc)}"
 
         return PetitionResponse(
-            title=f"{request.petitionType} Dilekcesi",
+            title=f"{request.petitionType} Dilekcesi" if current_language() == "tr" else f"{request.petitionType} Petition",
             body=_normalize_petition_body(body),
             citedPrecedents=citations,
         )
 
     def ingest_knowledge(self, request: KnowledgeIngestRequest) -> KnowledgeIngestResponse:
         if not self.embeddings:
-            return KnowledgeIngestResponse(indexed=0, storage="disabled", message="AI saglayicisi yapilandirilmamis.")
+            return KnowledgeIngestResponse(indexed=0, storage="disabled", message=t("ai_provider_not_configured"))
         try:
             embeddings = self._embed_documents([doc.content for doc in request.documents])
         except Exception as exc:
             embeddings = LocalEmbeddings().embed_documents([doc.content for doc in request.documents])
-            fallback_message = f"Embedding saglayicisi hata verdi; local embedding fallback kullanildi. Detay: {exc}"
+            fallback_message = t("embedding_fallback", detail=exc)
         else:
             fallback_message = None
         try:
@@ -339,15 +339,15 @@ class LegalService:
             return KnowledgeIngestResponse(
                 indexed=0,
                 storage="disabled",
-                message=f"Vektor deposu hata verdi: {exc}",
+                message=t("vector_store_error", detail=exc),
             )
         storage = f"pgvector/{self.provider}" if settings.vector_store.lower() == "pgvector" else f"persistent/{self.provider}"
-        message = "Dokumanlar kalici vektor deposuna indekslendi."
+        message = t("documents_indexed")
         if fallback_message:
             storage = f"{storage}+local-fallback"
             message = fallback_message
         if self.provider == "local":
-            message += " Not: local embedding yalnizca gelistirme icindir; emsal kalitesi icin OpenAI, Gemini veya Ollama embedding saglayicisi kullanin ve dokumanlari yeniden indeksleyin."
+            message += t("local_embedding_note")
         return KnowledgeIngestResponse(indexed=indexed, storage=storage, message=message)
 
     def seed_precedents(self) -> KnowledgeIngestResponse:
@@ -372,14 +372,14 @@ class LegalService:
         if self.chat_model:
             try:
                 answer = self._synthesize_research_with_ai(request.query, context)
-                return LegalResearchSynthesizeResponse(answer=answer, disclaimer=DISCLAIMER)
+                return LegalResearchSynthesizeResponse(answer=answer, disclaimer=t("disclaimer"))
             except Exception as exc:
                 fallback = self._local_research_synthesis(request.query, context)
-                fallback += f"\n\nNOT: AI saglayicisi yanit vermedi; yerel sentez modu kullanildi. Detay: {exc}"
-                return LegalResearchSynthesizeResponse(answer=fallback, disclaimer=DISCLAIMER)
+                fallback += f"\n\n{t('ai_research_fallback', detail=exc)}"
+                return LegalResearchSynthesizeResponse(answer=fallback, disclaimer=t("disclaimer"))
         return LegalResearchSynthesizeResponse(
             answer=self._local_research_synthesis(request.query, context),
-            disclaimer=DISCLAIMER,
+            disclaimer=t("disclaimer"),
         )
 
     def search(self, query: str, court: str | None, chamber: str | None, limit: int, use_samples: bool = True) -> list[PrecedentDto]:
@@ -410,6 +410,7 @@ class LegalService:
     def _answer_with_ai(self, request: ChatRequest, citations: list[PrecedentDto]) -> str:
         prompt = (
             "Turk hukuku odakli, temkinli ve kaynak uydurmayan bir hukuk asistanisin.\n\n"
+            f"{ai_language_instruction()}\n\n"
             f"Kullanici sorusu:\n{request.question}\n\n"
             f"Calisma modu: {request.mode}\nGizli mod: {request.privateMode}\n\n"
             f"RAG baglami olarak bulunan kararlar:\n{self._format_citations(citations)}\n\n"
@@ -567,6 +568,7 @@ class LegalService:
         prompt = (
             "Turk hukuku baglaminda bir avukat asistanisin. Asagidaki emsal karari, secili dava dosyasi "
             "ve mevcut dilekce taslagi bilgileriyle eslestir.\n"
+            f"{ai_language_instruction()}\n"
             "Metinde ve dosyada olmayan olay, tarih, karar veya taraf uydurma.\n"
             "Yalnizca gercekten iliskili noktalari bagla; zorla benzerlik kurma.\n"
             "Ciktiyi su basliklarla ver:\n"
@@ -608,9 +610,17 @@ class LegalService:
         legal_grounds = extract("HUKUKI DAYANAK TASLAGI:", ["VAKIA BAGLANTISI:"])
         facts_link = extract("VAKIA BAGLANTISI:", [])
         if not legal_grounds:
-            legal_grounds = f"{citation_line} sayili kararda benzer olayda benimsenen hukuki ilke, isbu dosyada da dikkate alinmalidir."
+            legal_grounds = (
+                f"The legal principle adopted in {citation_line} should also be considered in this file."
+                if current_language() == "en"
+                else f"{citation_line} sayili kararda benzer olayda benimsenen hukuki ilke, isbu dosyada da dikkate alinmalidir."
+            )
         if not facts_link:
-            facts_link = f"Dosya konusu ({case.subject or '-'}) ile emsal kararin konusu ({metadata.splitlines()[-1].replace('Konu: ', '')}) arasinda bag kurulabilir."
+            facts_link = (
+                f"A link can be made between the file subject ({case.subject or '-'}) and the precedent topic ({metadata.splitlines()[-1].replace('Konu: ', '')})."
+                if current_language() == "en"
+                else f"Dosya konusu ({case.subject or '-'}) ile emsal kararin konusu ({metadata.splitlines()[-1].replace('Konu: ', '')}) arasinda bag kurulabilir."
+            )
         return {
             "applicationNote": application_note,
             "legalGroundsSnippet": legal_grounds,
@@ -627,23 +637,38 @@ class LegalService:
         excerpt = content[:900].strip()
         if len(content) > 900:
             excerpt += "..."
-        application_note = (
-            f"Dosya: {case.caseLabel or case.caseType or '-'}\n"
-            f"Dava konusu: {case.subject or '-'}\n"
-            f"Emsal: {citation_line}\n"
-            f"Karar konusu: {metadata.splitlines()[-1].replace('Konu: ', '')}\n\n"
-            "Yerel eslestirme: Emsal karar metni ile dosya ozeti birlikte incelenmelidir. "
-            "Tam baglanti metni icin AI saglayicisini etkinlestirin.\n\n"
-            f"Metinden alinti:\n{excerpt}"
-        )
+        if current_language() == "en":
+            application_note = (
+                f"File: {case.caseLabel or case.caseType or '-'}\n"
+                f"Case subject: {case.subject or '-'}\n"
+                f"Precedent: {citation_line}\n"
+                f"Decision topic: {metadata.splitlines()[-1].replace('Konu: ', '')}\n\n"
+                "Local matching: the precedent text and case summary should be reviewed together. "
+                "Enable an AI provider for the full connection text.\n\n"
+                f"Excerpt from the text:\n{excerpt}"
+            )
+        else:
+            application_note = (
+                f"Dosya: {case.caseLabel or case.caseType or '-'}\n"
+                f"Dava konusu: {case.subject or '-'}\n"
+                f"Emsal: {citation_line}\n"
+                f"Karar konusu: {metadata.splitlines()[-1].replace('Konu: ', '')}\n\n"
+                "Yerel eslestirme: Emsal karar metni ile dosya ozeti birlikte incelenmelidir. "
+                "Tam baglanti metni icin AI saglayicisini etkinlestirin.\n\n"
+                f"Metinden alinti:\n{excerpt}"
+            )
         return {
             "applicationNote": application_note,
             "legalGroundsSnippet": (
-                f"Somut olayda {citation_line} sayili Yargitay kararinda benimsenen degerlendirme "
+                f"The assessment adopted in {citation_line} should also be considered within the scope of {case.subject or 'this file'}."
+                if current_language() == "en"
+                else f"Somut olayda {citation_line} sayili Yargitay kararinda benimsenen degerlendirme "
                 f"isbu {case.subject or 'dosya'} kapsaminda da dikkate alinmalidir."
             ),
             "factsLinkSnippet": (
-                f"Dosya ozetinde yer alan {case.summary or 'vakialar'}, emsal karardaki olay ve hukuki "
+                f"The facts in the file summary ({case.summary or 'facts'}) should be compared with the facts and legal assessment in the precedent."
+                if current_language() == "en"
+                else f"Dosya ozetinde yer alan {case.summary or 'vakialar'}, emsal karardaki olay ve hukuki "
                 "degerlendirme ile karsilastirilmalidir."
             ),
         }
@@ -654,6 +679,7 @@ class LegalService:
         prompt = (
             "Turk hukuku baglaminda calisan bir hukuk asistanisin. Asagidaki mahkeme kararinin "
             "TAM METNINI okuyup ozet cikar.\n"
+            f"{ai_language_instruction()}\n"
             "Metinde olmayan bilgi, karar numarasi, tarih veya sonuc uydurma.\n"
             "Ozeti su basliklarla ver:\n"
             "1. Kararin konusu\n"
@@ -664,7 +690,7 @@ class LegalService:
             "6. Emsal degeri (dilekcede nasil kullanilabilecegi)\n\n"
             f"Karar bilgileri:\n{metadata}\n\n"
             f"Karar metni:\n{decision_text}\n\n"
-            "En fazla 450 kelime, Turkce, net maddeler halinde yaz."
+            "En fazla 450 kelime, net maddeler halinde yaz."
         )
         response = self.chat_model.invoke(prompt)
         return str(response.content).strip() or self._local_precedent_summary(metadata, content)
@@ -675,10 +701,10 @@ class LegalService:
             excerpt += "..."
         return (
             f"{metadata}\n\n"
-            "Yerel ozet (AI yapilandirilmamis):\n"
-            f"Metin uzunlugu: {len(content)} karakter.\n"
-            f"Metinden alinti:\n{excerpt}\n\n"
-            "Tam AI ozeti icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin."
+            f"{t('local_summary_label')}\n"
+            f"{t('text_length', length=len(content))}\n"
+            f"{t('text_excerpt')}\n{excerpt}\n\n"
+            f"{t('enable_ai_summary')}"
         )
 
     def _format_research_findings(self, source_results: list[ResearchSourceFinding]) -> str:
@@ -693,13 +719,14 @@ class LegalService:
             if item.findings:
                 findings = "\n".join(f"- {finding}" for finding in item.findings)
             else:
-                findings = "- Sonuc bulunamadi."
+                findings = t("no_findings")
             blocks.append(f"[{label}]\n{findings}")
         return "\n\n".join(blocks)
 
     def _synthesize_research_with_ai(self, query: str, context: str) -> str:
         prompt = (
             "Turk hukuku odakli bir hukuki arastirma asistanisin.\n"
+            f"{ai_language_instruction()}\n"
             f"Kullanici sorusu:\n{query}\n\n"
             f"Arastirma bulgulari:\n{context}\n\n"
             "Yalnizca verilen bulgulara dayanarak kapsamli bir hukuki analiz yaz. "
@@ -712,15 +739,15 @@ class LegalService:
 
     def _local_research_synthesis(self, query: str, context: str) -> str:
         return (
-            f"## Hukuki Arastirma Ozeti: {query}\n\n"
-            f"### Arastirma Bulgulari\n{context}\n\n"
-            "### Not\n"
-            "Tam LLM sentezi icin OpenAI, Gemini veya Ollama saglayicisini etkinlestirin."
+            f"{t('local_research_title', query=query)}\n\n"
+            f"{t('research_findings_title')}\n{context}\n\n"
+            f"{t('note_title')}\n"
+            f"{t('enable_ai_synthesis')}"
         )
 
     def _format_citations(self, citations: list[PrecedentDto]) -> str:
         if not citations:
-            return "Uygun emsal baglami bulunamadi."
+            return t("no_precedent_context")
         return "\n".join(
             f"{c.court} {c.chamber or ''}, {c.docketNo or '-'} E., {c.decisionNo or '-'} K., {c.date or '-'}, konu: {c.topic}, ozet: {c.summary}"
             for c in citations
@@ -733,17 +760,14 @@ class LegalService:
                 for index, citation in enumerate(citations, start=1)
             )
             return (
-                "Yuklenen/indekslenen kaynaklarda soruyla en yakin eslesen bolumler sunlar:\n\n"
+                f"{t('local_answer_with_citations_intro')}\n\n"
                 f"{source_lines}\n\n"
-                "Local mod bu parcalari ozetleyip eslestirir; hukuki muhakeme uretmek icin tam LLM saglayicisi etkinlestirilmelidir. "
-                "Bu baglama gore cevabi, yukaridaki maddelerde gecen belge icerigiyle sinirli kurun; kaynakta olmayan sonuc, tarih veya karar numarasi eklemeyin."
+                f"{t('local_answer_with_citations_note')}"
             )
 
         return (
-            f"'{request.question}' sorusu icin yuklenen dokumanlarda yeterli eslesme bulunamadi.\n\n"
-            "1. Soruda PDF icindeki somut kelimeleri kullanin.\n"
-            "2. PDF taranmis goruntuyse OCR yapilmis metinli dosya yukleyin.\n"
-            "3. Dokuman yukledikten sonra uygulamayi yeniden baslattiysaniz kalici indeks dosyasinin olustugunu kontrol edin."
+            f"{t('local_answer_no_match', question=request.question)}\n\n"
+            f"{t('local_answer_no_match_steps')}"
         )
 
     def _local_petition(self, request: PetitionRequest) -> str:

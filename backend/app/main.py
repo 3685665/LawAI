@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.i18n import reset_current_language, set_current_language, t
 from app.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -35,6 +36,15 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def use_request_language(request, call_next):
+    token = set_current_language(request.headers.get("accept-language"))
+    try:
+        return await call_next(request)
+    finally:
+        reset_current_language(token)
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "lawai-next-langchain"}
@@ -67,7 +77,7 @@ async def extract_pdf_text(file: UploadFile = File(...)) -> PdfTextExtractionRes
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"PDF text extraction failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=t("pdf_extraction_failed", detail=exc)) from exc
 
 
 @app.post("/api/documents/extract-text", response_model=PdfTextExtractionResponse)
@@ -77,7 +87,7 @@ async def extract_text(file: UploadFile = File(...)) -> PdfTextExtractionRespons
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Document text extraction failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=t("document_text_extraction_failed", detail=exc)) from exc
 
 
 @app.post("/api/knowledge/documents", response_model=KnowledgeIngestResponse)

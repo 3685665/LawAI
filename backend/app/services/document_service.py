@@ -13,6 +13,7 @@ from app.models.schemas import (
     KnowledgeIngestRequest,
     PdfTextExtractionResponse,
 )
+from app.i18n import t
 from app.services.legal_service import legal_service
 from app.settings import settings
 
@@ -29,9 +30,9 @@ class DocumentService:
         filename = file.filename or "document"
         extension = Path(filename).suffix.lower()
         if extension not in SUPPORTED_EXTENSIONS:
-            raise ValueError("Bu asamada PDF, Word ve metin dosyalari desteklenir.")
+            raise ValueError(t("document_unsupported"))
         if not content:
-            raise ValueError("Dosya bos gorunuyor.")
+            raise ValueError(t("document_empty"))
 
         text = self._extract_text(filename, content)
         return PdfTextExtractionResponse(
@@ -42,21 +43,21 @@ class DocumentService:
 
     async def analyze(self, file: UploadFile) -> DocumentAnalysisResponse:
         content = await file.read()
-        filename = file.filename or "yuklenen-dokuman"
+        filename = file.filename or t("uploaded_document")
         content_type = file.content_type or "application/octet-stream"
         issues = self._validate(filename, content)
-        summary = "Dosya yuklendi ancak inceleme oncesi kontrol edilmesi gereken noktalar var."
+        summary = t("document_review_warning")
 
         if not issues:
             try:
                 text = self._extract_text(filename, content)
                 summary = (
-                    f"Dosya kabul edildi. {len(text)} karakter metin cikarildi."
-                    if text else "Dosya yuklendi ancak okunabilir metin cikarilamadi. Taranmis PDF olabilir."
+                    t("document_accepted", characters=len(text))
+                    if text else t("document_no_readable_text")
                 )
             except Exception as exc:
-                issues.append(f"Metin cikarimi basarisiz: {exc}")
-                summary = "Dosya yuklendi ancak metin okunamadi."
+                issues.append(t("document_extraction_failed", detail=exc))
+                summary = t("document_unreadable")
 
         return DocumentAnalysisResponse(
             filename=filename,
@@ -68,7 +69,7 @@ class DocumentService:
 
     async def ingest(self, file: UploadFile, topic: str | None, court: str | None) -> DocumentIngestResponse:
         content = await file.read()
-        filename = file.filename or "yuklenen-dokuman"
+        filename = file.filename or t("uploaded_document")
         content_type = file.content_type or "application/octet-stream"
         warnings = self._validate(filename, content)
         if warnings:
@@ -76,7 +77,7 @@ class DocumentService:
 
         extracted_text = self._extract_text(filename, content)
         if len(extracted_text) < MIN_EXTRACTED_CHARACTERS:
-            raise ValueError("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.")
+            raise ValueError(t("document_insufficient_text"))
 
         cleaned_text = self._clean_text(extracted_text)
         splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=150)
@@ -86,7 +87,7 @@ class DocumentService:
             KnowledgeDocumentRequest(
                 sourceType="upload",
                 court=court,
-                topic=f"{document_topic} (bolum {index + 1}/{len(chunks)})",
+                topic=t("chunk_topic", topic=document_topic, index=index + 1, total=len(chunks)),
                 summary=self._preview(chunk, 700),
                 content=chunk,
             )
@@ -114,11 +115,11 @@ class DocumentService:
         extension = Path(filename).suffix.lower()
         max_bytes = settings.max_upload_mb * 1024 * 1024
         if not content:
-            issues.append("Dosya bos gorunuyor.")
+            issues.append(t("document_empty"))
         if len(content) > max_bytes:
-            issues.append(f"Dosya {settings.max_upload_mb} MB sinirini asiyor.")
+            issues.append(t("document_too_large", max_mb=settings.max_upload_mb))
         if extension not in SUPPORTED_EXTENSIONS:
-            issues.append("Bu asamada PDF, Word ve metin dosyalari desteklenir.")
+            issues.append(t("document_unsupported"))
         return issues
 
     def _extract_text(self, filename: str, content: bytes) -> str:

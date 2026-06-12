@@ -72,6 +72,41 @@ def test_chat_uses_indexed_local_documents() -> None:
     assert body["citations"][0]["topic"] == "Ayipli arac raporu"
 
 
+def test_chat_uses_accept_language_for_local_messages() -> None:
+    response = client.post(
+        "/api/chat",
+        headers={"Accept-Language": "en-US,en;q=0.9,tr;q=0.8"},
+        json={"question": "What evidence is available for a rental dispute?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "No sufficient match was found" in body["answer"]
+    assert body["disclaimer"].startswith("This response is not legal advice")
+    assert body["nextSteps"][0].startswith("Use distinctive phrases")
+
+
+def test_knowledge_ingest_uses_accept_language_for_messages() -> None:
+    response = client.post(
+        "/api/knowledge/documents",
+        headers={"Accept-Language": "en"},
+        json={
+            "documents": [
+                {
+                    "sourceType": "upload",
+                    "court": "Uploaded source",
+                    "topic": "Lease dispute",
+                    "summary": "A test document about rent and default.",
+                    "content": "Rent amount, default notice, and payment records should be reviewed together.",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"].startswith("Documents were indexed")
+
+
 def test_precedent_apply_to_petition() -> None:
     response = client.post(
         "/api/precedents/apply-to-petition",
