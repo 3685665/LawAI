@@ -19,6 +19,7 @@ import {
   FileText,
   FolderOpen,
   Gavel,
+  Pencil,
   Printer,
   KeyRound,
   LoaderCircle,
@@ -4122,17 +4123,17 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       filterable: false,
       renderCell: (params) => (
         <div className="feedback-row-actions">
-          <button className="secondary-button" onClick={(event) => {
+          <button className="secondary-button compact icon-only" title={t.view} aria-label={t.view} onClick={(event) => {
             event.stopPropagation();
             void openCase(params.row.id);
           }} type="button">
-            {t.view}
+            <Pencil size={16} aria-hidden="true" />
           </button>
-          <button className="danger-button" onClick={(event) => {
+          <button className="danger-button compact icon-only" title={t.delete} aria-label={t.delete} onClick={(event) => {
             event.stopPropagation();
             void deleteCase(params.row.id);
           }} type="button">
-            {t.delete}
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         </div>
       )

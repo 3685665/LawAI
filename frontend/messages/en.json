@@ -566,7 +566,7 @@
     "listing": "Listing",
     "caseRecord": "case records",
     "loading": "Loading cases...",
-    "view": "View",
+    "view": "Update",
     "delete": "Delete",
     "emptyList": "List is empty",
     "emptyListDesc": "Add a new case to build the list.",

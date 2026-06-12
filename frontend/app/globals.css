@@ -7182,6 +7182,11 @@ body[data-theme="dark"] .icon-danger-button {
   padding-inline: 0.45rem;
 }
 
+.danger-button.compact.icon-only {
+  min-width: 34px;
+  padding-inline: 0.45rem;
+}
+
 @media (max-width: 1100px) {
   .batch-documents-layout {
     grid-template-columns: 1fr;
