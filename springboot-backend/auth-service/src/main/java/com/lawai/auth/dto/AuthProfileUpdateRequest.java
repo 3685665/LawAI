@@ -5,13 +5,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record AuthProfileUpdateRequest(
-    @NotBlank(message = "Ad soyad gerekli.")
-    @Size(max = 120, message = "Ad soyad en fazla 120 karakter olabilir.")
+    @NotBlank(message = "{validation.name.required}")
+    @Size(max = 120, message = "{validation.name.size.max}")
     String name,
 
-    @NotBlank(message = "E-posta gerekli.")
-    @Email(message = "Gecerli bir e-posta adresi girin.")
-    @Size(max = 180, message = "E-posta en fazla 180 karakter olabilir.")
+    @NotBlank(message = "{validation.email.required}")
+    @Email(message = "{validation.email.invalid}")
+    @Size(max = 180, message = "{validation.email.size.max}")
     String email
 ) {
 }

@@ -17,7 +17,7 @@ public class QueryPlannerService {
 
   public ResearchPlanDto createPlan(String query) {
     if (!StringUtils.hasText(query)) {
-      throw new IllegalArgumentException("Arastirma sorgusu bos olamaz.");
+      throw new IllegalArgumentException("research.query-required");
     }
 
     String normalized = query.trim();

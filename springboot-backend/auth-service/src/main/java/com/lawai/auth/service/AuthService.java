@@ -18,6 +18,7 @@ import com.lawai.auth.model.EmailVerificationRecord;
 import com.lawai.auth.model.PasswordResetRecord;
 import com.lawai.auth.model.SessionRecord;
 import com.lawai.auth.model.UserRecord;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.persistence.entity.AuthSessionEntity;
 import com.lawai.persistence.entity.EmailVerificationEntity;
 import com.lawai.persistence.entity.PasswordResetEntity;
@@ -51,10 +52,8 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
-  private static final String PASSWORD_RESET_ACK_MESSAGE =
-      "E-posta adresi sistemde bulunuyorsa sifirlama baglantisi gonderildi.";
-
   private final ObjectMapper objectMapper;
+  private final I18nMessages i18n;
   private final UserRepository userRepository;
   private final AuthSessionRepository authSessionRepository;
   private final PasswordResetRepository passwordResetRepository;
@@ -71,6 +70,7 @@ public class AuthService {
 
   public AuthService(
       ObjectMapper objectMapper,
+      I18nMessages i18n,
       UserRepository userRepository,
       AuthSessionRepository authSessionRepository,
       PasswordResetRepository passwordResetRepository,
@@ -84,6 +84,7 @@ public class AuthService {
       @Value("${app.auth.google-client-id:}") String googleClientId
   ) {
     this.objectMapper = objectMapper;
+    this.i18n = i18n;
     this.userRepository = userRepository;
     this.authSessionRepository = authSessionRepository;
     this.passwordResetRepository = passwordResetRepository;
@@ -106,7 +107,7 @@ public class AuthService {
   public AuthRegisterResponse registerAdmin(AuthRegisterRequest request) {
     String email = normalizeEmail(request.email());
     if (findUserByEmail(email).isPresent()) {
-      throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+      throw new IllegalArgumentException("auth.email-in-use");
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -122,7 +123,7 @@ public class AuthService {
         now
     );
     userRepository.save(UserEntity.fromRecord(user));
-    return new AuthRegisterResponse("Yonetici hesabi olusturuldu.", null, null, null);
+    return new AuthRegisterResponse(i18n.get("auth.admin-created"), null, null, null);
   }
 
   @Transactional
@@ -138,7 +139,7 @@ public class AuthService {
   private AuthRegisterResponse registerInternal(AuthRegisterRequest request, String role) {
     String email = normalizeEmail(request.email());
     if (findUserByEmail(email).isPresent()) {
-      throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+      throw new IllegalArgumentException("auth.email-in-use");
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -173,7 +174,7 @@ public class AuthService {
       System.out.println("[AuthService] Failed to send verification email: " + ex.getMessage());
     }
     return new AuthRegisterResponse(
-        "Kullanici olusturuldu; e-posta dogrulamasi gereklidir.",
+        i18n.get("auth.user-created-verification-required"),
         previewVerificationToken ? verificationToken : null,
         verification.expiresAt(),
         previewVerificationToken ? link : null
@@ -183,9 +184,9 @@ public class AuthService {
   @Transactional
   public AuthSessionResponse login(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
-        .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
+        .orElseThrow(() -> new BadCredentialsException("auth.invalid-email-or-password"));
     if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
-      throw new BadCredentialsException("E-posta veya sifre hatali.");
+      throw new BadCredentialsException("auth.invalid-email-or-password");
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -239,7 +240,7 @@ public class AuthService {
     userRepository.findByEmailIgnoreCase(nextEmail)
         .filter(item -> !item.getId().equals(user.id()))
         .ifPresent(item -> {
-          throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+          throw new IllegalArgumentException("auth.email-in-use");
         });
 
     UserRecord updatedUser = user.withProfile(nextName, nextEmail);
@@ -252,7 +253,7 @@ public class AuthService {
     String email = normalizeEmail(request.email());
     Optional<UserRecord> userOptional = findUserByEmail(email);
     if (userOptional.isEmpty()) {
-      return new AuthPasswordResetResponse(PASSWORD_RESET_ACK_MESSAGE, null, null, null);
+      return new AuthPasswordResetResponse(i18n.get("auth.password-reset-ack"), null, null, null);
     }
 
     UserRecord user = userOptional.get();
@@ -275,7 +276,7 @@ public class AuthService {
       System.out.println("[AuthService] Sifre sifirlama e-postasi gonderilemedi: " + ex.getMessage());
     }
     return new AuthPasswordResetResponse(
-        PASSWORD_RESET_ACK_MESSAGE,
+        i18n.get("auth.password-reset-ack"),
         previewResetToken ? resetToken : null,
         previewResetToken ? resetRecord.expiresAt() : null,
         previewResetToken ? resetLink : null
@@ -304,7 +305,7 @@ public class AuthService {
     String normalized = normalizeEmail(email);
     Optional<UserRecord> userOptional = findUserByEmail(normalized);
     if (userOptional.isEmpty()) {
-      return new AuthRegisterResponse("E-posta adresi sistemde bulunuyorsa dogrulama baglantisi olusturuldu.", null, null, null);
+      return new AuthRegisterResponse(i18n.get("auth.verification-ack"), null, null, null);
     }
     UserRecord user = userOptional.get();
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -325,7 +326,7 @@ public class AuthService {
     } catch (Exception ex) {
       System.out.println("[AuthService] Failed to send verification email: " + ex.getMessage());
     }
-    return new AuthRegisterResponse("Dogrulama baglantisi gonderildi.", previewVerificationToken ? verificationToken : null, verification.expiresAt(), previewVerificationToken ? link : null);
+    return new AuthRegisterResponse(i18n.get("auth.verification-sent"), previewVerificationToken ? verificationToken : null, verification.expiresAt(), previewVerificationToken ? link : null);
   }
 
   @Transactional
@@ -344,7 +345,7 @@ public class AuthService {
     SessionRecord session = requireSession(sessionToken);
     UserRecord user = requireUser(session.userId());
     if (!passwordEncoder.matches(request.currentPassword(), user.passwordHash())) {
-      throw new BadCredentialsException("Mevcut sifre hatali.");
+      throw new BadCredentialsException("auth.current-password-invalid");
     }
     UserRecord updatedUser = user.withPasswordHash(passwordEncoder.encode(request.newPassword()));
     replaceUser(updatedUser);
@@ -370,7 +371,7 @@ public class AuthService {
         .map(UserEntity::toRecord)
         .map(this::normalizeUserRole)
         .map(this::toDto)
-        .orElseThrow(() -> new IllegalArgumentException("Kullanici bulunamadi."));
+        .orElseThrow(() -> new IllegalArgumentException("auth.user-not-found"));
   }
 
   @Transactional
@@ -378,7 +379,7 @@ public class AuthService {
     requireAdmin(sessionToken);
     String email = normalizeEmail(request.email());
     if (findUserByEmail(email).isPresent()) {
-      throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+      throw new IllegalArgumentException("auth.email-in-use");
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -407,11 +408,11 @@ public class AuthService {
     userRepository.findByEmailIgnoreCase(nextEmail)
         .filter(item -> !item.getId().equals(user.id()))
         .ifPresent(item -> {
-          throw new IllegalArgumentException("Bu e-posta zaten kullaniliyor.");
+          throw new IllegalArgumentException("auth.email-in-use");
         });
 
     if (session.userId().equals(user.id()) && !"ADMIN".equalsIgnoreCase(request.role())) {
-      throw new IllegalArgumentException("Kendi yonetici rolunuzu kaldiramazsiniz.");
+      throw new IllegalArgumentException("auth.cannot-remove-own-admin-role");
     }
 
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -439,10 +440,10 @@ public class AuthService {
     SessionRecord session = requireSession(sessionToken);
     requireAdmin(sessionToken);
     if (session.userId().equals(userId)) {
-      throw new IllegalArgumentException("Kendi hesabinizi silemezsiniz.");
+      throw new IllegalArgumentException("auth.cannot-delete-own-account");
     }
     if (!userRepository.existsById(userId)) {
-      throw new IllegalArgumentException("Kullanici bulunamadi.");
+      throw new IllegalArgumentException("auth.user-not-found");
     }
     authSessionRepository.deleteByUserId(userId);
     passwordResetRepository.deleteByUserId(userId);
@@ -453,9 +454,9 @@ public class AuthService {
   @Transactional
   public String issueSessionToken(AuthLoginRequest request) {
     UserRecord user = findUserByEmail(normalizeEmail(request.email()))
-        .orElseThrow(() -> new BadCredentialsException("E-posta veya sifre hatali."));
+        .orElseThrow(() -> new BadCredentialsException("auth.invalid-email-or-password"));
     if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
-      throw new BadCredentialsException("E-posta veya sifre hatali.");
+      throw new BadCredentialsException("auth.invalid-email-or-password");
     }
 
     UserRecord verifiedUser = requireVerifiedUser(user);
@@ -510,13 +511,13 @@ public class AuthService {
       replaceUser(verifiedUser);
       return verifiedUser;
     }
-    throw new BadCredentialsException("E-posta adresi dogrulanmadi. Lutfen e-posta onayinizi gerceklestirin.");
+    throw new BadCredentialsException("auth.email-not-verified");
   }
 
   private void requireAdmin(String sessionToken) {
     AuthUserDto user = currentUser(sessionToken);
     if (!"ADMIN".equalsIgnoreCase(user.role())) {
-      throw new AccessDeniedException("Yonetici yetkisi gerekli.");
+      throw new AccessDeniedException("auth.admin-required");
     }
   }
 
@@ -537,12 +538,12 @@ public class AuthService {
     return userRepository.findById(userId)
         .map(UserEntity::toRecord)
         .map(this::normalizeUserRole)
-        .orElseThrow(() -> new BadCredentialsException("Oturum gecersiz."));
+        .orElseThrow(() -> new BadCredentialsException("auth.session-invalid"));
   }
 
   private SessionRecord requireSession(String sessionToken) {
     if (!StringUtils.hasText(sessionToken)) {
-      throw new BadCredentialsException("Oturum bulunamadi.");
+      throw new BadCredentialsException("auth.session-not-found");
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     authSessionRepository.deleteByExpiresAtBefore(now);
@@ -554,14 +555,14 @@ public class AuthService {
       }
     }
     if (found == null) {
-      throw new BadCredentialsException("Oturum gecersiz veya suresi dolmus.");
+      throw new BadCredentialsException("auth.session-invalid-or-expired");
     }
     return found;
   }
 
   private PasswordResetRecord requireResetToken(String token) {
     if (!StringUtils.hasText(token)) {
-      throw new IllegalArgumentException("Sifirlama tokeni gerekli.");
+      throw new IllegalArgumentException("auth.reset-token-required");
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     PasswordResetRecord found = null;
@@ -575,14 +576,14 @@ public class AuthService {
       }
     }
     if (found == null) {
-      throw new IllegalArgumentException("Sifirlama tokeni gecersiz veya suresi dolmus.");
+      throw new IllegalArgumentException("auth.reset-token-invalid-or-expired");
     }
     return found;
   }
 
   private EmailVerificationRecord requireVerificationToken(String token) {
     if (!StringUtils.hasText(token)) {
-      throw new IllegalArgumentException("Dogrulama tokeni gerekli.");
+      throw new IllegalArgumentException("auth.verification-token-required");
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     EmailVerificationRecord found = null;
@@ -596,7 +597,7 @@ public class AuthService {
       }
     }
     if (found == null) {
-      throw new IllegalArgumentException("Dogrulama tokeni gecersiz veya suresi dolmus.");
+      throw new IllegalArgumentException("auth.verification-token-invalid-or-expired");
     }
     return found;
   }
@@ -646,34 +647,34 @@ public class AuthService {
 
   private GoogleTokenPayload verifyGoogleCredential(String credential) {
     if (!StringUtils.hasText(googleClientId)) {
-      throw new IllegalStateException("Google girisi icin GOOGLE_CLIENT_ID ayarlanmadi.");
+      throw new IllegalStateException("auth.google-client-id-not-configured");
     }
     if (!StringUtils.hasText(credential)) {
-      throw new IllegalArgumentException("Google kimlik bilgisi gerekli.");
+      throw new IllegalArgumentException("validation.google-credential.required");
     }
     try {
       String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + URLEncoder.encode(credential, StandardCharsets.UTF_8);
       HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().build();
       HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
-        throw new BadCredentialsException("Google oturumu dogrulanamadi.");
+        throw new BadCredentialsException("auth.google-session-not-verified");
       }
       JsonNode body = objectMapper.readTree(response.body());
       String audience = textValue(body, "aud");
       String email = normalizeEmail(textValue(body, "email"));
       boolean emailVerified = "true".equalsIgnoreCase(textValue(body, "email_verified"));
       if (!googleClientId.equals(audience)) {
-        throw new BadCredentialsException("Google istemci bilgisi gecersiz.");
+        throw new BadCredentialsException("auth.google-client-invalid");
       }
       if (!emailVerified || !StringUtils.hasText(email)) {
-        throw new BadCredentialsException("Google e-posta adresi dogrulanmadi.");
+        throw new BadCredentialsException("auth.google-email-not-verified");
       }
       return new GoogleTokenPayload(email, textValue(body, "name"));
     } catch (IOException exception) {
-      throw new IllegalStateException("Google oturumu okunamadi: " + exception.getMessage(), exception);
+      throw new IllegalStateException(i18n.get("auth.google-session-read-failed", exception.getMessage()), exception);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new IllegalStateException("Google oturumu kesintiye ugradi.", exception);
+      throw new IllegalStateException("auth.google-session-interrupted", exception);
     }
   }
 

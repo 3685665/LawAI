@@ -1,6 +1,7 @@
 package com.lawai.common.security;
 
 import com.lawai.common.client.AuthSessionClient;
+import com.lawai.common.i18n.I18nMessages;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,11 @@ public abstract class MicroserviceSecurityConfig {
   protected abstract List<String> publicPaths();
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthSessionClient authSessionClient) throws Exception {
+  public SecurityFilterChain securityFilterChain(
+      HttpSecurity http,
+      AuthSessionClient authSessionClient,
+      I18nMessages i18n
+  ) throws Exception {
     RemoteSessionAuthenticationFilter sessionFilter = new RemoteSessionAuthenticationFilter(authSessionClient);
     http
         .csrf(csrf -> csrf.disable())
@@ -35,7 +40,7 @@ public abstract class MicroserviceSecurityConfig {
         .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
           response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
           response.setContentType("application/json");
-          response.getWriter().write("{\"detail\":\"Oturum gerekli.\"}");
+          response.getWriter().write("{\"detail\":\"" + i18n.get("error.session-required") + "\"}");
         }))
         .addFilterBefore(sessionFilter, UsernamePasswordAuthenticationFilter.class);
     return http.build();

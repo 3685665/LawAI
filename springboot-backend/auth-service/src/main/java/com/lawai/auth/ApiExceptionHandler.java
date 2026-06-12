@@ -1,5 +1,6 @@
 package com.lawai.auth;
 
+import com.lawai.common.i18n.I18nMessages;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,24 +15,30 @@ import java.util.Map;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+  private final I18nMessages i18n;
+
+  public ApiExceptionHandler(I18nMessages i18n) {
+    this.i18n = i18n;
+  }
+
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException exception) {
-    return ResponseEntity.badRequest().body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.badRequest().body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
   public ResponseEntity<Map<String, String>> unauthorized(RuntimeException exception) {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<Map<String, String>> forbidden(AccessDeniedException exception) {
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", "Erisim reddedildi."));
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", i18n.get("error.access-denied")));
   }
 
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<Map<String, String>> serverError(IllegalStateException exception) {
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -40,7 +47,7 @@ public class ApiExceptionHandler {
         .map(error -> error.getDefaultMessage())
         .filter(message -> message != null && !message.isBlank())
         .findFirst()
-        .orElse("Gecersiz istek.");
+        .orElse(i18n.get("error.invalid-request"));
     return ResponseEntity.badRequest().body(Map.of("detail", detail));
   }
 }

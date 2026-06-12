@@ -5,6 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record AuthResetPasswordRequest(
     @NotBlank String token,
-    @NotBlank @Size(min = 10, message = "Sifre en az 10 karakter olmali.") String newPassword
+    @NotBlank @Size(min = 10, message = "{validation.password.size.min}") String newPassword
 ) {
 }

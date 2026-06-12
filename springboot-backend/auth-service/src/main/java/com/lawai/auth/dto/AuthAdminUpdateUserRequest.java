@@ -6,12 +6,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record AuthAdminUpdateUserRequest(
-    @NotBlank(message = "Ad soyad gerekli.") String name,
-    @Email(message = "Gecerli bir e-posta adresi girin.") @NotBlank(message = "E-posta gerekli.") String email,
-    @NotBlank(message = "Rol gerekli.")
-    @Pattern(regexp = "USER|ADMIN", message = "Rol USER veya ADMIN olmali.") String role,
+    @NotBlank(message = "{validation.name.required}") String name,
+    @Email(message = "{validation.email.invalid}") @NotBlank(message = "{validation.email.required}") String email,
+    @NotBlank(message = "{validation.role.required}")
+    @Pattern(regexp = "USER|ADMIN", message = "{validation.role.invalid}") String role,
     Boolean verified,
-    @Size(min = 10, message = "Sifre en az 10 karakter olmali.") String password
+    @Size(min = 10, message = "{validation.password.size.min}") String password
 ) {
   public AuthAdminUpdateUserRequest {
     name = name == null ? null : name.trim();

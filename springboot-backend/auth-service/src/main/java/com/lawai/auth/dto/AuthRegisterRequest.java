@@ -5,9 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record AuthRegisterRequest(
-    @NotBlank(message = "Ad soyad gerekli.") String name,
-    @Email(message = "Gecerli bir e-posta adresi girin.") @NotBlank(message = "E-posta gerekli.") String email,
-    @NotBlank(message = "Sifre gerekli.") @Size(min = 10, message = "Sifre en az 10 karakter olmali.") String password
+    @NotBlank(message = "{validation.name.required}") String name,
+    @Email(message = "{validation.email.invalid}") @NotBlank(message = "{validation.email.required}") String email,
+    @NotBlank(message = "{validation.password.required}") @Size(min = 10, message = "{validation.password.size.min}") String password
 ) {
   public AuthRegisterRequest {
     name = name == null ? null : name.trim();

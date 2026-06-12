@@ -9,18 +9,22 @@ import com.lawai.api.research.dto.ResearchStepDto;
 import com.lawai.api.research.service.LegalResearchService;
 import com.lawai.common.client.ActivityLogClient;
 import com.lawai.api.service.ChatHistoryService;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.i18n.SimpleLocaleContext;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.concurrent.DelegatingSecurityContextRunnable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +34,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,17 +49,20 @@ public class LegalResearchController {
   private final ActivityLogClient activityLogClient;
   private final ChatHistoryService chatHistoryService;
   private final ObjectMapper objectMapper;
+  private final I18nMessages i18n;
 
   public LegalResearchController(
       LegalResearchService legalResearchService,
       ActivityLogClient activityLogClient,
       ChatHistoryService chatHistoryService,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      I18nMessages i18n
   ) {
     this.legalResearchService = legalResearchService;
     this.activityLogClient = activityLogClient;
     this.chatHistoryService = chatHistoryService;
     this.objectMapper = objectMapper;
+    this.i18n = i18n;
   }
 
   @PostMapping("/run")
@@ -70,9 +78,11 @@ public class LegalResearchController {
   public SseEmitter runStream(@Valid @RequestBody LegalResearchRequest request, Authentication authentication) {
     AuthenticatedUser user = requireUser(authentication);
     SecurityContext securityContext = SecurityContextHolder.getContext();
+    Locale locale = LocaleContextHolder.getLocale();
     SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
     Runnable streamTask = () -> {
+      LocaleContextHolder.setLocaleContext(new SimpleLocaleContext(locale));
       try {
         LegalResearchResponse response = legalResearchService.run(request.query(), step -> sendStep(emitter, step));
         LegalResearchResponse finalized = finalizeResponse(user, request, response);
@@ -82,11 +92,13 @@ public class LegalResearchController {
       } catch (Exception exception) {
         log.error("SSE arastirma hatasi: {}", exception.getMessage(), exception);
         try {
-          emitter.send(SseEmitter.event().name("error").data(Map.of("detail", exception.getMessage())));
+          emitter.send(SseEmitter.event().name("error").data(Map.of("detail", i18n.detail(exception.getMessage()))));
         } catch (IOException ignored) {
           // emitter already broken
         }
         emitter.completeWithError(exception);
+      } finally {
+        LocaleContextHolder.resetLocaleContext();
       }
     };
 
@@ -98,14 +110,25 @@ public class LegalResearchController {
   @ExceptionHandler(IllegalArgumentException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   public Map<String, String> handleBadRequest(IllegalArgumentException exception) {
-    return Map.of("detail", exception.getMessage());
+    return Map.of("detail", i18n.detail(exception.getMessage()));
+  }
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public Map<String, String> handleValidation(MethodArgumentNotValidException exception) {
+    String detail = exception.getBindingResult().getFieldErrors().stream()
+        .map(error -> error.getDefaultMessage())
+        .filter(message -> message != null && !message.isBlank())
+        .findFirst()
+        .orElse(i18n.get("error.invalid-request"));
+    return Map.of("detail", detail);
   }
 
   @ExceptionHandler(LegalResearchException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public Map<String, String> handleResearchFailure(LegalResearchException exception) {
     log.error("Hukuki arastirma hatasi: {}", exception.getMessage(), exception);
-    return Map.of("detail", "Hukuki arastirma tamamlanamadi: " + exception.getMessage());
+    return Map.of("detail", i18n.get("research.failed", i18n.detail(exception.getMessage())));
   }
 
   private LegalResearchResponse finalizeResponse(
@@ -132,7 +155,7 @@ public class LegalResearchController {
   }
 
   private void sendStep(SseEmitter emitter, ResearchStepDto step) {
-    sendEvent(emitter, "step", ResearchProgressEvent.step(step.type(), step.status()));
+    sendEvent(emitter, "step", ResearchProgressEvent.step(step.type(), step.label(), step.status()));
   }
 
   private void sendEvent(SseEmitter emitter, String name, ResearchProgressEvent event) {
@@ -158,6 +181,6 @@ public class LegalResearchController {
     if (principal instanceof AuthenticatedUser user) {
       return user;
     }
-    throw new BadCredentialsException("Oturum gerekli.");
+    throw new BadCredentialsException("error.session-required");
   }
 }

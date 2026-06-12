@@ -1,5 +1,6 @@
 package com.lawai.api;
 
+import com.lawai.common.i18n.I18nMessages;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -17,24 +18,30 @@ import java.util.Map;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+  private final I18nMessages i18n;
+
+  public ApiExceptionHandler(I18nMessages i18n) {
+    this.i18n = i18n;
+  }
+
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException exception) {
-    return ResponseEntity.badRequest().body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.badRequest().body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
   public ResponseEntity<Map<String, String>> unauthorized(RuntimeException exception) {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<Map<String, String>> forbidden(AccessDeniedException exception) {
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", "Erisim reddedildi."));
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", i18n.get("error.access-denied")));
   }
 
   @ExceptionHandler({RestClientException.class, IllegalStateException.class})
   public ResponseEntity<Map<String, String>> badGateway(RuntimeException exception) {
-    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("detail", exception.getMessage()));
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,17 +50,17 @@ public class ApiExceptionHandler {
         .map(error -> error.getDefaultMessage())
         .filter(message -> message != null && !message.isBlank())
         .findFirst()
-        .orElse("Gecersiz istek.");
+        .orElse(i18n.get("error.invalid-request"));
     return ResponseEntity.badRequest().body(Map.of("detail", detail));
   }
 
   @ExceptionHandler(MaxUploadSizeExceededException.class)
   public ResponseEntity<Map<String, String>> uploadTooLarge(MaxUploadSizeExceededException exception) {
-    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", "Dosya cok buyuk. Maksimum yukleme limiti asildi."));
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", i18n.get("error.upload-too-large")));
   }
 
   @ExceptionHandler(MultipartException.class)
   public ResponseEntity<Map<String, String>> multipartError(MultipartException exception) {
-    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", "Dosya cok buyuk veya multipart islemi basarisiz oldu."));
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", i18n.get("error.multipart-failed")));
   }
 }
