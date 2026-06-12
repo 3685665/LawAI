@@ -6,11 +6,11 @@ import java.util.List;
 
 public record CaseCreateRequest(
     @NotBlank String caseType,
-    @NotBlank String clientName,
-    @NotBlank String opponentName,
+    @NotBlank String fileTitle,
+    @NotBlank String caseNumber,
     @NotBlank String courtName,
-    @NotBlank String subject,
-    @NotBlank String summary,
+    @NotBlank String city,
+    @NotBlank String notes,
     List<String> completedDocumentIds
 ) {
 }

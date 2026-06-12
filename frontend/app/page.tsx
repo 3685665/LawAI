@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, SyntheticEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -66,6 +66,7 @@ import {
   authRegister,
   authUpdateProfile,
   createActivityLog,
+  type CaseCreatePayload,
   CaseDocument as ApiCaseDocument,
   CaseRecord,
   CaseTemplate,
@@ -1300,12 +1301,12 @@ export default function Home() {
       .map((note, index) => `${index + 1}. ${note.text}`)
       .join("\n");
     const parts = [
-      "Kullanıcının aşağıdaki talebini hukuk asistanı gibi yanıtla.",
-      "Ekli belge varsa önce belge içeriğini dikkate al; kullanıcının istediği konuya göre belgeyi araştır, incele ve analiz et.",
-      "Yanıtı pratik, gerekçeli ve mümkünse başlıklar halinde ver. Belgeden emin olmadığın noktaları açıkça belirt.",
+      "KullanÄ±cÄ±nÄ±n aÅŸaÄŸÄ±daki talebini hukuk asistanÄ± gibi yanÄ±tla.",
+      "Ekli belge varsa Ã¶nce belge iÃ§eriÄŸini dikkate al; kullanÄ±cÄ±nÄ±n istediÄŸi konuya gÃ¶re belgeyi araÅŸtÄ±r, incele ve analiz et.",
+      "YanÄ±tÄ± pratik, gerekÃ§eli ve mÃ¼mkÃ¼nse baÅŸlÄ±klar halinde ver. Belgeden emin olmadÄ±ÄŸÄ±n noktalarÄ± aÃ§Ä±kÃ§a belirt.",
       "",
-      "Kullanıcı talebi:",
-      notesText || "Ekli belgeyi incele ve hukuki olarak değerlendir."
+      "KullanÄ±cÄ± talebi:",
+      notesText || "Ekli belgeyi incele ve hukuki olarak deÄŸerlendir."
     ];
     if (attachment) {
       parts.push("", "Ek belge:", `Ad: ${attachment.filename}`, `Boyut: ${formatBytes(attachment.size)}`, "", attachment.content);
@@ -1418,7 +1419,7 @@ export default function Home() {
       return;
     }
     const attachmentLine = chatAttachment ? `\n\n[Belge: ${chatAttachment.filename}]` : "";
-    const userMessage = `${draft || "Ekli belgeyi incele ve hukuki olarak değerlendir."}${attachmentLine}`;
+    const userMessage = `${draft || "Ekli belgeyi incele ve hukuki olarak deÄŸerlendir."}${attachmentLine}`;
     const attachmentForPrompt = chatAttachment;
     setChatMessages((current) => [
       ...current,
@@ -1528,15 +1529,15 @@ export default function Home() {
       form.append("file", file, file.name);
       const result = await uploadMultipart<UploadResponse>("/documents/analyze", form);
       const content = [
-        result.summary ? `Özet:\n${result.summary}` : "",
-        result.textPreview ? `Metin önizleme:\n${result.textPreview}` : "",
+        result.summary ? `Ã–zet:\n${result.summary}` : "",
+        result.textPreview ? `Metin Ã¶nizleme:\n${result.textPreview}` : "",
         result.detectedIssues?.length ? `Tespit edilen hususlar:\n${result.detectedIssues.join("\n")}` : "",
-        result.warnings?.length ? `Uyarılar:\n${result.warnings.join("\n")}` : ""
+        result.warnings?.length ? `UyarÄ±lar:\n${result.warnings.join("\n")}` : ""
       ].filter(Boolean).join("\n\n");
       setChatAttachment({
         filename: result.filename || file.name,
         size: result.size || file.size,
-        content: content || "Belge analiz edildi ancak metin önizlemesi alınamadı. Kullanıcı sorusunu belge adı ve bağlamı ile birlikte değerlendir."
+        content: content || "Belge analiz edildi ancak metin Ã¶nizlemesi alÄ±namadÄ±. KullanÄ±cÄ± sorusunu belge adÄ± ve baÄŸlamÄ± ile birlikte deÄŸerlendir."
       });
     } catch (error) {
       if (file.type.startsWith("text/") || file.name.toLowerCase().endsWith(".txt")) {
@@ -1823,7 +1824,10 @@ export default function Home() {
     }
   }
 
-  function hasPrecedentDetailText(item: Precedent) {
+  function hasPrecedentDetailText(item: Precedent | null | undefined) {
+    if (!item) {
+      return false;
+    }
     const plainContent = getPrecedentPlainContent(item.content, item.summary);
     const summary = item.summary?.trim() ?? "";
     return plainContent.length >= 80 && plainContent.length > summary.length + 40;
@@ -1885,16 +1889,20 @@ export default function Home() {
   }
 
   function buildCaseContextPayload(caseRecord: CaseRecord) {
-    const draftFacts = [caseRecord.subject, caseRecord.summary].filter(Boolean).join("\n\n");
+    const draftFacts = [caseRecord.fileTitle, caseRecord.caseNumber, caseRecord.city, caseRecord.notes].filter(Boolean).join("\n\n");
     return {
       caseId: caseRecord.id,
       caseType: caseRecord.caseType,
       caseLabel: caseRecord.caseLabel,
-      clientName: caseRecord.clientName,
-      opponentName: caseRecord.opponentName,
+      fileTitle: caseRecord.fileTitle,
+      caseNumber: caseRecord.caseNumber,
+      city: caseRecord.city,
+      notes: caseRecord.notes,
+      clientName: caseRecord.fileTitle,
+      opponentName: caseRecord.caseNumber,
       courtName: caseRecord.courtName,
-      subject: caseRecord.subject,
-      summary: caseRecord.summary,
+      subject: caseRecord.fileTitle,
+      summary: caseRecord.notes,
       petitionType: caseRecord.caseLabel || petition.petitionType,
       petitionFacts: draftFacts || petition.facts,
       petitionDemands: petition.demands
@@ -1903,10 +1911,12 @@ export default function Home() {
 
   function syncPetitionFromCase(caseRecord: CaseRecord) {
     const parties = [
-      caseRecord.clientName ? `${t.tools.petitionApplicant}: ${caseRecord.clientName}` : "",
-      caseRecord.opponentName ? `${t.tools.petitionOpponent}: ${caseRecord.opponentName}` : ""
+      caseRecord.fileTitle ? `${t.cases.fileTitle}: ${caseRecord.fileTitle}` : "",
+      caseRecord.caseNumber ? `${t.cases.caseNumber}: ${caseRecord.caseNumber}` : "",
+      caseRecord.city ? `${t.cases.city}: ${caseRecord.city}` : "",
+      caseRecord.courtName ? `${t.cases.court}: ${caseRecord.courtName}` : ""
     ].filter(Boolean).join("\n");
-    const facts = [caseRecord.subject, caseRecord.summary].filter(Boolean).join("\n\n");
+    const facts = [caseRecord.fileTitle, caseRecord.caseNumber, caseRecord.notes].filter(Boolean).join("\n\n");
     setPetition({
       petitionType: caseRecord.caseLabel || petition.petitionType,
       court: caseRecord.courtName || petition.court,
@@ -1987,7 +1997,7 @@ export default function Home() {
               <option value="">{t.tools.petitionSelectCase}</option>
               {savedPetitionCases.map((caseRecord) => (
                 <option key={caseRecord.id} value={caseRecord.id}>
-                  {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
+                  {caseRecord.caseLabel} — {caseRecord.fileTitle} / {caseRecord.caseNumber}
                 </option>
               ))}
             </select>
@@ -2039,10 +2049,12 @@ export default function Home() {
         aiSummary: selectedPrecedentSummary || null,
         caseContext: buildCaseContextPayload(linkedPetitionCase)
       });
-      const draftFacts = [linkedPetitionCase.subject, linkedPetitionCase.summary].filter(Boolean).join("\n\n");
+      const draftFacts = [linkedPetitionCase.fileTitle, linkedPetitionCase.caseNumber, linkedPetitionCase.notes].filter(Boolean).join("\n\n");
       const draftParties = [
-        linkedPetitionCase.clientName ? `${t.tools.petitionApplicant}: ${linkedPetitionCase.clientName}` : "",
-        linkedPetitionCase.opponentName ? `${t.tools.petitionOpponent}: ${linkedPetitionCase.opponentName}` : ""
+        linkedPetitionCase.fileTitle ? `${t.cases.fileTitle}: ${linkedPetitionCase.fileTitle}` : "",
+        linkedPetitionCase.caseNumber ? `${t.cases.caseNumber}: ${linkedPetitionCase.caseNumber}` : "",
+        linkedPetitionCase.city ? `${t.cases.city}: ${linkedPetitionCase.city}` : "",
+        linkedPetitionCase.courtName ? `${t.cases.court}: ${linkedPetitionCase.courtName}` : ""
       ].filter(Boolean).join("\n");
       const block: PetitionPrecedentBlock = {
         id: `${key}:${linkedPetitionCase.id}:${Date.now()}`,
@@ -2085,8 +2097,8 @@ export default function Home() {
       linkedPetitionCase
         ? [
             `${t.tools.petitionLinkedCase}: ${linkedPetitionCase.caseLabel}`,
-            linkedPetitionCase.subject ? `${t.tools.petitionCaseContext}: ${linkedPetitionCase.subject}` : "",
-            linkedPetitionCase.summary ? linkedPetitionCase.summary : ""
+            linkedPetitionCase.fileTitle ? `${t.tools.petitionCaseContext}: ${linkedPetitionCase.fileTitle}` : "",
+            linkedPetitionCase.notes ? linkedPetitionCase.notes : ""
           ].filter(Boolean).join("\n")
         : "",
       petitionContextSources.upload ? `${t.tools.petitionUploadContext}: evet` : "",
@@ -3027,7 +3039,7 @@ export default function Home() {
                         <option value="">{t.tools.petitionSelectCase}</option>
                         {savedPetitionCases.map((caseRecord) => (
                           <option key={caseRecord.id} value={caseRecord.id}>
-                            {caseRecord.caseLabel} — {caseRecord.clientName} / {caseRecord.opponentName}
+                            {caseRecord.caseLabel} — {caseRecord.fileTitle} / {caseRecord.caseNumber}
                           </option>
                         ))}
                       </select>
@@ -3047,8 +3059,8 @@ export default function Home() {
                   {linkedPetitionCase ? (
                     <div className="petition-linked-case-card">
                       <strong>{linkedPetitionCase.caseLabel}</strong>
-                      <span>{linkedPetitionCase.subject}</span>
-                      <small>{linkedPetitionCase.clientName} / {linkedPetitionCase.opponentName} — {linkedPetitionCase.courtName}</small>
+                      <span>{linkedPetitionCase.fileTitle}</span>
+                      <small>{linkedPetitionCase.caseNumber} — {linkedPetitionCase.city} — {linkedPetitionCase.courtName}</small>
                     </div>
                   ) : null}
 
@@ -4001,11 +4013,11 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const t = getMessages(locale).cases;
   const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
   const [caseType, setCaseType] = useState<CaseType>("genel");
-  const [clientName, setClientName] = useState("");
-  const [opponentName, setOpponentName] = useState("");
+  const [fileTitle, setFileTitle] = useState("");
+  const [caseNumber, setCaseNumber] = useState("");
   const [courtName, setCourtName] = useState("");
-  const [subject, setSubject] = useState("Dava kaydi ve dosya hazirligi");
-  const [summary, setSummary] = useState("Musteri gorusmesi, taraf bilgileri ve belge kontrolu tamamlanacak.");
+  const [city, setCity] = useState("");
+  const [notes, setNotes] = useState("");
   const [documents, setDocuments] = useState<Record<string, boolean>>({});
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
@@ -4036,35 +4048,46 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
   const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
     {
-      field: "caseLabel",
-      headerName: t.caseType,
+      field: "fileTitle",
+      headerName: t.fileTitle,
       flex: 1,
-      minWidth: 190,
+      minWidth: 240,
       renderCell: (params) => (
         <div className="feedback-grid-cell">
           <strong>{String(params.value ?? "")}</strong>
-          <span>{params.row.subject}</span>
+          <span>{params.row.caseNumber}</span>
         </div>
       )
     },
     {
-      field: "clientName",
-      headerName: t.client,
-      flex: 1,
-      minWidth: 180,
-      renderCell: (params) => (
-        <div className="feedback-grid-cell">
-          <strong>{String(params.value ?? "")}</strong>
-          <span>{params.row.opponentName}</span>
-        </div>
-      )
+      field: "caseType",
+      headerName: t.caseType,
+      width: 150,
+      renderCell: (params) => <span className="feedback-owner">{String(params.value ?? "")}</span>
     },
     {
       field: "courtName",
       headerName: t.court,
       flex: 1,
       minWidth: 220,
-      renderCell: (params) => <span className="feedback-owner">{String(params.value ?? "-")}</span>
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{String(params.value ?? "-")}</strong>
+          <span>{params.row.city}</span>
+        </div>
+      )
+    },
+    {
+      field: "notes",
+      headerName: t.notes,
+      flex: 1.2,
+      minWidth: 240,
+      renderCell: (params) => (
+        <div className="feedback-grid-cell">
+          <strong>{String(params.value ?? "-")}</strong>
+          <span>{params.row.caseLabel}</span>
+        </div>
+      )
     },
     {
       field: "progress",
@@ -4160,6 +4183,13 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   function openCreateScreen() {
     setCaseScreen("create");
     setLocalError("");
+    setCaseType("genel");
+    setFileTitle("");
+    setCaseNumber("");
+    setCourtName("");
+    setCity("");
+    setNotes("");
+    setDocuments({});
   }
 
   function openListScreen() {
@@ -4172,17 +4202,18 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     setSaving(true);
     setLocalError("");
     try {
-      const created = await postJson<CaseRecord>("/cases", {
+      const payload: CaseCreatePayload = {
         caseType,
-        clientName,
-        opponentName,
+        fileTitle,
+        caseNumber,
         courtName,
-        subject,
-        summary,
+        city,
+        notes,
         completedDocumentIds: Object.entries(documents)
           .filter(([, completed]) => completed)
           .map(([id]) => id)
-      });
+      };
+      const created = await postJson<CaseRecord>("/cases", payload);
       const caseList = await getJson<CaseRecord[]>("/cases");
       setSavedCases(caseList);
       const nextSelected = caseList.find((item) => item.id === created.id) ?? null;
@@ -4254,33 +4285,46 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         <section className="cases-grid">
           <form className="panel primary-panel case-form case-form-large" onSubmit={submitCase}>
             <PanelTitle icon={<FolderOpen size={20} />} title={t.addCase} />
+            <div className="case-template">
+              <strong>{t.uploadDocument}</strong>
+              <p>{t.saveNotice}</p>
+              <small>{t.caseUploadHint}</small>
+            </div>
+            <div className="upload-actions">
+              <button className="secondary-button" type="button" onClick={onGoToDocuments}>
+                <Upload size={17} />
+                {t.uploadDocument}
+              </button>
+            </div>
+            <div className="cases-form-grid">
+              <label className="field-label">
+                {t.fileTitle}
+                <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder={t.fileTitlePlaceholder} />
+              </label>
+              <label className="field-label">
+                {t.caseNumber}
+                <input value={caseNumber} onChange={(event) => setCaseNumber(event.target.value)} placeholder={t.caseNumberPlaceholder} />
+              </label>
+              <label className="field-label">
+                {t.caseType}
+                <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
+                  {Object.entries(caseTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                {t.court}
+                <input value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder={t.courtPlaceholder} />
+              </label>
+              <label className="field-label">
+                {t.city}
+                <input value={city} onChange={(event) => setCity(event.target.value)} placeholder={t.cityPlaceholder} />
+              </label>
+            </div>
             <label className="field-label">
-              {t.caseType}
-              <select value={caseType} onChange={(event) => setCaseType(event.target.value as CaseType)}>
-                {Object.entries(caseTypeLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              {t.client}
-              <input value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder={t.clientPlaceholder} />
-            </label>
-            <label className="field-label">
-              {t.opponent}
-              <input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder={t.opponentPlaceholder} />
-            </label>
-            <label className="field-label">
-              {t.court}
-              <input value={courtName} onChange={(event) => setCourtName(event.target.value)} />
-            </label>
-            <label className="field-label">
-              {t.subject}
-              <input value={subject} onChange={(event) => setSubject(event.target.value)} />
-            </label>
-            <label className="field-label">
-              {t.summary}
-              <textarea rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} />
+              {t.notes}
+              <textarea rows={5} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t.notesPlaceholder} />
             </label>
             <div className="case-template">
               <strong>{selectedTemplate.title}</strong>
@@ -4288,10 +4332,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               <small>{t.courtHint.replace("{court}", selectedTemplate.courtHint)}</small>
             </div>
             <div className="upload-actions">
-              <button className="secondary-button" type="button" onClick={onGoToDocuments}>
-                <Upload size={17} />
-                {t.uploadDocument}
-              </button>
               <button type="button" onClick={markAll}>
                 <CheckCircle2 size={17} />
                 {t.markAll}
@@ -4316,9 +4356,9 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               <div className="meter-fill" style={{ width: `${completion}%` }} />
             </div>
             <div className="case-stats">
-              <div><span>{t.client}</span><strong>{clientName || "-"}</strong></div>
-              <div><span>{t.opponent}</span><strong>{opponentName || "-"}</strong></div>
-              <div><span>{t.subject}</span><strong>{subject || "-"}</strong></div>
+              <div><span>{t.fileTitle}</span><strong>{fileTitle || "-"}</strong></div>
+              <div><span>{t.caseNumber}</span><strong>{caseNumber || "-"}</strong></div>
+              <div><span>{t.city}</span><strong>{city || "-"}</strong></div>
               <div><span>{t.court}</span><strong>{courtName || selectedTemplate.courtHint}</strong></div>
             </div>
             <div className="check-note">
@@ -4446,12 +4486,12 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <div className="meter-fill" style={{ width: `${selectedCase.progress}%` }} />
                 </div>
                 <div className="case-stats case-detail-stats">
-                  <div><span>{t.client}</span><strong>{selectedCase.clientName}</strong></div>
-                  <div><span>{t.opponent}</span><strong>{selectedCase.opponentName}</strong></div>
+                  <div><span>{t.fileTitle}</span><strong>{selectedCase.fileTitle}</strong></div>
+                  <div><span>{t.caseNumber}</span><strong>{selectedCase.caseNumber}</strong></div>
+                  <div><span>{t.city}</span><strong>{selectedCase.city}</strong></div>
                   <div><span>{t.court}</span><strong>{selectedCase.courtName}</strong></div>
-                  <div><span>{t.subject}</span><strong>{selectedCase.subject}</strong></div>
                 </div>
-                <p>{selectedCase.summary}</p>
+                <p>{selectedCase.notes}</p>
                 <div className="case-detail-documents">
                   {selectedCase.documents.map((document) => (
                     <label key={document.id} className={`check-item ${document.required ? "required" : ""}`}>
@@ -4584,6 +4624,8 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+
 
 
 

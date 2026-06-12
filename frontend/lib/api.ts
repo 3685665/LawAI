@@ -33,6 +33,10 @@ export type PetitionCaseContextPayload = {
   caseId?: string | null;
   caseType?: string | null;
   caseLabel?: string | null;
+  fileTitle?: string | null;
+  caseNumber?: string | null;
+  city?: string | null;
+  notes?: string | null;
   clientName?: string | null;
   opponentName?: string | null;
   courtName?: string | null;
@@ -78,17 +82,27 @@ export type CaseRecord = {
   id: string;
   caseType: string;
   caseLabel: string;
-  clientName: string;
-  opponentName: string;
+  fileTitle: string;
+  caseNumber: string;
   courtName: string;
-  subject: string;
-  summary: string;
+  city: string;
+  notes: string;
   requiredDocumentCount: number;
   completedRequiredDocumentCount: number;
   progress: number;
   documents: CaseDocument[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type CaseCreatePayload = {
+  caseType: string;
+  fileTitle: string;
+  caseNumber: string;
+  courtName: string;
+  city: string;
+  notes: string;
+  completedDocumentIds?: string[];
 };
 
 export type CaseTemplatesResponse = { templates: CaseTemplate[] };

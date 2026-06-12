@@ -54,7 +54,7 @@ public class CaseController {
   @PostMapping
   public CaseRecordResponse createCase(@Valid @RequestBody CaseCreateRequest request, Authentication authentication) {
     CaseRecordResponse response = caseService.createCase(request);
-    activityLogClient.logBackend(requireUser(authentication), "case-create", "Davalar", "Dava kaydi olusturuldu: " + response.subject(), "/api/cases");
+    activityLogClient.logBackend(requireUser(authentication), "case-create", "Davalar", "Dava kaydi olusturuldu: " + response.fileTitle(), "/api/cases");
     return response;
   }
 

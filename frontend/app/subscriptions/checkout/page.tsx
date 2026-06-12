@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
 const CHECKOUT_FORM_KEY = "lawai-checkout-form";
 
-export default function SubscriptionCheckoutPage() {
+function SubscriptionCheckoutContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [formContent, setFormContent] = useState("");
@@ -44,5 +44,23 @@ export default function SubscriptionCheckoutPage() {
         <Link className="secondary-button" href="/subscriptions">Planlara don</Link>
       </section>
     </main>
+  );
+}
+
+export default function SubscriptionCheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-shell">
+          <section className="panel subscription-checkout-panel">
+            <span className="eyebrow">Odeme</span>
+            <h1>iyzico ile guvenli odeme</h1>
+            <p>Odeme formu yukleniyor...</p>
+          </section>
+        </main>
+      }
+    >
+      <SubscriptionCheckoutContent />
+    </Suspense>
   );
 }

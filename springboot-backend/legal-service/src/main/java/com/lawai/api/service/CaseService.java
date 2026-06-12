@@ -139,7 +139,7 @@ public class CaseService {
   @Transactional
   public List<CaseRecordResponse> seedSamples() {
     List<CaseRecordSnapshot> existing = load();
-    boolean alreadySeeded = existing.stream().anyMatch(item -> item.clientName().startsWith("Ornek "));
+    boolean alreadySeeded = existing.stream().anyMatch(item -> safe(item.fileTitle()).startsWith("Ornek "));
     if (alreadySeeded) {
       return listCasesFromSnapshots(existing);
     }
@@ -148,30 +148,30 @@ public class CaseService {
     List<CaseRecordSnapshot> samples = new ArrayList<>(existing);
     samples.add(sampleCase(
         "genel",
-        "Ornek Ahmet Yilmaz",
-        "Ornek XYZ A.S.",
-        "Ankara 3. Asliye Hukuk Mahkemesi",
-        "Sözleşme bedelinin tahsili",
-        "Sözleşme uyarinca dogan alacagin tahsili ve ihtarname surecinin kontrolu.",
+        "Ornek Ahmet Yilmaz - Is alacagi dosyasi",
+        "2026/118",
+        "Ankara 3. Is Mahkemesi",
+        "Ankara",
+        "Is sozlesmesi, bordro ve arabuluculuk evraklarinin kontrolu.",
         List.of("genel-vekalet", "genel-kimlik", "genel-dilekce", "genel-delil", "genel-harc"),
         now.minusDays(3)
     ));
     samples.add(sampleCase(
         "is",
-        "Ornek Ayse Kaya",
-        "Ornek Isveren Ltd.",
+        "Ornek Ayse Kaya - Fesih ve alacaklar",
+        "2026/204",
         "Istanbul 8. Is Mahkemesi",
-        "Fesih ve alacaklar",
+        "Istanbul",
         "Is akdinin feshi, fazla mesai ve kullanilmayan izinlerin takibi.",
         List.of("is-vekalet", "is-hizmet", "is-fesih", "is-bordro"),
         now.minusDays(2)
     ));
     samples.add(sampleCase(
         "icra",
-        "Ornek Mehmet Demir",
-        "Ornek Borclu San. Ltd.",
+        "Ornek Mehmet Demir - Ilamli icra takibi",
+        "2026/77",
         "Bursa 1. Icra Mudurlugu",
-        "Ilamli icra takibi",
+        "Bursa",
         "Ilam ve hesap cetveli ile icra takibi baslatilmasi ve tebligat evrakinin kontrolu.",
         List.of("i-dayanak", "i-vekalet", "i-hesap", "i-tebligat", "i-adres"),
         now.minusDays(1)
@@ -193,11 +193,11 @@ public class CaseService {
     CaseRecordSnapshot snapshot = new CaseRecordSnapshot(
         UUID.randomUUID().toString(),
         template.caseType(),
-        request.clientName().trim(),
-        request.opponentName().trim(),
+        request.fileTitle().trim(),
+        request.caseNumber().trim(),
         request.courtName().trim(),
-        request.subject().trim(),
-        request.summary().trim(),
+        request.city().trim(),
+        request.notes().trim(),
         template.documents().stream()
             .map(document -> new CaseDocumentSnapshot(
                 document.id(),
@@ -285,11 +285,11 @@ public class CaseService {
         snapshot.id(),
         snapshot.caseType(),
         template == null ? snapshot.caseType() : template.label(),
-        snapshot.clientName(),
-        snapshot.opponentName(),
+        snapshot.fileTitle(),
+        snapshot.caseNumber(),
         snapshot.courtName(),
-        snapshot.subject(),
-        snapshot.summary(),
+        snapshot.city(),
+        snapshot.notes(),
         requiredDocumentCount,
         completedRequiredDocumentCount,
         progress,
@@ -323,11 +323,11 @@ public class CaseService {
 
   private CaseRecordSnapshot sampleCase(
       String caseType,
-      String clientName,
-      String opponentName,
+      String fileTitle,
+      String caseNumber,
       String courtName,
-      String subject,
-      String summary,
+      String city,
+      String notes,
       List<String> completedDocumentIds,
       OffsetDateTime updatedAt
   ) {
@@ -349,11 +349,11 @@ public class CaseService {
     return new CaseRecordSnapshot(
         UUID.randomUUID().toString(),
         template.caseType(),
-        clientName,
-        opponentName,
+        fileTitle,
+        caseNumber,
         courtName,
-        subject,
-        summary,
+        city,
+        notes,
         documents,
         updatedAt.minusHours(6),
         updatedAt
@@ -362,6 +362,10 @@ public class CaseService {
 
   private String normalize(String value) {
     return StringUtils.hasText(value) ? value.trim().toLowerCase() : "";
+  }
+
+  private String safe(String value) {
+    return value == null ? "" : value;
   }
 
   public record CaseTemplateDefinition(
@@ -387,21 +391,21 @@ public class CaseService {
   public record CaseRecordSnapshot(
       String id,
       String caseType,
-      String clientName,
-      String opponentName,
+      String fileTitle,
+      String caseNumber,
       String courtName,
-      String subject,
-      String summary,
+      String city,
+      String notes,
       List<CaseDocumentSnapshot> documents,
       OffsetDateTime createdAt,
       OffsetDateTime updatedAt
   ) {
     private CaseRecordSnapshot withDocuments(List<CaseDocumentSnapshot> documents) {
-      return new CaseRecordSnapshot(id, caseType, clientName, opponentName, courtName, subject, summary, documents, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, createdAt, updatedAt);
     }
 
     private CaseRecordSnapshot withUpdatedAt(OffsetDateTime updatedAt) {
-      return new CaseRecordSnapshot(id, caseType, clientName, opponentName, courtName, subject, summary, documents, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, createdAt, updatedAt);
     }
   }
 }

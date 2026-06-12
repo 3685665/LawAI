@@ -26,20 +26,20 @@ public class LegalCaseEntity {
   @Column(name = "case_type", nullable = false, length = 50)
   private String caseType;
 
-  @Column(name = "client_name", nullable = false)
-  private String clientName;
+  @Column(name = "file_title", nullable = false)
+  private String fileTitle;
 
-  @Column(name = "opponent_name", nullable = false)
-  private String opponentName;
+  @Column(name = "case_number", nullable = false)
+  private String caseNumber;
 
   @Column(name = "court_name", nullable = false)
   private String courtName;
 
   @Column(nullable = false)
-  private String subject;
+  private String city;
 
-  @Column(nullable = false, columnDefinition = "text")
-  private String summary;
+  @Column(columnDefinition = "text")
+  private String notes;
 
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
@@ -54,23 +54,23 @@ public class LegalCaseEntity {
   protected LegalCaseEntity() {
   }
 
-  public LegalCaseEntity(String id, String caseType, String clientName, String opponentName, String courtName,
-      String subject, String summary, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+  public LegalCaseEntity(String id, String caseType, String fileTitle, String caseNumber, String courtName,
+      String city, String notes, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     this.id = id;
     this.caseType = caseType;
-    this.clientName = clientName;
-    this.opponentName = opponentName;
+    this.fileTitle = fileTitle;
+    this.caseNumber = caseNumber;
     this.courtName = courtName;
-    this.subject = subject;
-    this.summary = summary;
+    this.city = city;
+    this.notes = notes;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
 
   public static LegalCaseEntity fromSnapshot(CaseRecordSnapshot snapshot) {
     LegalCaseEntity entity = new LegalCaseEntity(
-        snapshot.id(), snapshot.caseType(), snapshot.clientName(), snapshot.opponentName(),
-        snapshot.courtName(), snapshot.subject(), snapshot.summary(), snapshot.createdAt(), snapshot.updatedAt()
+        snapshot.id(), snapshot.caseType(), snapshot.fileTitle(), snapshot.caseNumber(),
+        snapshot.courtName(), snapshot.city(), snapshot.notes(), snapshot.createdAt(), snapshot.updatedAt()
     );
     if (snapshot.documents() != null) {
       for (var document : snapshot.documents()) {
@@ -85,7 +85,7 @@ public class LegalCaseEntity {
         .map(CaseDocumentEntity::toSnapshot)
         .toList();
     return new CaseRecordSnapshot(
-        id, caseType, clientName, opponentName, courtName, subject, summary, documentSnapshots, createdAt, updatedAt
+        id, caseType, fileTitle, caseNumber, courtName, city, notes, documentSnapshots, createdAt, updatedAt
     );
   }
 

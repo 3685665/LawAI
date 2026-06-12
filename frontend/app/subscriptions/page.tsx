@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, CreditCard, LoaderCircle, Lock, Scale } from "lucide-react";
@@ -14,6 +14,14 @@ type SubscriptionTab = "plans" | "mine";
 const CHECKOUT_FORM_KEY = "lawai-checkout-form";
 
 export default function SubscriptionsPage() {
+  return (
+    <Suspense fallback={<LoadingCard title="Abonelik" text="Yukleniyor..." />}>
+      <SubscriptionsPageContent />
+    </Suspense>
+  );
+}
+
+function SubscriptionsPageContent() {
   const searchParams = useSearchParams();
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
