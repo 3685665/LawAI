@@ -140,6 +140,13 @@ export type CaseCreatePayload = {
 
 export type CaseTemplatesResponse = { templates: CaseTemplate[] };
 export type CaseDocumentPatchResponse = { caseRecord: CaseRecord; cases: CaseRecord[] };
+export type CaseAiActionResponse = {
+  action: string;
+  title: string;
+  answer: string;
+  nextSteps: string[];
+  disclaimer?: string | null;
+};
 export type AuthUser = {
   id: string;
   name: string;

@@ -1,11 +1,14 @@
 package com.lawai.api;
 
+import com.lawai.api.dto.CaseAiActionRequest;
+import com.lawai.api.dto.CaseAiActionResponse;
 import com.lawai.api.dto.CaseCreateRequest;
 import com.lawai.api.dto.CaseDocumentPatchResponse;
 import com.lawai.api.dto.CaseDocumentUpdateRequest;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplatesResponse;
 import com.lawai.common.client.ActivityLogClient;
+import com.lawai.api.service.CaseAiActionService;
 import com.lawai.api.service.CaseService;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -27,10 +30,12 @@ import java.util.List;
 public class CaseController {
 
   private final CaseService caseService;
+  private final CaseAiActionService caseAiActionService;
   private final ActivityLogClient activityLogClient;
 
-  public CaseController(CaseService caseService, ActivityLogClient activityLogClient) {
+  public CaseController(CaseService caseService, CaseAiActionService caseAiActionService, ActivityLogClient activityLogClient) {
     this.caseService = caseService;
+    this.caseAiActionService = caseAiActionService;
     this.activityLogClient = activityLogClient;
   }
 
@@ -61,6 +66,17 @@ public class CaseController {
   @GetMapping("/{caseId}")
   public CaseRecordResponse getCase(@PathVariable String caseId) {
     return caseService.getCase(caseId);
+  }
+
+  @PostMapping("/{caseId}/ai-actions")
+  public CaseAiActionResponse runAiAction(
+      @PathVariable String caseId,
+      @Valid @RequestBody CaseAiActionRequest request,
+      Authentication authentication
+  ) {
+    CaseAiActionResponse response = caseAiActionService.run(caseId, request.action());
+    activityLogClient.logBackend(requireUser(authentication), "case-ai-action", "Davalar", response.title() + " AI islemi calistirildi.", "/api/cases/" + caseId + "/ai-actions");
+    return response;
   }
 
   @DeleteMapping("/{caseId}")

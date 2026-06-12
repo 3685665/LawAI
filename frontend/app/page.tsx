@@ -66,6 +66,7 @@ import {
   authRegister,
   authUpdateProfile,
   createActivityLog,
+  type CaseAiActionResponse,
   type CaseExpense,
   type CaseCreatePayload,
   type CaseNote,
@@ -285,6 +286,27 @@ type CaseExpenseDraft = CaseExpense & { draftId: string };
 type CaseNoteDraft = CaseNote & { draftId: string };
 type CasePartyForm = Omit<CaseParty, "id">;
 type CaseExpenseForm = Omit<CaseExpense, "id">;
+type CaseAiActionKey =
+  | "strategy"
+  | "hearing_statement"
+  | "risk"
+  | "evidence"
+  | "missing_documents"
+  | "client_summary"
+  | "precedent_match"
+  | "petition_suggestions"
+  | "hearing_notes"
+  | "case_score"
+  | "opponent_analysis"
+  | "appeal_review"
+  | "calendar";
+type CaseAiAction = {
+  key: CaseAiActionKey;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  tone: string;
+};
 type UploadResponse = {
   documentId?: number;
   filename: string;
@@ -351,6 +373,22 @@ const emptyCasePartyForm: CasePartyForm = {
   endDate: ""
 };
 const caseExpenseCategories = ["Diger", "Harc", "Tebligat", "Bilirkisi", "Ulasim", "Vekalet", "Fotokopi"];
+
+const caseAiActions: CaseAiAction[] = [
+  { key: "strategy", title: "Dava Stratejisi", description: "Güçlü iddialar, ispat planı ve usuli hamleler", icon: Scale, tone: "blue" },
+  { key: "hearing_statement", title: "Duruşma Beyanı", description: "Bir sonraki duruşma için kullanılabilir beyan taslağı", icon: Gavel, tone: "green" },
+  { key: "risk", title: "Risk Analizi", description: "Zayıf noktalar, usul riski ve karşı argümanlar", icon: ShieldAlert, tone: "amber" },
+  { key: "evidence", title: "Delil Listesi", description: "Delillerin hangi vakıayı desteklediğini çıkar", icon: FileSearch, tone: "violet" },
+  { key: "missing_documents", title: "Eksik Belge Kontrolü", description: "Checklist ve dava türüne göre eksikleri bul", icon: ClipboardList, tone: "cyan" },
+  { key: "client_summary", title: "Müvekkil Özeti", description: "Müvekkile gönderilecek anlaşılır durum notu", icon: MessageSquareMore, tone: "rose" },
+  { key: "precedent_match", title: "Emsal Eşleştirme", description: "Aranacak içtihat temaları ve sorgu önerileri", icon: ScrollText, tone: "amber" },
+  { key: "petition_suggestions", title: "Dilekçe Önerisi", description: "Yazılabilecek dilekçeler ve öncelik sırası", icon: FileText, tone: "green" },
+  { key: "hearing_notes", title: "Duruşma Notu", description: "Sorular, hatırlatıcılar ve dikkat başlıkları", icon: ClipboardList, tone: "cyan" },
+  { key: "case_score", title: "Dava Puanlama", description: "Güçlü, zayıf ve belirsiz yönleri puanla", icon: BarChart3, tone: "violet" },
+  { key: "opponent_analysis", title: "Karşı Taraf Analizi", description: "Muhtemel savunma ve hazırlık önerileri", icon: ShieldCheck, tone: "rose" },
+  { key: "appeal_review", title: "Kanun Yolu Değerlendirmesi", description: "İstinaf/temyiz kontrol başlıkları", icon: Gavel, tone: "blue" },
+  { key: "calendar", title: "Dava Takvimi", description: "Kronoloji, süreler ve yapılacaklar", icon: Clock3, tone: "cyan" }
+];
 
 function createEmptyCaseExpenseForm(): CaseExpenseForm {
   return {
@@ -4059,6 +4097,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
+  const [activeCaseAiAction, setActiveCaseAiAction] = useState<CaseAiActionKey | null>(null);
+  const [caseAiResult, setCaseAiResult] = useState<CaseAiActionResponse | null>(null);
   const [localError, setLocalError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingCases, setLoadingCases] = useState(true);
@@ -4193,6 +4233,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     try {
       const detail = await getJson<CaseRecord>(`/cases/${caseId}`);
       setSelectedCase(detail);
+      setCaseAiResult(null);
       setCaseScreen("detail");
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.open);
@@ -4220,6 +4261,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
   function openListScreen() {
     setCaseScreen("list");
+    setCaseAiResult(null);
     setLocalError("");
   }
 
@@ -4343,7 +4385,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       setSavedCases(caseList);
       const nextSelected = caseList.find((item) => item.id === created.id) ?? null;
       setSelectedCase(nextSelected);
-      setCaseScreen("list");
+      setCaseAiResult(null);
+      setCaseScreen("detail");
       setCaseType(created.caseType as CaseType);
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.save);
@@ -4363,6 +4406,21 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     }
   }
 
+  async function runCaseAiAction(action: CaseAiActionKey) {
+    if (!selectedCase) return;
+    setActiveCaseAiAction(action);
+    setCaseAiResult(null);
+    setLocalError("");
+    try {
+      const response = await postJson<CaseAiActionResponse>(`/cases/${selectedCase.id}/ai-actions`, { action });
+      setCaseAiResult(response);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "AI işlemi çalıştırılamadı.");
+    } finally {
+      setActiveCaseAiAction(null);
+    }
+  }
+
   async function deleteCase(caseId: string) {
     const confirmed = window.confirm(t.confirmDelete);
     if (!confirmed) return;
@@ -4372,6 +4430,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       setSavedCases(caseList);
       const nextSelected = caseList[0] ?? null;
       setSelectedCase(nextSelected);
+      setCaseAiResult(null);
       setCaseScreen("list");
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.delete);
@@ -4758,6 +4817,75 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <div><span>{t.court}</span><strong>{selectedCase.courtName}</strong></div>
                 </div>
                 <p>{selectedCase.notes}</p>
+                <section className="case-ai-workspace">
+                  <div className="case-ai-head">
+                    <div>
+                      <span className="case-ai-kicker"><Sparkles size={16} /> AI Dava Asistanı</span>
+                      <h3>Dosyadaki bilgilerle hızlı işlem üret</h3>
+                      <p>Strateji, risk, belge kontrolü ve müvekkil bilgilendirmesi gibi çıktılar seçili dava bağlamıyla hazırlanır.</p>
+                    </div>
+                    <div className="case-ai-status">
+                      <strong>{selectedCase.progress}%</strong>
+                      <span>dosya hazırlığı</span>
+                    </div>
+                  </div>
+                  <div className="case-ai-grid">
+                    {caseAiActions.map((action) => {
+                      const Icon = action.icon;
+                      const running = activeCaseAiAction === action.key;
+                      return (
+                        <button
+                          className={`case-ai-card tone-${action.tone}`}
+                          disabled={Boolean(activeCaseAiAction)}
+                          key={action.key}
+                          onClick={() => void runCaseAiAction(action.key)}
+                          type="button"
+                        >
+                          <span className="case-ai-card-icon">
+                            {running ? <LoaderCircle className="spin" size={20} /> : <Icon size={20} />}
+                          </span>
+                          <strong>{action.title}</strong>
+                          <small>{action.description}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className={`case-ai-output ${caseAiResult ? "ready" : ""}`}>
+                    {activeCaseAiAction ? (
+                      <div className="case-ai-loading">
+                        <LoaderCircle className="spin" size={20} />
+                        <span>AI dava dosyasını analiz ediyor...</span>
+                      </div>
+                    ) : caseAiResult ? (
+                      <>
+                        <div className="case-ai-output-head">
+                          <span><Bot size={18} /> {caseAiResult.title}</span>
+                          <button className="secondary-button compact" type="button" onClick={() => setCaseAiResult(null)}>
+                            <X size={16} />
+                            Kapat
+                          </button>
+                        </div>
+                        <pre>{caseAiResult.answer}</pre>
+                        {caseAiResult.nextSteps?.length ? (
+                          <div className="case-ai-next">
+                            <strong>Sonraki adımlar</strong>
+                            <ul>
+                              {caseAiResult.nextSteps.map((step, index) => (
+                                <li key={`${step}-${index}`}>{step}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                        {caseAiResult.disclaimer ? <small className="case-ai-disclaimer">{caseAiResult.disclaimer}</small> : null}
+                      </>
+                    ) : (
+                      <div className="case-ai-empty">
+                        <Bot size={22} />
+                        <span>Bir işlem seçildiğinde AI çıktısı burada görünecek.</span>
+                      </div>
+                    )}
+                  </div>
+                </section>
                 <div className="case-collection-stack compact">
                   <section className="case-collection-panel">
                     <div className="case-collection-head">
