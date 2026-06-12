@@ -34,8 +34,8 @@ public class CaseService {
       "genel", new CaseTemplateDefinition(
           "genel",
           "Genel hukuk",
-          "Genel hukuk dosyasi",
-          "Nobetci Asliye Hukuk Mahkemesi",
+          "",
+          "",
           List.of()
       ),
       "is", new CaseTemplateDefinition(
@@ -49,7 +49,7 @@ public class CaseService {
           "sozlesme",
           "Sozlesme / alacak",
           "Sozlesme / alacak dosyasi",
-          "Nobetci Asliye Hukuk Mahkemesi",
+          "",
           List.of()
       ),
       "icra", new CaseTemplateDefinition(

@@ -73,8 +73,6 @@ import {
   type CaseNote,
   type CaseParty,
   type CaseRecord,
-  type CaseTemplate,
-  type CaseTemplatesResponse,
   type AuthPasswordResetResponse,
   type AuthSessionResponse,
   type AuthUser,
@@ -274,13 +272,6 @@ const emptyAdminUserForm = (): AdminUserForm => ({
 type ThemeMode = "original" | "light" | "dark";
 type CaseType = "genel" | "is" | "sozlesme" | "icra" | "aile";
 type CaseScreen = "list" | "create" | "detail";
-type CaseDocument = {
-  id: string;
-  title: string;
-  detail: string;
-  required: boolean;
-  group: string;
-};
 type CasePartyDraft = CaseParty & { draftId: string };
 type CaseExpenseDraft = CaseExpense & { draftId: string };
 type CaseNoteDraft = CaseNote & { draftId: string };
@@ -338,29 +329,6 @@ const caseTypeLabels: Record<CaseType, string> = {
   aile: "Aile hukuku"
 };
 
-const caseTemplates: Record<CaseType, { title: string; courtHint: string }> = {
-  genel: {
-    title: "Genel hukuk dosyasi",
-    courtHint: "Nobetci Asliye Hukuk Mahkemesi"
-  },
-  is: {
-    title: "Is hukuku dosyasi",
-    courtHint: "Is Mahkemesi"
-  },
-  sozlesme: {
-    title: "Sozlesme / alacak dosyasi",
-    courtHint: "Nobetci Asliye Hukuk Mahkemesi"
-  },
-  icra: {
-    title: "Icra takibi dosyasi",
-    courtHint: "Icra Mudurlugu / Icra Hukuk Mahkemesi"
-  },
-  aile: {
-    title: "Aile hukuku dosyasi",
-    courtHint: "Aile Mahkemesi"
-  }
-};
-
 const casePartyRoles = ["Muvekkil", "Davaci", "Davali", "Borclu", "Alacakli", "Tanik", "Diger"];
 const emptyCasePartyForm: CasePartyForm = {
   name: "",
@@ -400,14 +368,6 @@ function createEmptyCaseExpenseForm(): CaseExpenseForm {
     paid: false
   };
 }
-
-const caseDocuments: Record<CaseType, CaseDocument[]> = {
-  genel: [],
-  is: [],
-  sozlesme: [],
-  icra: [],
-  aile: []
-};
 
 const feedbackTypeLabels: Record<FeedbackType, string> = {
   hata: "Hata bildirimi",
@@ -533,7 +493,7 @@ export default function Home() {
   const [precedentDetailOpen, setPrecedentDetailOpen] = useState(false);
   const [petition, setPetition] = useState({
     petitionType: "Alacak",
-    court: "Istanbul Nobetci Asliye Hukuk Mahkemesi",
+    court: "",
     parties: "Davaci: ...\nDavali: ...",
     facts: "Taraflar arasinda akdedilen sozlesme kapsaminda edimler yerine getirilmemis, ihtara ragmen borc odenmemistir.",
     demands: "Alacagin yasal faiziyle birlikte tahsiline karar verilmesini talep ederiz."
@@ -4045,7 +4005,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [expenseForm, setExpenseForm] = useState<CaseExpenseForm>(() => createEmptyCaseExpenseForm());
   const [caseNotes, setCaseNotes] = useState<CaseNoteDraft[]>([]);
-  const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [activeCaseAiAction, setActiveCaseAiAction] = useState<CaseAiActionKey | null>(null);
@@ -4054,17 +4013,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [saving, setSaving] = useState(false);
   const [loadingCases, setLoadingCases] = useState(true);
 
-  const selectedTemplate = useMemo(() => {
-    const fetched = templates.find((item) => item.caseType === caseType);
-    if (fetched) return fetched;
-    return {
-      caseType,
-      label: caseTypeLabels[caseType],
-      title: caseTemplates[caseType].title,
-      courtHint: caseTemplates[caseType].courtHint,
-      documents: caseDocuments[caseType].map((item) => ({ ...item, completed: false }))
-    } satisfies CaseTemplate;
-  }, [caseType, templates]);
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
   const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
     {
@@ -4146,12 +4094,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       setLoadingCases(true);
       setLocalError("");
       try {
-        const [templateResponse, caseList] = await Promise.all([
-          getJson<CaseTemplatesResponse>("/cases/templates"),
-          getJson<CaseRecord[]>("/cases")
-        ]);
+        const caseList = await getJson<CaseRecord[]>("/cases");
         if (cancelled) return;
-        setTemplates(templateResponse.templates);
         setSavedCases(caseList);
       } catch (error) {
         if (!cancelled) {
@@ -4168,12 +4112,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (caseScreen === "create") {
-      setCourtName(selectedTemplate.courtHint);
-    }
-  }, [caseScreen, selectedTemplate]);
 
   async function openCase(caseId: string) {
     setLocalError("");
@@ -4664,10 +4602,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <p className="case-collection-empty">{t.noCaseNotes}</p>
                 )}
               </section>
-            </div>
-            <div className="case-template">
-              <strong>{selectedTemplate.title}</strong>
-              <small>{t.courtHint.replace("{court}", selectedTemplate.courtHint)}</small>
             </div>
             {caseScreen === "detail" && selectedCase ? (
               <section className="case-ai-workspace">

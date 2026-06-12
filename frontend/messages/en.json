@@ -552,7 +552,6 @@
     "noteTitlePlaceholder": "Note title",
     "noteTextPlaceholder": "Note content",
     "removeItem": "Remove item",
-    "courtHint": "Court hint: {court}",
     "caseUploadHint": "Upload documents or connect the case to the document workflow.",
     "uploadDocument": "Document upload",
     "saveAndList": "Save and list",

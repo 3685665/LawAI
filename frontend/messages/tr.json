@@ -552,7 +552,6 @@
     "noteTitlePlaceholder": "Not basligi",
     "noteTextPlaceholder": "Not icerigi",
     "removeItem": "Kaydi kaldir",
-    "courtHint": "Mahkeme ipucu: {court}",
     "caseUploadHint": "Dokuman yukleyebilir veya mevcut dosyayi belge akisina baglayabilirsiniz.",
     "uploadDocument": "Belge yukleme",
     "saveAndList": "Kaydet ve listele",
