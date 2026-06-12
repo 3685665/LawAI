@@ -86,6 +86,9 @@ export type CaseExpense = {
   title: string;
   amount: number;
   description: string;
+  category?: string;
+  expenseDate?: string;
+  paid?: boolean;
 };
 
 export type CaseNote = {

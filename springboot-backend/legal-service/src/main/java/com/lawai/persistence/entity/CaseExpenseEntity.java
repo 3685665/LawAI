@@ -32,22 +32,36 @@ public class CaseExpenseEntity {
   @Column(columnDefinition = "text")
   private String description;
 
+  private String category;
+
+  @Column(name = "expense_date")
+  private String expenseDate;
+
+  private Boolean paid;
+
   protected CaseExpenseEntity() {
   }
 
-  public CaseExpenseEntity(String id, LegalCaseEntity legalCase, String title, BigDecimal amount, String description) {
+  public CaseExpenseEntity(String id, LegalCaseEntity legalCase, String title, BigDecimal amount, String description,
+      String category, String expenseDate, Boolean paid) {
     this.id = id;
     this.legalCase = legalCase;
     this.title = title;
     this.amount = amount;
     this.description = description;
+    this.category = category;
+    this.expenseDate = expenseDate;
+    this.paid = paid;
   }
 
   public static CaseExpenseEntity fromSnapshot(CaseExpenseSnapshot snapshot, LegalCaseEntity legalCase) {
-    return new CaseExpenseEntity(snapshot.id(), legalCase, snapshot.title(), snapshot.amount(), snapshot.description());
+    return new CaseExpenseEntity(
+        snapshot.id(), legalCase, snapshot.title(), snapshot.amount(), snapshot.description(),
+        snapshot.category(), snapshot.expenseDate(), snapshot.paid()
+    );
   }
 
   public CaseExpenseSnapshot toSnapshot() {
-    return new CaseExpenseSnapshot(id, title, amount, description);
+    return new CaseExpenseSnapshot(id, title, amount, description, category, expenseDate, paid);
   }
 }

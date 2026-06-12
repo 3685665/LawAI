@@ -6,6 +6,9 @@ public record CaseExpenseDto(
     String id,
     String title,
     BigDecimal amount,
-    String description
+    String description,
+    String category,
+    String expenseDate,
+    Boolean paid
 ) {
 }

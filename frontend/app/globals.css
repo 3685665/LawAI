@@ -5626,6 +5626,21 @@ body[data-theme="dark"] .petition-linked-precedents li {
   min-width: 88px;
 }
 
+.case-modal-check {
+  align-items: center;
+  color: var(--ink);
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+}
+
+.case-modal-check input {
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  width: 18px;
+}
+
 .icon-danger-button {
   align-items: center;
   background: transparent;

@@ -309,7 +309,15 @@ public class CaseService {
             ))
             .toList(),
         snapshot.expenses().stream()
-            .map(expense -> new CaseExpenseDto(expense.id(), expense.title(), expense.amount(), expense.description()))
+            .map(expense -> new CaseExpenseDto(
+                expense.id(),
+                expense.title(),
+                expense.amount(),
+                expense.description(),
+                expense.category(),
+                expense.expenseDate(),
+                expense.paid()
+            ))
             .toList(),
         snapshot.caseNotes().stream()
             .map(caseNote -> new CaseNoteDto(caseNote.id(), caseNote.title(), caseNote.text()))
@@ -349,7 +357,10 @@ public class CaseService {
             newId(),
             safe(expense.title()).trim(),
             expense.amount() == null ? BigDecimal.ZERO : expense.amount(),
-            safe(expense.description()).trim()
+            safe(expense.description()).trim(),
+            safe(expense.category()).trim(),
+            safe(expense.expenseDate()).trim(),
+            Boolean.TRUE.equals(expense.paid())
         ))
         .toList();
   }
@@ -504,7 +515,10 @@ public class CaseService {
       String id,
       String title,
       BigDecimal amount,
-      String description
+      String description,
+      String category,
+      String expenseDate,
+      Boolean paid
   ) {
   }
 

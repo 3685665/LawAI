@@ -284,6 +284,7 @@ type CasePartyDraft = CaseParty & { draftId: string };
 type CaseExpenseDraft = CaseExpense & { draftId: string };
 type CaseNoteDraft = CaseNote & { draftId: string };
 type CasePartyForm = Omit<CaseParty, "id">;
+type CaseExpenseForm = Omit<CaseExpense, "id">;
 type UploadResponse = {
   documentId?: number;
   filename: string;
@@ -349,6 +350,18 @@ const emptyCasePartyForm: CasePartyForm = {
   startDate: "",
   endDate: ""
 };
+const caseExpenseCategories = ["Diger", "Harc", "Tebligat", "Bilirkisi", "Ulasim", "Vekalet", "Fotokopi"];
+
+function createEmptyCaseExpenseForm(): CaseExpenseForm {
+  return {
+    title: "",
+    amount: 0,
+    description: "",
+    category: "Diger",
+    expenseDate: new Date().toISOString().slice(0, 10),
+    paid: false
+  };
+}
 
 const caseDocuments: Record<CaseType, CaseDocument[]> = {
   genel: [
@@ -4040,6 +4053,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [partyForm, setPartyForm] = useState<CasePartyForm>(emptyCasePartyForm);
   const [partyClientSearch, setPartyClientSearch] = useState("");
   const [expenses, setExpenses] = useState<CaseExpenseDraft[]>([]);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState<CaseExpenseForm>(() => createEmptyCaseExpenseForm());
   const [caseNotes, setCaseNotes] = useState<CaseNoteDraft[]>([]);
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
@@ -4198,6 +4213,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     setPartyClientSearch("");
     setPartyModalOpen(false);
     setExpenses([]);
+    setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseModalOpen(false);
     setCaseNotes([]);
   }
 
@@ -4243,14 +4260,33 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   }
 
   function addExpense() {
-    setExpenses((current) => [...current, { draftId: createCaseDraftId("expense"), title: "", amount: 0, description: "" }]);
+    setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseModalOpen(true);
   }
 
-  function updateExpense(draftId: string, field: keyof CaseExpense, value: string) {
-    setExpenses((current) => current.map((expense) => {
-      if (expense.draftId !== draftId) return expense;
-      return { ...expense, [field]: field === "amount" ? Number(value || 0) : value };
+  function updateExpenseForm(field: keyof CaseExpenseForm, value: string | boolean) {
+    setExpenseForm((current) => ({
+      ...current,
+      [field]: field === "amount" ? Number(value || 0) : value
     }));
+  }
+
+  function saveExpense() {
+    if (!expenseForm.title.trim()) return;
+    setExpenses((current) => [
+      ...current,
+      {
+        draftId: createCaseDraftId("expense"),
+        title: expenseForm.title.trim(),
+        amount: Number(expenseForm.amount || 0),
+        description: expenseForm.description?.trim() ?? "",
+        category: expenseForm.category?.trim() || "Diger",
+        expenseDate: expenseForm.expenseDate ?? "",
+        paid: Boolean(expenseForm.paid)
+      }
+    ]);
+    setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseModalOpen(false);
   }
 
   function removeExpense(draftId: string) {
@@ -4292,7 +4328,14 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
           startDate: party.startDate,
           endDate: party.endDate
         })),
-        expenses: expenses.map((expense) => ({ title: expense.title, amount: expense.amount, description: expense.description })),
+        expenses: expenses.map((expense) => ({
+          title: expense.title,
+          amount: expense.amount,
+          description: expense.description,
+          category: expense.category,
+          expenseDate: expense.expenseDate,
+          paid: expense.paid
+        })),
         caseNotes: caseNotes.map((caseNote) => ({ title: caseNote.title, text: caseNote.text }))
       };
       const created = await postJson<CaseRecord>("/cases", payload);
@@ -4362,7 +4405,7 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
       {partyModalOpen && (
         <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setPartyModalOpen(false)}>
-          <section className="case-party-modal" role="dialog" aria-modal="true" aria-labelledby="case-party-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={t.addParty} onMouseDown={(event) => event.stopPropagation()}>
             <div className="case-party-modal-head">
               <PanelTitle icon={<UsersRound size={20} />} title={t.addParty} />
               <button className="secondary-button compact icon-only" type="button" onClick={() => setPartyModalOpen(false)} aria-label={t.cancel}>
@@ -4407,6 +4450,53 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
             <div className="case-party-modal-actions">
               <button disabled={!partyForm.name.trim()} type="button" onClick={saveParty}>{t.add}</button>
               <button className="secondary-button" type="button" onClick={() => setPartyModalOpen(false)}>{t.cancel}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {expenseModalOpen && (
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setExpenseModalOpen(false)}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={t.addExpense} onMouseDown={(event) => event.stopPropagation()}>
+            <div className="case-party-modal-head">
+              <PanelTitle icon={<CreditCard size={20} />} title={t.addExpense} />
+              <button className="secondary-button compact icon-only" type="button" onClick={() => setExpenseModalOpen(false)} aria-label={t.cancel}>
+                <X size={17} />
+              </button>
+            </div>
+            <label className="field-label">
+              {t.expenseTitlePlaceholder}
+              <input value={expenseForm.title} onChange={(event) => updateExpenseForm("title", event.target.value)} placeholder={t.expenseTitlePlaceholder} />
+            </label>
+            <div className="case-party-modal-grid">
+              <label className="field-label">
+                {t.expenseAmountPlaceholder}
+                <input value={expenseForm.amount || ""} min="0" onChange={(event) => updateExpenseForm("amount", event.target.value)} placeholder={t.expenseAmountPlaceholder} type="number" />
+              </label>
+              <label className="field-label">
+                {t.expenseCategory}
+                <select value={expenseForm.category ?? "Diger"} onChange={(event) => updateExpenseForm("category", event.target.value)}>
+                  {caseExpenseCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="field-label">
+              {t.expenseDate}
+              <input value={expenseForm.expenseDate ?? ""} onChange={(event) => updateExpenseForm("expenseDate", event.target.value)} type="date" />
+            </label>
+            <label className="field-label">
+              {t.expenseDescriptionPlaceholder}
+              <textarea rows={3} value={expenseForm.description} onChange={(event) => updateExpenseForm("description", event.target.value)} placeholder={t.expenseDescriptionPlaceholder} />
+            </label>
+            <label className="case-modal-check">
+              <input checked={Boolean(expenseForm.paid)} onChange={(event) => updateExpenseForm("paid", event.target.checked)} type="checkbox" />
+              <span>{t.expensePaid}</span>
+            </label>
+            <div className="case-party-modal-actions">
+              <button disabled={!expenseForm.title.trim()} type="button" onClick={saveExpense}>{t.saveExpense}</button>
+              <button className="secondary-button" type="button" onClick={() => setExpenseModalOpen(false)}>{t.cancel}</button>
             </div>
           </section>
         </div>
@@ -4507,12 +4597,14 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   </button>
                 </div>
                 {expenses.length ? (
-                  <div className="case-collection-rows">
+                  <div className="case-saved-items">
                     {expenses.map((expense) => (
-                      <div className="case-collection-row" key={expense.draftId}>
-                        <input value={expense.title} onChange={(event) => updateExpense(expense.draftId, "title", event.target.value)} placeholder={t.expenseTitlePlaceholder} />
-                        <input value={expense.amount || ""} min="0" onChange={(event) => updateExpense(expense.draftId, "amount", event.target.value)} placeholder={t.expenseAmountPlaceholder} type="number" />
-                        <input value={expense.description} onChange={(event) => updateExpense(expense.draftId, "description", event.target.value)} placeholder={t.expenseDescriptionPlaceholder} />
+                      <div className="case-party-preview" key={expense.draftId}>
+                        <div>
+                          <strong>{expense.title}</strong>
+                          <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL · {expense.category || "Diger"}</span>
+                          <small>{[expense.expenseDate, expense.paid ? t.expensePaid : null].filter(Boolean).join(" / ") || "-"}</small>
+                        </div>
                         <button className="icon-danger-button" type="button" onClick={() => removeExpense(expense.draftId)} aria-label={t.removeItem}>
                           <Trash2 size={17} />
                         </button>
@@ -4699,7 +4791,8 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                         {selectedCase.expenses.map((expense) => (
                           <div className="case-saved-item" key={expense.id ?? `${expense.title}-${expense.amount}`}>
                             <strong>{expense.title || "-"}</strong>
-                            <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL</span>
+                            <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL · {expense.category || "Diger"}</span>
+                            <small>{[expense.expenseDate, expense.paid ? t.expensePaid : null].filter(Boolean).join(" / ") || "-"}</small>
                             <small>{expense.description || "-"}</small>
                           </div>
                         ))}
