@@ -1,0 +1,9 @@
+.git
+.idea
+.junie
+.ai
+**/target
+uploads
+*.log
+.env*
+application-local.yml
