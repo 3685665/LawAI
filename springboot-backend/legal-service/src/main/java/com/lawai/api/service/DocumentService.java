@@ -5,6 +5,7 @@ import com.lawai.api.dto.DocumentIngestResponse;
 import com.lawai.api.dto.KnowledgeDocumentRequest;
 import com.lawai.api.dto.KnowledgeIngestRequest;
 import com.lawai.api.dto.KnowledgeIngestResponse;
+import com.lawai.common.i18n.I18nMessages;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -33,10 +34,16 @@ public class DocumentService {
 
   private final int maxUploadMb;
   private final AiServiceClient aiServiceClient;
+  private final I18nMessages i18n;
 
-  public DocumentService(@Value("${app.max-upload-mb:25}") int maxUploadMb, AiServiceClient aiServiceClient) {
+  public DocumentService(
+      @Value("${app.max-upload-mb:25}") int maxUploadMb,
+      AiServiceClient aiServiceClient,
+      I18nMessages i18n
+  ) {
     this.maxUploadMb = maxUploadMb;
     this.aiServiceClient = aiServiceClient;
+    this.i18n = i18n;
   }
 
   public DocumentAnalysisResponse analyze(MultipartFile file) {
@@ -44,17 +51,17 @@ public class DocumentService {
     String contentType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
     byte[] content = readBytes(file);
     List<String> issues = validate(filename, content);
-    String summary = "Dosya yuklendi ancak inceleme oncesi kontrol edilmesi gereken noktalar var.";
+    String summary = i18n.get("document.review-warning");
 
     if (issues.isEmpty()) {
       try {
         String text = extractText(filename, content);
         summary = text.isEmpty()
-            ? "Dosya yuklendi ancak okunabilir metin cikarilamadi. Taranmis PDF olabilir."
-            : "Dosya kabul edildi. " + text.length() + " karakter metin cikarildi.";
+            ? i18n.get("document.no-readable-text")
+            : i18n.get("document.accepted", text.length());
       } catch (Exception exc) {
-        issues.add("Metin cikarimi basarisiz: " + exc.getMessage());
-        summary = "Dosya yuklendi ancak metin okunamadi.";
+        issues.add(i18n.get("document.extraction-failed", exc.getMessage()));
+        summary = i18n.get("document.unreadable");
       }
     }
 
@@ -72,7 +79,7 @@ public class DocumentService {
 
     String extractedText = extractText(filename, content);
     if (extractedText.length() < MIN_EXTRACTED_CHARACTERS) {
-      throw new IllegalArgumentException("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.");
+      throw new IllegalArgumentException(i18n.get("error.document-insufficient-text"));
     }
 
     List<String> chunks = splitIntoChunks(extractedText, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP);
@@ -87,7 +94,7 @@ public class DocumentService {
           null,
           null,
           null,
-          documentTopic + " (bolum " + (index + 1) + "/" + chunks.size() + ")",
+          i18n.get("document.chunk-topic", documentTopic, index + 1, chunks.size()),
           preview(chunk, 700),
           chunk
       ));
@@ -117,13 +124,13 @@ public class DocumentService {
     String extension = extensionOf(filename);
     long maxBytes = (long) maxUploadMb * 1024L * 1024L;
     if (content.length == 0) {
-      issues.add("Dosya bos gorunuyor.");
+      issues.add(i18n.get("error.document-empty"));
     }
     if (content.length > maxBytes) {
-      issues.add("Dosya " + maxUploadMb + " MB sinirini asiyor.");
+      issues.add(i18n.get("error.document-too-large", maxUploadMb));
     }
     if (!SUPPORTED_EXTENSIONS.contains(extension)) {
-      issues.add("Bu asamada PDF, Word ve metin dosyalari desteklenir.");
+      issues.add(i18n.get("error.document-unsupported"));
     }
     return issues;
   }
@@ -154,7 +161,7 @@ public class DocumentService {
         }
       }
     } catch (IOException exc) {
-      throw new IllegalStateException("Dokuman metni okunamadi: " + exc.getMessage(), exc);
+      throw new IllegalStateException(i18n.get("error.document-read-failed", exc.getMessage()), exc);
     }
     return "";
   }
@@ -181,12 +188,12 @@ public class DocumentService {
     try {
       return file.getBytes();
     } catch (IOException exc) {
-      throw new IllegalStateException("Dosya okunamadi: " + exc.getMessage(), exc);
+      throw new IllegalStateException(i18n.get("error.file-read-failed", exc.getMessage()), exc);
     }
   }
 
   private String safeFilename(MultipartFile file) {
-    return StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "yuklenen-dokuman";
+    return StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : i18n.get("document.uploaded-default");
   }
 
   private String extensionOf(String filename) {

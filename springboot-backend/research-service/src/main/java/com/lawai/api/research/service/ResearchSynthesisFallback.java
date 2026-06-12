@@ -2,6 +2,7 @@ package com.lawai.api.research.service;
 
 import com.lawai.api.research.ResearchSource;
 import com.lawai.api.research.dto.ResearchSourceResultDto;
+import com.lawai.common.i18n.I18nMessages;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -11,30 +12,36 @@ final class ResearchSynthesisFallback {
   private ResearchSynthesisFallback() {
   }
 
-  static String synthesize(String query, List<ResearchSourceResultDto> sourceResults) {
+  static String synthesize(String query, List<ResearchSourceResultDto> sourceResults, I18nMessages i18n) {
     String findingsSummary = sourceResults.stream()
-        .map(ResearchSynthesisFallback::formatSourceBlock)
+        .map(result -> formatSourceBlock(result, i18n))
         .collect(Collectors.joining("\n\n"));
 
     return """
-        ## Hukuki Arastirma Ozeti: %s
-
-        ### Arastirma Bulgulari
         %s
 
-        ### Not
-        AI servisi su anda yanit veremedi; yukaridaki bulgular otomatik olarak derlendi. Tam sentez icin Python AI servisini ve LLM saglayicisini kontrol edin.
-        """.formatted(query, findingsSummary);
+        %s
+        %s
+
+        %s
+        %s
+        """.formatted(
+            i18n.get("research.local-title", query),
+            i18n.get("research.findings-title"),
+            findingsSummary,
+            i18n.get("research.note-title"),
+            i18n.get("research.ai-fallback-note")
+        );
   }
 
-  private static String formatSourceBlock(ResearchSourceResultDto result) {
+  private static String formatSourceBlock(ResearchSourceResultDto result, I18nMessages i18n) {
     String title = switch (result.source()) {
-      case LEGISLATION -> "Mevzuat";
-      case CASE_LAW -> "Ictihat";
-      case WEB -> "Web";
+      case LEGISLATION -> i18n.get("research.source.legislation");
+      case CASE_LAW -> i18n.get("research.source.case-law");
+      case WEB -> i18n.get("research.source.web");
     };
     if (result.findings() == null || result.findings().isEmpty()) {
-      return "**" + title + "**\n- Sonuc bulunamadi.";
+      return "**" + title + "**\n" + i18n.get("research.no-results");
     }
     String items = result.findings().stream()
         .map(finding -> "- " + finding)

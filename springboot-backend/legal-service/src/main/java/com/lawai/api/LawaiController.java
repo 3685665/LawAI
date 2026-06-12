@@ -147,7 +147,7 @@ public class LawaiController {
       case "YARGITAY" -> yargitayPrecedentService.sync(request);
       case "DANISTAY" -> danistayPrecedentService.sync(request);
       case "ANAYASA" -> anayasaPrecedentService.sync(request);
-      default -> throw new IllegalArgumentException("Desteklenmeyen mahkeme: " + request.court());
+      default -> throw new IllegalArgumentException("error.unsupported-court");
     };
     activityLogClient.logBackend(
         requireUser(authentication),
@@ -218,7 +218,7 @@ public class LawaiController {
     if (principal instanceof AuthenticatedUser user) {
       return user;
     }
-    throw new BadCredentialsException("Oturum gerekli.");
+    throw new BadCredentialsException("error.session-required");
   }
 
   private String normalizeCourt(String court) {

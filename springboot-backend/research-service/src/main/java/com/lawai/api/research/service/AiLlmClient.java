@@ -4,6 +4,7 @@ import com.lawai.api.research.dto.LegalResearchSynthesizeRequest;
 import com.lawai.api.research.dto.LegalResearchSynthesizeResponse;
 import com.lawai.api.research.dto.ResearchSourceResultDto;
 import com.lawai.api.service.AiServiceClient;
+import com.lawai.common.i18n.I18nMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,9 +19,11 @@ public class AiLlmClient implements LlmClient {
   private static final Logger log = LoggerFactory.getLogger(AiLlmClient.class);
 
   private final AiServiceClient aiServiceClient;
+  private final I18nMessages i18n;
 
-  public AiLlmClient(AiServiceClient aiServiceClient) {
+  public AiLlmClient(AiServiceClient aiServiceClient, I18nMessages i18n) {
     this.aiServiceClient = aiServiceClient;
+    this.i18n = i18n;
   }
 
   @Override
@@ -37,7 +40,7 @@ public class AiLlmClient implements LlmClient {
       return response.answer();
     } catch (RuntimeException exception) {
       log.warn("AI sentez basarisiz, yerel ozet kullaniliyor: {}", exception.getMessage());
-      return ResearchSynthesisFallback.synthesize(query, sourceResults);
+      return ResearchSynthesisFallback.synthesize(query, sourceResults, i18n);
     }
   }
 }

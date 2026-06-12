@@ -2,7 +2,9 @@ package com.lawai.document.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lawai.common.i18n.I18nMessages;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -21,13 +23,16 @@ public class PdfTextExtractionClient {
 
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
+  private final I18nMessages i18n;
 
   public PdfTextExtractionClient(
       @Value("${app.ai-base-url:http://localhost:8000/api}") String aiBaseUrl,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      I18nMessages i18n
   ) {
     this.restClient = RestClient.builder().baseUrl(aiBaseUrl).build();
     this.objectMapper = objectMapper;
+    this.i18n = i18n;
   }
 
   public String extract(MultipartFile file, String filename) {
@@ -53,15 +58,16 @@ public class PdfTextExtractionClient {
       PdfTextExtractionResponse response = restClient.post()
           .uri("/documents/extract-text")
           .contentType(MediaType.MULTIPART_FORM_DATA)
+          .header(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage())
           .body(body)
           .retrieve()
           .body(PdfTextExtractionResponse.class);
       if (response == null || response.text() == null) {
-        throw new IllegalStateException("Metin cikarma servisi bos yanit dondu.");
+        throw new IllegalStateException(i18n.get("error.text-extraction-empty"));
       }
       return response.text().trim();
     } catch (Exception exception) {
-      throw new IllegalStateException("Metin cikarma servisi hata verdi: " + readableMessage(exception), exception);
+      throw new IllegalStateException(i18n.get("error.text-extraction-failed", readableMessage(exception)), exception);
     }
   }
 
@@ -79,11 +85,18 @@ public class PdfTextExtractionClient {
     };
   }
 
+  private String acceptLanguage() {
+    Locale locale = LocaleContextHolder.getLocale();
+    return "en".equalsIgnoreCase(locale.getLanguage())
+        ? "en-US,en;q=0.9,tr;q=0.8"
+        : "tr-TR,tr;q=0.9,en;q=0.8";
+  }
+
   private byte[] readBytes(MultipartFile file) {
     try {
       return file.getBytes();
     } catch (IOException exception) {
-      throw new IllegalStateException("Dosya okunamadi: " + exception.getMessage(), exception);
+      throw new IllegalStateException(i18n.get("error.file-read-failed", exception.getMessage()), exception);
     }
   }
 
