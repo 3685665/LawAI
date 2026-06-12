@@ -139,7 +139,6 @@ public class CaseAiActionService {
         "Mahkeme: " + fallback(legalCase.courtName()),
         "Şehir: " + fallback(legalCase.city()),
         "Notlar: " + fallback(legalCase.notes()),
-        "Tamamlanma: %" + legalCase.progress(),
         "Taraflar:\n" + formatParties(legalCase.parties()),
         "Masraflar:\n" + formatExpenses(legalCase.expenses()),
         "Dosya notları:\n" + formatNotes(legalCase.caseNotes()),

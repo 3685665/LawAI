@@ -90,7 +90,6 @@ import {
   listUsers,
   updateUser,
   Precedent,
-  seedSamples,
   summarizePrecedent,
   applyPrecedentToPetition,
   submitFeedback as postFeedback,
@@ -2226,12 +2225,6 @@ export default function Home() {
     });
   }
 
-  function seedAdminCases() {
-    run("admin-cases", async () => {
-      await seedSamples<CaseRecord[]>("/cases/seed-samples");
-    });
-  }
-
   function refreshAdminFeedback() {
     setFeedbackLoaded(false);
     void loadFeedbackHistory();
@@ -4116,12 +4109,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       )
     },
     {
-      field: "progress",
-      headerName: t.overallCompletion,
-      width: 170,
-      renderCell: (params) => <span className="case-progress-pill">{Number(params.value ?? 0)}%</span>
-    },
-    {
       field: "updatedAt",
       headerName: locale === "en" ? "Updated" : "Guncelleme",
       width: 180,
@@ -4425,20 +4412,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     }
   }
 
-  async function loadSampleCases() {
-    setLoadingCases(true);
-    setLocalError("");
-    try {
-      const caseList = await seedSamples<CaseRecord[]>("/cases/seed-samples");
-      setSavedCases(caseList);
-      setCaseScreen("list");
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : t.errors.samples);
-    } finally {
-      setLoadingCases(false);
-    }
-  }
-
   return (
     <section className="cases-shell">
       <div className="cases-toolbar panel">
@@ -4703,10 +4676,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                     <h3>Dosyadaki bilgilerle hizli islem uret</h3>
                     <p>Strateji, risk, belge kontrolu ve muvekkil bilgilendirmesi gibi ciktilar secili dava baglamiyla hazirlanir.</p>
                   </div>
-                  <div className="case-ai-status">
-                    <strong>{selectedCase.progress}%</strong>
-                    <span>dosya hazirligi</span>
-                  </div>
                 </div>
                 <div className="case-ai-grid">
                   {caseAiActions.map((action) => {
@@ -4785,10 +4754,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                 <p>{savedCases.length} {t.caseRecord}</p>
               </div>
               <div className="case-list-head-actions">
-                <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
-                  <CheckCircle2 size={17} />
-                  {t.loadSamples}
-                </button>
                 <button className="secondary-button" onClick={openCreateScreen} type="button">
                   <FolderOpen size={17} />
                   {t.addCase}
@@ -4829,10 +4794,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                 <h3>{t.emptyList}</h3>
                 <p>{t.emptyListDesc}</p>
                 <div className="upload-actions">
-                  <button className="secondary-button" onClick={() => void loadSampleCases()} type="button">
-                    <CheckCircle2 size={17} />
-                    {t.loadSamples}
-                  </button>
                   <button onClick={openCreateScreen} type="button">
                     <FolderOpen size={17} />
                     {t.addCase}

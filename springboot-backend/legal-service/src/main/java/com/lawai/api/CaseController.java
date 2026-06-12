@@ -50,13 +50,6 @@ public class CaseController {
     return caseService.listCases();
   }
 
-  @PostMapping("/seed-samples")
-  public List<CaseRecordResponse> seedSamples(Authentication authentication) {
-    List<CaseRecordResponse> response = caseService.seedSamples();
-    activityLogClient.logBackend(requireUser(authentication), "case-seed", "Davalar", "Ornek dava kayitlari yuklendi.", "/api/cases/seed-samples");
-    return response;
-  }
-
   @PostMapping
   public CaseRecordResponse createCase(@Valid @RequestBody CaseCreateRequest request, Authentication authentication) {
     CaseRecordResponse response = caseService.createCase(request);

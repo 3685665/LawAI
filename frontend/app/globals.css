@@ -5363,17 +5363,6 @@ body[data-theme="dark"] .petition-linked-precedents li {
   gap: 8px;
 }
 
-.case-progress-pill {
-  background: #e8f2ef;
-  border: 1px solid #cfe1da;
-  border-radius: 999px;
-  color: var(--accent-strong);
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 900;
-  padding: 6px 10px;
-}
-
 .case-detail-panel {
   display: grid;
   gap: 14px;

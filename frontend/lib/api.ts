@@ -146,7 +146,6 @@ export type CaseRecord = {
   notes: string;
   requiredDocumentCount: number;
   completedRequiredDocumentCount: number;
-  progress: number;
   documents: CaseDocument[];
   parties: CaseParty[];
   expenses: CaseExpense[];
@@ -511,17 +510,6 @@ export async function putJson<T>(path: string, payload: unknown): Promise<T> {
 export async function deleteJson<T>(path: string): Promise<T> {
   const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "DELETE",
-    credentials: "include"
-  });
-  if (!response.ok) {
-    throw new Error(await readError(response));
-  }
-  return response.json();
-}
-
-export async function seedSamples<T>(path: string): Promise<T> {
-  const response = await localizedFetch(`${API_BASE}${path}`, {
-    method: "POST",
     credentials: "include"
   });
   if (!response.ok) {

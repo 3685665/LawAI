@@ -14,7 +14,6 @@ public record CaseRecordResponse(
     String notes,
     int requiredDocumentCount,
     int completedRequiredDocumentCount,
-    int progress,
     List<CaseDocumentDto> documents,
     List<CasePartyDto> parties,
     List<CaseExpenseDto> expenses,

@@ -19,7 +19,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -93,50 +92,6 @@ public class CaseService {
   }
 
   @Transactional
-  public List<CaseRecordResponse> seedSamples() {
-    List<CaseRecordSnapshot> existing = load();
-    boolean alreadySeeded = existing.stream().anyMatch(item -> safe(item.fileTitle()).startsWith("Ornek "));
-    if (alreadySeeded) {
-      return listCasesFromSnapshots(existing);
-    }
-
-    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    List<CaseRecordSnapshot> samples = new ArrayList<>(existing);
-    samples.add(sampleCase(
-        "genel",
-        "Ornek Ahmet Yilmaz - Is alacagi dosyasi",
-        "2026/118",
-        "Ankara 3. Is Mahkemesi",
-        "Ankara",
-        "Is sozlesmesi, bordro ve arabuluculuk evraklarinin kontrolu.",
-        List.of("genel-vekalet", "genel-kimlik", "genel-dilekce", "genel-delil", "genel-harc"),
-        now.minusDays(3)
-    ));
-    samples.add(sampleCase(
-        "is",
-        "Ornek Ayse Kaya - Fesih ve alacaklar",
-        "2026/204",
-        "Istanbul 8. Is Mahkemesi",
-        "Istanbul",
-        "Is akdinin feshi, fazla mesai ve kullanilmayan izinlerin takibi.",
-        List.of("is-vekalet", "is-hizmet", "is-fesih", "is-bordro"),
-        now.minusDays(2)
-    ));
-    samples.add(sampleCase(
-        "icra",
-        "Ornek Mehmet Demir - Ilamli icra takibi",
-        "2026/77",
-        "Bursa 1. Icra Mudurlugu",
-        "Bursa",
-        "Ilam ve hesap cetveli ile icra takibi baslatilmasi ve tebligat evrakinin kontrolu.",
-        List.of("i-dayanak", "i-vekalet", "i-hesap", "i-tebligat", "i-adres"),
-        now.minusDays(1)
-    ));
-    save(samples);
-    return listCasesFromSnapshots(samples);
-  }
-
-  @Transactional
   public CaseRecordResponse createCase(CaseCreateRequest request) {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     CaseRecordSnapshot snapshot = buildSnapshot(
@@ -203,13 +158,6 @@ public class CaseService {
     return new CaseDocumentPatchResponse(toResponse(saved.toSnapshot()), listCases());
   }
 
-  private List<CaseRecordResponse> listCasesFromSnapshots(List<CaseRecordSnapshot> snapshots) {
-    return snapshots.stream()
-        .sorted(Comparator.comparing(CaseRecordSnapshot::updatedAt).reversed())
-        .map(this::toResponse)
-        .toList();
-  }
-
   private CaseTemplateDto toTemplateDto(CaseTemplateDefinition template) {
     return new CaseTemplateDto(
         template.caseType(),
@@ -235,7 +183,6 @@ public class CaseService {
         .toList();
     int requiredDocumentCount = (int) documents.stream().filter(CaseDocumentDto::required).count();
     int completedRequiredDocumentCount = (int) documents.stream().filter(document -> document.required() && document.completed()).count();
-    int progress = requiredDocumentCount == 0 ? 100 : Math.round((completedRequiredDocumentCount * 100.0f) / requiredDocumentCount);
     CaseTemplateDefinition template = TEMPLATES.get(snapshot.caseType());
     return new CaseRecordResponse(
         snapshot.id(),
@@ -248,7 +195,6 @@ public class CaseService {
         safe(snapshot.notes()),
         requiredDocumentCount,
         completedRequiredDocumentCount,
-        progress,
         documents,
         snapshot.parties().stream()
             .map(party -> new CasePartyDto(
@@ -385,52 +331,6 @@ public class CaseService {
     return legalCaseRepository.findAll().stream()
         .map(LegalCaseEntity::toSnapshot)
         .toList();
-  }
-
-  private void save(List<CaseRecordSnapshot> cases) {
-    legalCaseRepository.saveAll(cases.stream().map(LegalCaseEntity::fromSnapshot).toList());
-  }
-
-  private CaseRecordSnapshot sampleCase(
-      String caseType,
-      String fileTitle,
-      String caseNumber,
-      String courtName,
-      String city,
-      String notes,
-      List<String> completedDocumentIds,
-      OffsetDateTime updatedAt
-  ) {
-    CaseTemplateDefinition template = requireTemplate(caseType);
-    Map<String, Boolean> completed = completedDocumentIds.stream()
-        .filter(StringUtils::hasText)
-        .map(value -> value.trim())
-        .collect(Collectors.toMap(Function.identity(), ignored -> true, (left, right) -> left, LinkedHashMap::new));
-    List<CaseDocumentSnapshot> documents = template.documents().stream()
-        .map(document -> new CaseDocumentSnapshot(
-            document.id(),
-            document.title(),
-            document.detail(),
-            document.required(),
-            document.group(),
-            completed.getOrDefault(document.id(), false)
-        ))
-        .toList();
-    return new CaseRecordSnapshot(
-        UUID.randomUUID().toString(),
-        template.caseType(),
-        fileTitle,
-        caseNumber,
-        courtName,
-        city,
-        notes,
-        documents,
-        List.of(),
-        List.of(),
-        List.of(),
-        updatedAt.minusHours(6),
-        updatedAt
-    );
   }
 
   private String normalize(String value) {
