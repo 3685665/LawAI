@@ -7,6 +7,7 @@ import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.dto.FeedbackStatusUpdateRequest;
 import com.lawai.api.service.ActivityLogService;
 import com.lawai.api.service.FeedbackService;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -29,10 +30,12 @@ public class FeedbackController {
 
   private final FeedbackService feedbackService;
   private final ActivityLogService activityLogService;
+  private final I18nMessages i18n;
 
-  public FeedbackController(FeedbackService feedbackService, ActivityLogService activityLogService) {
+  public FeedbackController(FeedbackService feedbackService, ActivityLogService activityLogService, I18nMessages i18n) {
     this.feedbackService = feedbackService;
     this.activityLogService = activityLogService;
+    this.i18n = i18n;
   }
 
   @GetMapping
@@ -45,7 +48,7 @@ public class FeedbackController {
     AuthenticatedUser user = requireUser(authentication);
     FeedbackRecordDto feedback = feedbackService.submit(user, request);
     activityLogService.logBackend(user, "feedback-create", "Geri Bildirim", "Geri bildirim gonderildi: " + feedback.subject(), "/api/feedback");
-    return new FeedbackSubmissionResponse("Geri bildiriminiz alindi.", feedback);
+    return new FeedbackSubmissionResponse(i18n.get("feedback.received"), feedback);
   }
 
   @PatchMapping("/{id}/status")
@@ -85,6 +88,6 @@ public class FeedbackController {
     if (principal instanceof AuthenticatedUser user) {
       return user;
     }
-    throw new BadCredentialsException("Oturum gerekli.");
+    throw new BadCredentialsException("error.session-required");
   }
 }

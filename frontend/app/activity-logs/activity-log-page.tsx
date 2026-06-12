@@ -83,10 +83,9 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
   }, []);
 
   const t = getMessages(locale);
+  const logText = t.activityLogs;
   const isAdminMode = mode === "admin";
-  const title = isAdminMode
-    ? (locale === "en" ? "All user activity logs" : "Tum kullanici islem loglari")
-    : (locale === "en" ? "Your activity history" : "Kendi islem gecmisiniz");
+  const title = isAdminMode ? logText.allTitle : logText.myTitle;
 
   useEffect(() => {
     if (!authUser) return;
@@ -118,10 +117,10 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
   }, [locale, logs, search]);
 
   const baseColumns = useMemo<GridColDef<ActivityLogRow>[]>(() => [
-    { field: "createdAtLabel", headerName: locale === "en" ? "Date" : "Tarih", width: 185 },
+    { field: "createdAtLabel", headerName: logText.date, width: 185 },
     {
       field: "screen",
-      headerName: locale === "en" ? "Screen" : "Ekran",
+      headerName: logText.screen,
       minWidth: 170,
       flex: 0.8,
       renderCell: (params) => (
@@ -131,22 +130,22 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
         </div>
       )
     },
-    { field: "action", headerName: locale === "en" ? "Action" : "Islem", minWidth: 170, flex: 0.8 },
-    { field: "detail", headerName: locale === "en" ? "Detail" : "Detay", minWidth: 260, flex: 1.3 },
+    { field: "action", headerName: logText.action, minWidth: 170, flex: 0.8 },
+    { field: "detail", headerName: logText.detail, minWidth: 260, flex: 1.3 },
     {
       field: "sourceLabel",
-      headerName: locale === "en" ? "Layer" : "Seviye",
+      headerName: logText.layer,
       width: 130,
       renderCell: (params) => <span className="feedback-pill feedback-pill-status">{String(params.value ?? "-")}</span>
     }
-  ], [locale]);
+  ], [logText]);
 
   const columns = useMemo<GridColDef<ActivityLogRow>[]>(() => {
     if (!isAdminMode) return baseColumns;
     return [
       {
         field: "userLabel",
-        headerName: locale === "en" ? "User" : "Kullanici",
+        headerName: logText.user,
         minWidth: 230,
         flex: 1,
         renderCell: (params) => (
@@ -158,7 +157,7 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
       },
       ...baseColumns
     ];
-  }, [baseColumns, isAdminMode, locale]);
+  }, [baseColumns, isAdminMode, logText]);
 
   async function loadLogs() {
     setLoading(true);
@@ -167,7 +166,7 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
       const data = isAdminMode ? await listActivityLogs() : await listMyActivityLogs();
       setLogs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : (locale === "en" ? "Activity logs could not be loaded." : "Islem loglari yuklenemedi."));
+      setError(err instanceof Error ? err.message : logText.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -187,7 +186,7 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
         <section className="auth-card panel">
           <LoaderCircle className="spin" size={32} />
           <h1>{title}</h1>
-          <p>{locale === "en" ? "Checking session..." : "Oturum kontrol ediliyor..."}</p>
+          <p>{logText.checkingSession}</p>
         </section>
       </main>
     );
@@ -199,8 +198,8 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
         <section className="auth-card panel">
           <AlertCircle size={32} />
           <h1>{title}</h1>
-          <p>{locale === "en" ? "Session required." : "Oturum gerekli."}</p>
-          <Link className="secondary-button" href="/">{locale === "en" ? "Back to home" : "Ana ekrana don"}</Link>
+          <p>{logText.sessionRequired}</p>
+          <Link className="secondary-button" href="/">{logText.backHome}</Link>
         </section>
       </main>
     );
@@ -212,8 +211,8 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
         <section className="auth-card panel">
           <AlertCircle size={32} />
           <h1>{title}</h1>
-          <p>{locale === "en" ? "This page is only open to admin accounts." : "Bu sayfa yalnizca yonetici hesabina aciktir."}</p>
-          <Link className="secondary-button" href="/">{locale === "en" ? "Back to home" : "Ana ekrana don"}</Link>
+          <p>{logText.adminOnly}</p>
+          <Link className="secondary-button" href="/">{logText.backHome}</Link>
         </section>
       </main>
     );
@@ -237,17 +236,17 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
         <section className="settings-workspace">
           <header className="panel settings-header">
             <div>
-              <span className="eyebrow">{isAdminMode ? (locale === "en" ? "System audit" : "Sistem denetimi") : (locale === "en" ? "User Activity" : "Kullanici Islemleri")}</span>
+              <span className="eyebrow">{isAdminMode ? logText.systemAudit : logText.userActivity}</span>
               <h1>{title}</h1>
-              <p>{locale === "en" ? "Frontend screen views and backend operations are listed together." : "Frontend ekran gecisleri ve backend islemleri birlikte listelenir."}</p>
+              <p>{logText.description}</p>
             </div>
           </header>
 
           <section className="panel admin-card">
             <div className="section-head">
               <div>
-                <span className="section-label">{locale === "en" ? "Activity logs" : "Islem loglari"}</span>
-                <h3>{locale === "en" ? "Visible records" : "Gorunen kayitlar"}</h3>
+                <span className="section-label">{logText.sectionLabel}</span>
+                <h3>{logText.visibleRecords}</h3>
               </div>
               <span className="status">{rows.length}/{logs.length} {t.tools.records}</span>
             </div>
@@ -257,14 +256,12 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder={isAdminMode
-                    ? (locale === "en" ? "Search user, screen, action..." : "Kullanici, ekran, islem ara...")
-                    : (locale === "en" ? "Search screen, action, detail..." : "Ekran, islem, detay ara...")}
+                  placeholder={isAdminMode ? logText.adminSearchPlaceholder : logText.userSearchPlaceholder}
                 />
               </label>
               <button className="secondary-button" type="button" onClick={() => void loadLogs()} disabled={loading}>
                 {loading ? <LoaderCircle className="spin" size={17} /> : <BarChart3 size={17} />}
-                {locale === "en" ? "Refresh logs" : "Loglari yenile"}
+                {logText.refresh}
               </button>
             </div>
             {error ? <div className="error">{error}</div> : null}
@@ -288,4 +285,3 @@ export function ActivityLogPage({ mode }: { mode: Mode }) {
     </main>
   );
 }
-

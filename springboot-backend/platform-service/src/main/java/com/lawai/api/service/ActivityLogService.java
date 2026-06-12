@@ -2,6 +2,7 @@ package com.lawai.api.service;
 
 import com.lawai.api.dto.ActivityLogCreateRequest;
 import com.lawai.api.dto.ActivityLogDto;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import com.lawai.persistence.entity.ActivityLogEntity;
 import com.lawai.persistence.repository.ActivityLogRepository;
@@ -20,14 +21,16 @@ import java.util.UUID;
 public class ActivityLogService {
 
   private final ActivityLogRepository activityLogRepository;
+  private final I18nMessages i18n;
 
-  public ActivityLogService(ActivityLogRepository activityLogRepository) {
+  public ActivityLogService(ActivityLogRepository activityLogRepository, I18nMessages i18n) {
     this.activityLogRepository = activityLogRepository;
+    this.i18n = i18n;
   }
 
   @Transactional
   public ActivityLogDto logFrontend(AuthenticatedUser user, ActivityLogCreateRequest request) {
-    return log(user, "frontend", clean(request.action(), "screen-view"), clean(request.screen(), "Uygulama"), clean(request.detail(), ""), clean(request.path(), ""));
+    return log(user, "frontend", clean(request.action(), "screen-view"), clean(request.screen(), i18n.get("activity.default-screen")), clean(request.detail(), ""), clean(request.path(), ""));
   }
 
   @Transactional
@@ -46,7 +49,7 @@ public class ActivityLogService {
   @Transactional(readOnly = true)
   public List<ActivityLogDto> listAll(AuthenticatedUser user) {
     if (!user.isAdmin()) {
-      throw new AccessDeniedException("Yonetici yetkisi gerekli.");
+      throw new AccessDeniedException(i18n.get("error.admin-required"));
     }
     return activityLogRepository.findAll().stream()
         .sorted(Comparator.comparing(ActivityLogEntity::getCreatedAt).reversed())
@@ -64,7 +67,7 @@ public class ActivityLogService {
         user.role(),
         clean(source, "backend"),
         clean(action, "operation"),
-        clean(screen, "Uygulama"),
+        clean(screen, i18n.get("activity.default-screen")),
         truncate(clean(detail, ""), 500),
         truncate(clean(path, ""), 250),
         OffsetDateTime.now(ZoneOffset.UTC)

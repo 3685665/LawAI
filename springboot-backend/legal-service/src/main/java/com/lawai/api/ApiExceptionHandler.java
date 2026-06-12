@@ -36,7 +36,7 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<Map<String, String>> forbidden(AccessDeniedException exception) {
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", i18n.get("error.access-denied")));
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("detail", i18n.detail(exception.getMessage())));
   }
 
   @ExceptionHandler({RestClientException.class, IllegalStateException.class})

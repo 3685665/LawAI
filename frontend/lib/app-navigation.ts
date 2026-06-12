@@ -71,12 +71,12 @@ export function buildRouteNavGroups(locale: Locale, isAdmin: boolean): AppNavGro
     { id: "document", label: t.tabs.document, icon: FileUp, href: "/" },
     {
       id: "account",
-      label: locale === "en" ? "Account" : "Hesap",
+      label: t.navigation.account,
       icon: UserRound,
       children: [
         { id: "profile", label: t.tabs.profile, icon: UserRound, href: "/" },
-        { id: "activity", label: locale === "en" ? "User Activity" : "Kullanici Islemleri", icon: ClipboardList, href: "/activity-logs" },
-        { id: "subscriptions", label: locale === "en" ? "Subscriptions" : "Abonelik", icon: CreditCard, href: "/subscriptions" },
+        { id: "activity", label: t.navigation.activity, icon: ClipboardList, href: "/activity-logs" },
+        { id: "subscriptions", label: t.navigation.subscriptions, icon: CreditCard, href: "/subscriptions" },
         { id: "feedback", label: t.tabs.feedback, icon: MessageSquareMore, href: "/" },
         { id: "settings-view", label: t.settings.sections.view, icon: Palette, href: "/" },
         { id: "settings-account", label: t.settings.sections.account, icon: KeyRound, href: "/" }
@@ -91,12 +91,12 @@ export function buildRouteNavGroups(locale: Locale, isAdmin: boolean): AppNavGro
       icon: ShieldAlert,
       children: [
         { id: "admin-feedback", label: t.adminFeedback.title, icon: MessageSquareMore, href: "/feedback-management" },
-        { id: "admin-subscriptions", label: locale === "en" ? "Subscription Plans" : "Abonelik Planlari", icon: CreditCard, href: "/admin/subscriptions" },
-        { id: "admin-user-subscriptions", label: locale === "en" ? "User Subscriptions" : "Kullanici Abonelikleri", icon: CreditCard, href: "/admin/user-subscriptions" },
-        { id: "admin-users", label: locale === "en" ? "User Management" : "Kullanici Yonetimi", icon: UsersRound, href: "/" },
-        { id: "admin-batch-documents", label: locale === "en" ? "Batch Document Jobs" : "Toplu Belge Isleme", icon: FolderOpen, href: "/" },
-        { id: "admin-precedent-sync", label: locale === "en" ? "Court Decision Sync" : "Mahkeme Karari Senkronu", icon: Gavel, href: "/" },
-        { id: "admin-logs", label: locale === "en" ? "Activity Logs" : "Islem Loglari", icon: ClipboardList, href: "/admin/activity-logs" }
+        { id: "admin-subscriptions", label: t.navigation.subscriptionPlans, icon: CreditCard, href: "/admin/subscriptions" },
+        { id: "admin-user-subscriptions", label: t.navigation.userSubscriptions, icon: CreditCard, href: "/admin/user-subscriptions" },
+        { id: "admin-users", label: t.navigation.userManagement, icon: UsersRound, href: "/" },
+        { id: "admin-batch-documents", label: t.navigation.batchDocumentJobs, icon: FolderOpen, href: "/" },
+        { id: "admin-precedent-sync", label: t.navigation.courtDecisionSync, icon: Gavel, href: "/" },
+        { id: "admin-logs", label: t.navigation.activityLogs, icon: ClipboardList, href: "/admin/activity-logs" }
       ]
     });
   }

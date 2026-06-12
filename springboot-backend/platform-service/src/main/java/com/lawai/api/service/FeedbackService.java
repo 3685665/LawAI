@@ -5,6 +5,7 @@ import com.lawai.api.dto.FeedbackRecordDto;
 import com.lawai.api.dto.FeedbackStatusUpdateRequest;
 import com.lawai.api.dto.FeedbackUpdateRequest;
 import com.lawai.api.model.FeedbackRecord;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import com.lawai.persistence.entity.FeedbackEntity;
 import com.lawai.persistence.repository.FeedbackRepository;
@@ -24,24 +25,26 @@ import java.util.UUID;
 public class FeedbackService {
 
   private final FeedbackRepository feedbackRepository;
+  private final I18nMessages i18n;
 
-  public FeedbackService(FeedbackRepository feedbackRepository) {
+  public FeedbackService(FeedbackRepository feedbackRepository, I18nMessages i18n) {
     this.feedbackRepository = feedbackRepository;
+    this.i18n = i18n;
   }
 
   @Transactional
   public FeedbackRecordDto submit(AuthenticatedUser user, FeedbackCreateRequest request) {
     String type = normalize(request.type());
     if (!StringUtils.hasText(type)) {
-      throw new IllegalArgumentException("Geri bildirim tipi gerekli.");
+      throw new IllegalArgumentException("feedback.type-required");
     }
     String subject = request.subject().trim();
     String message = request.message().trim();
     if (!StringUtils.hasText(subject)) {
-      throw new IllegalArgumentException("Baslik gerekli.");
+      throw new IllegalArgumentException("feedback.subject-required");
     }
     if (!StringUtils.hasText(message)) {
-      throw new IllegalArgumentException("Mesaj gerekli.");
+      throw new IllegalArgumentException("feedback.message-required");
     }
 
     FeedbackEntity entity = FeedbackEntity.fromRecord(new FeedbackRecord(
@@ -81,14 +84,14 @@ public class FeedbackService {
   @Transactional
   public FeedbackRecordDto updateStatus(AuthenticatedUser user, String feedbackId, FeedbackStatusUpdateRequest request) {
     if (!user.isAdmin()) {
-      throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
+      throw new AccessDeniedException(i18n.get("error.admin-required"));
     }
     String status = normalizeStatus(request.status());
     if (!StringUtils.hasText(status)) {
-      throw new IllegalArgumentException("Durum gerekli.");
+      throw new IllegalArgumentException("feedback.status-required");
     }
     FeedbackEntity entity = feedbackRepository.findById(feedbackId)
-        .orElseThrow(() -> new IllegalArgumentException("Geri bildirim bulunamadi."));
+        .orElseThrow(() -> new IllegalArgumentException("feedback.not-found"));
     entity.setStatus(status);
     return toDto(feedbackRepository.save(entity).toRecord());
   }
@@ -96,27 +99,27 @@ public class FeedbackService {
   @Transactional
   public FeedbackRecordDto update(AuthenticatedUser user, String feedbackId, FeedbackUpdateRequest request) {
     if (!user.isAdmin()) {
-      throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
+      throw new AccessDeniedException(i18n.get("error.admin-required"));
     }
     String type = normalize(request.type());
     String subject = request.subject().trim();
     String message = request.message().trim();
     String status = normalizeStatus(request.status());
     if (!StringUtils.hasText(type)) {
-      throw new IllegalArgumentException("Geri bildirim tipi gerekli.");
+      throw new IllegalArgumentException("feedback.type-required");
     }
     if (!StringUtils.hasText(subject)) {
-      throw new IllegalArgumentException("Baslik gerekli.");
+      throw new IllegalArgumentException("feedback.subject-required");
     }
     if (!StringUtils.hasText(message)) {
-      throw new IllegalArgumentException("Mesaj gerekli.");
+      throw new IllegalArgumentException("feedback.message-required");
     }
     if (!StringUtils.hasText(status)) {
-      throw new IllegalArgumentException("Durum gerekli.");
+      throw new IllegalArgumentException("feedback.status-required");
     }
 
     FeedbackEntity entity = feedbackRepository.findById(feedbackId)
-        .orElseThrow(() -> new IllegalArgumentException("Geri bildirim bulunamadi."));
+        .orElseThrow(() -> new IllegalArgumentException("feedback.not-found"));
     entity.update(type, subject, message, status);
     return toDto(feedbackRepository.save(entity).toRecord());
   }
@@ -124,10 +127,10 @@ public class FeedbackService {
   @Transactional
   public void delete(AuthenticatedUser user, String feedbackId) {
     if (!user.isAdmin()) {
-      throw new AccessDeniedException("Yalnizca yonetici işlem yapabilir.");
+      throw new AccessDeniedException(i18n.get("error.admin-required"));
     }
     if (!feedbackRepository.existsById(feedbackId)) {
-      throw new IllegalArgumentException("Geri bildirim bulunamadi.");
+      throw new IllegalArgumentException("feedback.not-found");
     }
     feedbackRepository.deleteById(feedbackId);
   }

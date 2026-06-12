@@ -2,6 +2,7 @@ package com.lawai.api.subscription;
 
 import com.lawai.api.subscription.dto.BillingCheckoutRequest;
 import com.lawai.api.subscription.dto.BillingCheckoutResponse;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -26,9 +27,11 @@ import java.util.Map;
 public class BillingController {
 
   private final IyzicoBillingService iyzicoBillingService;
+  private final I18nMessages i18n;
 
-  public BillingController(IyzicoBillingService iyzicoBillingService) {
+  public BillingController(IyzicoBillingService iyzicoBillingService, I18nMessages i18n) {
     this.iyzicoBillingService = iyzicoBillingService;
+    this.i18n = i18n;
   }
 
   @PostMapping("/checkout")
@@ -60,7 +63,7 @@ public class BillingController {
       iyzicoBillingService.completeCallback(token);
       response.sendRedirect(iyzicoBillingService.successRedirectUrl());
     } catch (Exception exception) {
-      String message = URLEncoder.encode(exception.getMessage() == null ? "Odeme tamamlanamadi." : exception.getMessage(), StandardCharsets.UTF_8);
+      String message = URLEncoder.encode(exception.getMessage() == null ? i18n.get("billing.payment-not-completed") : exception.getMessage(), StandardCharsets.UTF_8);
       response.sendRedirect(iyzicoBillingService.cancelRedirectUrl() + "&error=" + message);
     }
   }
@@ -70,6 +73,6 @@ public class BillingController {
     if (principal instanceof AuthenticatedUser user) {
       return user;
     }
-    throw new BadCredentialsException("Oturum gerekli.");
+    throw new BadCredentialsException("error.session-required");
   }
 }

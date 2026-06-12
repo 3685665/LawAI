@@ -1,4 +1,4 @@
-package com.lawai.auth;
+package com.lawai.config;
 
 import com.lawai.common.i18n.I18nMessages;
 import org.springframework.http.HttpStatus;

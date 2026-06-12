@@ -8,6 +8,7 @@ import com.lawai.api.subscription.model.BillingEventRecord;
 import com.lawai.api.subscription.model.SubscriptionPlanRecord;
 import com.lawai.api.subscription.model.SubscriptionStorePayload;
 import com.lawai.api.subscription.model.UserSubscriptionRecord;
+import com.lawai.common.i18n.I18nMessages;
 import com.lawai.common.model.AuthenticatedUser;
 import com.lawai.persistence.entity.BillingEventEntity;
 import com.lawai.persistence.entity.SubscriptionPlanEntity;
@@ -36,17 +37,20 @@ public class SubscriptionPlanService {
   private final UserSubscriptionRepository userSubscriptionRepository;
   private final BillingEventRepository billingEventRepository;
   private final IyzicoCatalogService iyzicoCatalogService;
+  private final I18nMessages i18n;
 
   public SubscriptionPlanService(
       SubscriptionPlanRepository subscriptionPlanRepository,
       UserSubscriptionRepository userSubscriptionRepository,
       BillingEventRepository billingEventRepository,
-      IyzicoCatalogService iyzicoCatalogService
+      IyzicoCatalogService iyzicoCatalogService,
+      I18nMessages i18n
   ) {
     this.subscriptionPlanRepository = subscriptionPlanRepository;
     this.userSubscriptionRepository = userSubscriptionRepository;
     this.billingEventRepository = billingEventRepository;
     this.iyzicoCatalogService = iyzicoCatalogService;
+    this.i18n = i18n;
   }
 
   public List<SubscriptionPlanDto> listActive() {
@@ -87,7 +91,7 @@ public class SubscriptionPlanService {
       }
     }
     if (!updated) {
-      throw new IllegalArgumentException("Abonelik plani bulunamadi.");
+      throw new IllegalArgumentException("subscription.plan-not-found");
     }
     List<UserSubscriptionRecord> subscriptions = store.userSubscriptions().stream()
         .map(item -> item.planId().equals(id)
@@ -101,7 +105,7 @@ public class SubscriptionPlanService {
   public void delete(AuthenticatedUser user, String id) {
     requireAdmin(user);
     if (!subscriptionPlanRepository.existsById(id)) {
-      throw new IllegalArgumentException("Abonelik plani bulunamadi.");
+      throw new IllegalArgumentException("subscription.plan-not-found");
     }
     subscriptionPlanRepository.deleteById(id);
   }
@@ -133,7 +137,7 @@ public class SubscriptionPlanService {
       }
     }
     if (result == null) {
-      throw new IllegalArgumentException("Iptal edilebilir abonelik bulunamadi.");
+      throw new IllegalArgumentException("subscription.cancellable-not-found");
     }
     saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
     return toDto(result);
@@ -142,7 +146,7 @@ public class SubscriptionPlanService {
   public UserSubscriptionRecord requireCancellableSubscription(AuthenticatedUser user) {
     UserSubscriptionRecord record = currentSubscriptionFor(user);
     if (record == null || !isAccessibleStatus(record.status())) {
-      throw new IllegalArgumentException("Iptal edilebilir abonelik bulunamadi.");
+      throw new IllegalArgumentException("subscription.cancellable-not-found");
     }
     return record;
   }
@@ -190,7 +194,7 @@ public class SubscriptionPlanService {
       }
     }
     if (result == null) {
-      throw new IllegalArgumentException("Kullanici aboneligi bulunamadi.");
+      throw new IllegalArgumentException("subscription.user-not-found");
     }
     saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
     return toDto(result);
@@ -200,7 +204,7 @@ public class SubscriptionPlanService {
     return loadStore().plans().stream()
         .filter(item -> item.id().equals(planId) && item.active())
         .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Aktif abonelik plani bulunamadi."));
+        .orElseThrow(() -> new IllegalArgumentException("subscription.active-plan-not-found"));
   }
 
   public String normalizeBillingCyclePublic(String billingCycle) {
@@ -237,16 +241,10 @@ public class SubscriptionPlanService {
     String normalizedCycle = normalizeBillingCycle(billingCycle);
     String planRef = "yearly".equals(normalizedCycle) ? clean(plan.iyzicoYearlyPlanRef()) : clean(plan.iyzicoMonthlyPlanRef());
     if (!StringUtils.hasText(planRef)) {
-      throw new IllegalArgumentException(
-          "Bu plan icin iyzico odeme plani referansi ayarlanmadi. "
-              + "Iyzico merchant panelinde urun ve odeme plani olusturup admin > Abonelikler ekranindaki referans alanlarina UUID kodlarini girin."
-      );
+      throw new IllegalArgumentException("subscription.iyzico-plan-ref-missing");
     }
     if (!iyzicoCatalogService.isValidReference(planRef)) {
-      throw new IllegalArgumentException(
-          "Bu plan icin gecersiz iyzico odeme plani referansi ayarli. "
-              + "Iyzico panelinden alinan UUID formatindaki plan referansini admin abonelik sayfasina girin."
-      );
+      throw new IllegalArgumentException("subscription.iyzico-plan-ref-invalid");
     }
     return planRef;
   }
@@ -344,7 +342,7 @@ public class SubscriptionPlanService {
       }
     }
     if (result == null) {
-      throw new IllegalArgumentException("Bekleyen abonelik kaydi bulunamadi.");
+      throw new IllegalArgumentException("subscription.pending-not-found");
     }
     saveStore(new SubscriptionStorePayload(store.plans(), subscriptions, store.billingEvents()));
     return toDto(result);
@@ -399,14 +397,14 @@ public class SubscriptionPlanService {
   }
 
   private SubscriptionPlanRecord fromRequest(String id, SubscriptionPlanRequest request, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
-    String name = cleanRequired(request.name(), "Plan adi gerekli.");
+    String name = cleanRequired(request.name(), "subscription.plan-name-required");
     String slug = StringUtils.hasText(request.slug()) ? slugify(request.slug()) : slugify(name);
     if (!StringUtils.hasText(slug)) {
       slug = id;
     }
     List<String> features = cleanList(request.features());
     if (features.isEmpty()) {
-      throw new IllegalArgumentException("En az bir ozellik girilmeli.");
+      throw new IllegalArgumentException("subscription.feature-required");
     }
     return new SubscriptionPlanRecord(
         id,
@@ -619,7 +617,7 @@ public class SubscriptionPlanService {
     if ("monthly".equals(cleaned) || "yearly".equals(cleaned)) {
       return cleaned;
     }
-    throw new IllegalArgumentException("Odeme donemi monthly veya yearly olmali.");
+    throw new IllegalArgumentException("subscription.billing-cycle-invalid");
   }
 
   private String normalizeStatus(String value) {
@@ -627,7 +625,7 @@ public class SubscriptionPlanService {
     if ("PENDING_PAYMENT".equals(cleaned) || "ACTIVE".equals(cleaned) || "PAUSED".equals(cleaned) || "PAST_DUE".equals(cleaned) || "CANCELLED".equals(cleaned) || "EXPIRED".equals(cleaned)) {
       return cleaned;
     }
-    throw new IllegalArgumentException("Abonelik durumu gecersiz.");
+    throw new IllegalArgumentException("subscription.status-invalid");
   }
 
   private String cleanOrExisting(String value, String fallback) {
@@ -636,7 +634,7 @@ public class SubscriptionPlanService {
 
   private void requireAdmin(AuthenticatedUser user) {
     if (user == null || !user.isAdmin()) {
-      throw new AccessDeniedException("Yalnizca yonetici islem yapabilir.");
+      throw new AccessDeniedException(i18n.get("error.admin-required"));
     }
   }
 

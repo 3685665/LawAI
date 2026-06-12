@@ -109,6 +109,6 @@ public class SubscriptionPlanController {
     if (principal instanceof AuthenticatedUser user) {
       return user;
     }
-    throw new BadCredentialsException("Oturum gerekli.");
+    throw new BadCredentialsException("error.session-required");
   }
 }

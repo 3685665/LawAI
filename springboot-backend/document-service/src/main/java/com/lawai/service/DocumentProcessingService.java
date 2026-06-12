@@ -3,6 +3,7 @@ package com.lawai.document.service;
 import com.lawai.document.dto.DocumentSearchResponse;
 import com.lawai.document.dto.DocumentSearchResult;
 import com.lawai.document.dto.DocumentUploadResponse;
+import com.lawai.common.i18n.I18nMessages;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,19 +27,22 @@ public class DocumentProcessingService {
   private final DocumentEmbeddingService embeddingService;
   private final DocumentRepository documentRepository;
   private final OpenSearchDocumentClient openSearchClient;
+  private final I18nMessages i18n;
 
   public DocumentProcessingService(
       DocumentProcessingProperties properties,
       PdfTextExtractionClient pdfTextExtractionClient,
       DocumentEmbeddingService embeddingService,
       DocumentRepository documentRepository,
-      OpenSearchDocumentClient openSearchClient
+      OpenSearchDocumentClient openSearchClient,
+      I18nMessages i18n
   ) {
     this.properties = properties;
     this.pdfTextExtractionClient = pdfTextExtractionClient;
     this.embeddingService = embeddingService;
     this.documentRepository = documentRepository;
     this.openSearchClient = openSearchClient;
+    this.i18n = i18n;
   }
 
   public DocumentUploadResponse upload(MultipartFile file) {
@@ -52,7 +56,7 @@ public class DocumentProcessingService {
           file.getBytes()
       );
     } catch (IOException exception) {
-      throw new IllegalStateException("Dosya okunamadi: " + exception.getMessage(), exception);
+      throw new IllegalStateException(i18n.get("error.file-read-failed", exception.getMessage()), exception);
     }
   }
 
@@ -71,17 +75,17 @@ public class DocumentProcessingService {
           Files.readAllBytes(filePath)
       );
     } catch (IOException exception) {
-      throw new IllegalStateException("Dosya okunamadi: " + exception.getMessage(), exception);
+      throw new IllegalStateException(i18n.get("error.file-read-failed", exception.getMessage()), exception);
     }
   }
 
   public DocumentUploadResponse processText(String filename, String text, String storedPath) {
     if (!StringUtils.hasText(text)) {
-      throw new IllegalArgumentException("Karar metni bos.");
+      throw new IllegalArgumentException("error.decision-text-empty");
     }
     String normalizedText = text.trim();
     if (normalizedText.length() < MIN_TEXT_LENGTH) {
-      throw new IllegalArgumentException("Karar metninden yeterli icerik cikarilamadi.");
+      throw new IllegalArgumentException("error.decision-text-insufficient");
     }
     String safeName = StringUtils.hasText(filename) ? filename : "precedent.txt";
     if (!safeName.toLowerCase(Locale.ROOT).endsWith(".txt")) {
@@ -105,11 +109,11 @@ public class DocumentProcessingService {
       byte[] content
   ) {
     if (!isSupportedExtension(filename)) {
-      throw new IllegalArgumentException("Belge isleme hatti PDF, Word ve metin dosyalarini destekler.");
+      throw new IllegalArgumentException("error.document-unsupported");
     }
     String text = pdfTextExtractionClient.extract(content, filename);
     if (text.length() < MIN_TEXT_LENGTH) {
-      throw new IllegalArgumentException("Dosyadan yeterli metin cikarilamadi. Taranmis PDF olabilir; OCR destegi henuz eklenmedi.");
+      throw new IllegalArgumentException("error.document-insufficient-text");
     }
 
     List<DocumentChunk> chunks = chunk(text).stream()
@@ -121,10 +125,10 @@ public class DocumentProcessingService {
     int opensearchIndexed = openSearchClient.indexChunks(filename, storedChunks);
 
     String message = storedPath == null || storedPath.isBlank()
-        ? "Belge bellek uzerinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
+        ? i18n.get("document.processing.memory")
         : storedPath.startsWith("precedent://")
-            ? "Ictihat karari cekilerek islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi."
-            : "Belge dizinden islendi; metin PostgreSQL'e yazildi, chunklar PostgreSQL/OpenSearch/pgvector hattina alindi.";
+            ? i18n.get("document.processing.precedent")
+            : i18n.get("document.processing.path");
 
     return new DocumentUploadResponse(
         documentId,
@@ -187,14 +191,12 @@ public class DocumentProcessingService {
   private String summarize(String text, String filename, int chunkCount) {
     String normalized = normalizeWhitespace(text);
     String firstSentence = firstSentence(normalized);
-    return "Belge icerigi ozeti: " + firstSentence
-        + " Dosya adi: " + filename
-        + ". Toplam " + text.length() + " karakter metin cikarildi ve " + chunkCount + " chunk olusturuldu.";
+    return i18n.get("document.summary", firstSentence, filename, text.length(), chunkCount);
   }
 
   private String firstSentence(String text) {
     if (!StringUtils.hasText(text)) {
-      return "Belgeden okunabilir metin cikarildi.";
+      return i18n.get("document.readable-text");
     }
     int max = Math.min(text.length(), 700);
     int sentenceEnd = -1;
