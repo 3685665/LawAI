@@ -7,7 +7,6 @@ public record CaseTemplateDto(
     String label,
     String title,
     String courtHint,
-    String summary,
     List<CaseDocumentDto> documents
 ) {
 }

@@ -66,11 +66,13 @@ import {
   authRegister,
   authUpdateProfile,
   createActivityLog,
+  type CaseExpense,
   type CaseCreatePayload,
-  CaseDocument as ApiCaseDocument,
-  CaseRecord,
-  CaseTemplate,
-  CaseTemplatesResponse,
+  type CaseNote,
+  type CaseParty,
+  type CaseRecord,
+  type CaseTemplate,
+  type CaseTemplatesResponse,
   type AuthPasswordResetResponse,
   type AuthSessionResponse,
   type AuthUser,
@@ -278,6 +280,10 @@ type CaseDocument = {
   required: boolean;
   group: string;
 };
+type CasePartyDraft = CaseParty & { draftId: string };
+type CaseExpenseDraft = CaseExpense & { draftId: string };
+type CaseNoteDraft = CaseNote & { draftId: string };
+type CasePartyForm = Omit<CaseParty, "id">;
 type UploadResponse = {
   documentId?: number;
   filename: string;
@@ -309,32 +315,39 @@ const caseTypeLabels: Record<CaseType, string> = {
   aile: "Aile hukuku"
 };
 
-const caseTemplates: Record<CaseType, { title: string; courtHint: string; summary: string }> = {
+const caseTemplates: Record<CaseType, { title: string; courtHint: string }> = {
   genel: {
     title: "Genel hukuk dosyasi",
-    courtHint: "Nobetci Asliye Hukuk Mahkemesi",
-    summary: "Dava dilekcesi, delil listesi, vekaletname ve ekler klasoru ile baslanir."
+    courtHint: "Nobetci Asliye Hukuk Mahkemesi"
   },
   is: {
     title: "Is hukuku dosyasi",
-    courtHint: "Is Mahkemesi",
-    summary: "Hizmet dokumu, fesih bildirimi, bordrolar ve arabuluculuk son tutanagi onerilir."
+    courtHint: "Is Mahkemesi"
   },
   sozlesme: {
     title: "Sozlesme / alacak dosyasi",
-    courtHint: "Nobetci Asliye Hukuk Mahkemesi",
-    summary: "Sozlesme, fatura, dekont, ihtarname ve teslim / kabul belgeleri bir arada tutulur."
+    courtHint: "Nobetci Asliye Hukuk Mahkemesi"
   },
   icra: {
     title: "Icra takibi dosyasi",
-    courtHint: "Icra Mudurlugu / Icra Hukuk Mahkemesi",
-    summary: "Takip dayanagi belge, hesap cetveli, senet / cek ve tebligat evraki gerekir."
+    courtHint: "Icra Mudurlugu / Icra Hukuk Mahkemesi"
   },
   aile: {
     title: "Aile hukuku dosyasi",
-    courtHint: "Aile Mahkemesi",
-    summary: "Nufus kayit ornegi, evlilik belgeleri, velayet / nafaka belgeleri ve sosyal inceleme destegi gerekir."
+    courtHint: "Aile Mahkemesi"
   }
+};
+
+const casePartyRoles = ["Muvekkil", "Davaci", "Davali", "Borclu", "Alacakli", "Tanik", "Diger"];
+const emptyCasePartyForm: CasePartyForm = {
+  name: "",
+  role: "Muvekkil",
+  contact: "",
+  identityNumber: "",
+  phone: "",
+  email: "",
+  startDate: "",
+  endDate: ""
 };
 
 const caseDocuments: Record<CaseType, CaseDocument[]> = {
@@ -4009,6 +4022,10 @@ function DocumentUploadResultCard({
   );
 }
 
+function createCaseDraftId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocuments: () => void }) {
   const t = getMessages(locale).cases;
   const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
@@ -4018,10 +4035,14 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [courtName, setCourtName] = useState("");
   const [city, setCity] = useState("");
   const [notes, setNotes] = useState("");
-  const [documents, setDocuments] = useState<Record<string, boolean>>({});
+  const [parties, setParties] = useState<CasePartyDraft[]>([]);
+  const [partyModalOpen, setPartyModalOpen] = useState(false);
+  const [partyForm, setPartyForm] = useState<CasePartyForm>(emptyCasePartyForm);
+  const [partyClientSearch, setPartyClientSearch] = useState("");
+  const [expenses, setExpenses] = useState<CaseExpenseDraft[]>([]);
+  const [caseNotes, setCaseNotes] = useState<CaseNoteDraft[]>([]);
   const [templates, setTemplates] = useState<CaseTemplate[]>([]);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [localError, setLocalError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -4035,16 +4056,9 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       label: caseTypeLabels[caseType],
       title: caseTemplates[caseType].title,
       courtHint: caseTemplates[caseType].courtHint,
-      summary: caseTemplates[caseType].summary,
       documents: caseDocuments[caseType].map((item) => ({ ...item, completed: false }))
     } satisfies CaseTemplate;
   }, [caseType, templates]);
-
-  const requiredDocs = selectedTemplate.documents.filter((item) => item.required);
-  const optionalDocs = selectedTemplate.documents.filter((item) => !item.required);
-  const missingRequired = requiredDocs.filter((item) => !documents[item.id]);
-  const completion = requiredDocs.length === 0 ? 100 : Math.round(((requiredDocs.length - missingRequired.length) / requiredDocs.length) * 100);
-  const groupedDocs = useMemo(() => groupDocuments(selectedTemplate.documents), [selectedTemplate.documents]);
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
   const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
     {
@@ -4157,22 +4171,12 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
   useEffect(() => {
     setCourtName(selectedTemplate.courtHint);
-    setDocuments(Object.fromEntries(selectedTemplate.documents.map((item) => [item.id, item.completed])) as Record<string, boolean>);
   }, [selectedTemplate]);
-
-  function toggleDocument(id: string) {
-    setDocuments((current) => ({ ...current, [id]: !current[id] }));
-  }
-
-  function markAll() {
-    setDocuments(Object.fromEntries(selectedTemplate.documents.map((item) => [item.id, true])) as Record<string, boolean>);
-  }
 
   async function openCase(caseId: string) {
     setLocalError("");
     try {
       const detail = await getJson<CaseRecord>(`/cases/${caseId}`);
-      setSelectedCaseId(caseId);
       setSelectedCase(detail);
       setCaseScreen("detail");
     } catch (error) {
@@ -4189,12 +4193,80 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     setCourtName("");
     setCity("");
     setNotes("");
-    setDocuments({});
+    setParties([]);
+    setPartyForm(emptyCasePartyForm);
+    setPartyClientSearch("");
+    setPartyModalOpen(false);
+    setExpenses([]);
+    setCaseNotes([]);
   }
 
   function openListScreen() {
     setCaseScreen("list");
     setLocalError("");
+  }
+
+  function addParty() {
+    setPartyForm(emptyCasePartyForm);
+    setPartyClientSearch("");
+    setPartyModalOpen(true);
+  }
+
+  function updatePartyForm(field: keyof CasePartyForm, value: string) {
+    setPartyForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function saveParty() {
+    if (!partyForm.name.trim()) return;
+    const contact = partyForm.contact?.trim() || [partyForm.phone, partyForm.email].filter(Boolean).join(" / ");
+    setParties((current) => [
+      ...current,
+      {
+        draftId: createCaseDraftId("party"),
+        name: partyForm.name.trim(),
+        role: partyForm.role.trim() || "Muvekkil",
+        contact,
+        identityNumber: partyForm.identityNumber?.trim() ?? "",
+        phone: partyForm.phone?.trim() ?? "",
+        email: partyForm.email?.trim() ?? "",
+        startDate: partyForm.startDate ?? "",
+        endDate: partyForm.endDate ?? ""
+      }
+    ]);
+    setPartyForm(emptyCasePartyForm);
+    setPartyClientSearch("");
+    setPartyModalOpen(false);
+  }
+
+  function removeParty(draftId: string) {
+    setParties((current) => current.filter((party) => party.draftId !== draftId));
+  }
+
+  function addExpense() {
+    setExpenses((current) => [...current, { draftId: createCaseDraftId("expense"), title: "", amount: 0, description: "" }]);
+  }
+
+  function updateExpense(draftId: string, field: keyof CaseExpense, value: string) {
+    setExpenses((current) => current.map((expense) => {
+      if (expense.draftId !== draftId) return expense;
+      return { ...expense, [field]: field === "amount" ? Number(value || 0) : value };
+    }));
+  }
+
+  function removeExpense(draftId: string) {
+    setExpenses((current) => current.filter((expense) => expense.draftId !== draftId));
+  }
+
+  function addCaseNote() {
+    setCaseNotes((current) => [...current, { draftId: createCaseDraftId("note"), title: "", text: "" }]);
+  }
+
+  function updateCaseNote(draftId: string, field: keyof CaseNote, value: string) {
+    setCaseNotes((current) => current.map((caseNote) => caseNote.draftId === draftId ? { ...caseNote, [field]: value } : caseNote));
+  }
+
+  function removeCaseNote(draftId: string) {
+    setCaseNotes((current) => current.filter((caseNote) => caseNote.draftId !== draftId));
   }
 
   async function submitCase(event: React.FormEvent) {
@@ -4209,15 +4281,24 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
         courtName,
         city,
         notes,
-        completedDocumentIds: Object.entries(documents)
-          .filter(([, completed]) => completed)
-          .map(([id]) => id)
+        completedDocumentIds: [],
+        parties: parties.map((party) => ({
+          name: party.name,
+          role: party.role,
+          contact: party.contact,
+          identityNumber: party.identityNumber,
+          phone: party.phone,
+          email: party.email,
+          startDate: party.startDate,
+          endDate: party.endDate
+        })),
+        expenses: expenses.map((expense) => ({ title: expense.title, amount: expense.amount, description: expense.description })),
+        caseNotes: caseNotes.map((caseNote) => ({ title: caseNote.title, text: caseNote.text }))
       };
       const created = await postJson<CaseRecord>("/cases", payload);
       const caseList = await getJson<CaseRecord[]>("/cases");
       setSavedCases(caseList);
       const nextSelected = caseList.find((item) => item.id === created.id) ?? null;
-      setSelectedCaseId(nextSelected?.id ?? null);
       setSelectedCase(nextSelected);
       setCaseScreen("list");
       setCaseType(created.caseType as CaseType);
@@ -4234,7 +4315,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       const response = await patchJson<{ caseRecord: CaseRecord; cases: CaseRecord[] }>(`/cases/${caseId}/documents/${documentId}`, { completed });
       setSavedCases(response.cases);
       setSelectedCase(response.caseRecord);
-      setSelectedCaseId(response.caseRecord.id);
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.document);
     }
@@ -4248,7 +4328,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       const caseList = await deleteJson<CaseRecord[]>(`/cases/${caseId}`);
       setSavedCases(caseList);
       const nextSelected = caseList[0] ?? null;
-      setSelectedCaseId(nextSelected?.id ?? null);
       setSelectedCase(nextSelected);
       setCaseScreen("list");
     } catch (error) {
@@ -4281,10 +4360,68 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
       {localError && <div className="error">{localError}</div>}
 
+      {partyModalOpen && (
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setPartyModalOpen(false)}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-labelledby="case-party-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="case-party-modal-head">
+              <PanelTitle icon={<UsersRound size={20} />} title={t.addParty} />
+              <button className="secondary-button compact icon-only" type="button" onClick={() => setPartyModalOpen(false)} aria-label={t.cancel}>
+                <X size={17} />
+              </button>
+            </div>
+            <label className="field-label">
+              {t.existingClientSearch}
+              <input value={partyClientSearch} onChange={(event) => setPartyClientSearch(event.target.value)} placeholder={t.existingClientSearchPlaceholder} />
+            </label>
+            <label className="field-label">
+              {t.partyFullNameRequired}
+              <input value={partyForm.name} onChange={(event) => updatePartyForm("name", event.target.value)} placeholder={t.partyNamePlaceholder} />
+            </label>
+            <div className="case-party-modal-grid">
+              <label className="field-label">
+                {t.identityNumber}
+                <input value={partyForm.identityNumber ?? ""} onChange={(event) => updatePartyForm("identityNumber", event.target.value)} placeholder={t.identityNumber} />
+              </label>
+              <label className="field-label">
+                {t.phone}
+                <input value={partyForm.phone ?? ""} onChange={(event) => updatePartyForm("phone", event.target.value)} placeholder={t.phone} />
+              </label>
+            </div>
+            <label className="field-label">
+              {t.email}
+              <input value={partyForm.email ?? ""} onChange={(event) => updatePartyForm("email", event.target.value)} placeholder={t.email} type="email" />
+            </label>
+            <div className="case-party-modal-separator" />
+            <label className="field-label">
+              {t.partyRolePlaceholder}
+              <select value={partyForm.role} onChange={(event) => updatePartyForm("role", event.target.value)}>
+                {casePartyRoles.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </label>
+            <div className="case-party-modal-grid">
+              <input value={partyForm.startDate ?? ""} onChange={(event) => updatePartyForm("startDate", event.target.value)} aria-label="Baslangic tarihi" type="date" />
+              <input value={partyForm.endDate ?? ""} onChange={(event) => updatePartyForm("endDate", event.target.value)} aria-label="Bitis tarihi" type="date" />
+            </div>
+            <div className="case-party-modal-actions">
+              <button disabled={!partyForm.name.trim()} type="button" onClick={saveParty}>{t.add}</button>
+              <button className="secondary-button" type="button" onClick={() => setPartyModalOpen(false)}>{t.cancel}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {caseScreen === "create" && (
-        <section className="cases-grid">
-          <form className="panel primary-panel case-form case-form-large" onSubmit={submitCase}>
-            <PanelTitle icon={<FolderOpen size={20} />} title={t.addCase} />
+        <section className="cases-create-layout">
+          <form className="panel primary-panel case-form" onSubmit={submitCase}>
+            <div className="case-detail-head">
+              <PanelTitle icon={<FolderOpen size={20} />} title={t.addCase} />
+              <button className="secondary-button" type="button" onClick={() => setCaseScreen("list")}>
+                <ArrowLeft size={17} />
+                {t.backList}
+              </button>
+            </div>
             <div className="case-template">
               <strong>{t.uploadDocument}</strong>
               <p>{t.saveNotice}</p>
@@ -4326,69 +4463,106 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
               {t.notes}
               <textarea rows={5} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t.notesPlaceholder} />
             </label>
+            <div className="case-collection-stack">
+              <section className="case-collection-panel">
+                <div className="case-collection-head">
+                  <div>
+                    <span className="case-collection-icon"><UsersRound size={19} /></span>
+                    <strong>{t.partiesTitle.replace("{count}", String(parties.length))}</strong>
+                  </div>
+                  <button className="secondary-button" type="button" onClick={addParty}>
+                    <Plus size={17} />
+                    {t.addParty}
+                  </button>
+                </div>
+                {parties.length ? (
+                  <div className="case-saved-items">
+                    {parties.map((party) => (
+                      <div className="case-party-preview" key={party.draftId}>
+                        <div>
+                          <strong>{party.name}</strong>
+                          <span>{party.role}</span>
+                          <small>{[party.identityNumber, party.phone, party.email].filter(Boolean).join(" / ") || "-"}</small>
+                        </div>
+                        <button className="icon-danger-button" type="button" onClick={() => removeParty(party.draftId)} aria-label={t.removeItem}>
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="case-collection-empty">{t.noParties}</p>
+                )}
+              </section>
+
+              <section className="case-collection-panel">
+                <div className="case-collection-head">
+                  <div>
+                    <span className="case-collection-icon expense"><CreditCard size={19} /></span>
+                    <strong>{t.expensesTitle}</strong>
+                  </div>
+                  <button className="secondary-button success" type="button" onClick={addExpense}>
+                    <Plus size={17} />
+                    {t.addExpense}
+                  </button>
+                </div>
+                {expenses.length ? (
+                  <div className="case-collection-rows">
+                    {expenses.map((expense) => (
+                      <div className="case-collection-row" key={expense.draftId}>
+                        <input value={expense.title} onChange={(event) => updateExpense(expense.draftId, "title", event.target.value)} placeholder={t.expenseTitlePlaceholder} />
+                        <input value={expense.amount || ""} min="0" onChange={(event) => updateExpense(expense.draftId, "amount", event.target.value)} placeholder={t.expenseAmountPlaceholder} type="number" />
+                        <input value={expense.description} onChange={(event) => updateExpense(expense.draftId, "description", event.target.value)} placeholder={t.expenseDescriptionPlaceholder} />
+                        <button className="icon-danger-button" type="button" onClick={() => removeExpense(expense.draftId)} aria-label={t.removeItem}>
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="case-collection-empty">{t.noExpenses}</p>
+                )}
+              </section>
+
+              <section className="case-collection-panel">
+                <div className="case-collection-head">
+                  <div>
+                    <span className="case-collection-icon note"><FileText size={19} /></span>
+                    <strong>{t.caseNotesTitle.replace("{count}", String(caseNotes.length))}</strong>
+                  </div>
+                  <button className="secondary-button neutral" type="button" onClick={addCaseNote}>
+                    <Plus size={17} />
+                    {t.addCaseNote}
+                  </button>
+                </div>
+                {caseNotes.length ? (
+                  <div className="case-collection-rows">
+                    {caseNotes.map((caseNote) => (
+                      <div className="case-collection-row case-collection-row-note" key={caseNote.draftId}>
+                        <input value={caseNote.title} onChange={(event) => updateCaseNote(caseNote.draftId, "title", event.target.value)} placeholder={t.noteTitlePlaceholder} />
+                        <textarea rows={2} value={caseNote.text} onChange={(event) => updateCaseNote(caseNote.draftId, "text", event.target.value)} placeholder={t.noteTextPlaceholder} />
+                        <button className="icon-danger-button" type="button" onClick={() => removeCaseNote(caseNote.draftId)} aria-label={t.removeItem}>
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="case-collection-empty">{t.noCaseNotes}</p>
+                )}
+              </section>
+            </div>
             <div className="case-template">
               <strong>{selectedTemplate.title}</strong>
-              <p>{selectedTemplate.summary}</p>
               <small>{t.courtHint.replace("{court}", selectedTemplate.courtHint)}</small>
             </div>
             <div className="upload-actions">
-              <button type="button" onClick={markAll}>
-                <CheckCircle2 size={17} />
-                {t.markAll}
-              </button>
               <button disabled={saving} type="submit">
                 {saving ? <LoaderCircle className="spin" size={17} /> : <FolderOpen size={17} />}
                 {t.saveAndList}
               </button>
             </div>
           </form>
-
-          <div className="panel result-panel case-summary-panel">
-            <div className="cases-preview-head">
-              <h2>{t.prepSummary}</h2>
-              <button className="secondary-button" onClick={openListScreen} type="button">{t.backList}</button>
-            </div>
-            <div className="case-score">
-              <strong>{completion}%</strong>
-              <span>{t.requiredCompletion}</span>
-            </div>
-            <div className="meter" aria-hidden="true">
-              <div className="meter-fill" style={{ width: `${completion}%` }} />
-            </div>
-            <div className="case-stats">
-              <div><span>{t.fileTitle}</span><strong>{fileTitle || "-"}</strong></div>
-              <div><span>{t.caseNumber}</span><strong>{caseNumber || "-"}</strong></div>
-              <div><span>{t.city}</span><strong>{city || "-"}</strong></div>
-              <div><span>{t.court}</span><strong>{courtName || selectedTemplate.courtHint}</strong></div>
-            </div>
-            <div className="check-note">
-              <CheckCircle2 size={18} />
-              <span>{missingRequired.length === 0 ? t.requiredComplete : t.requiredMissing.replace("{count}", String(missingRequired.length))}</span>
-            </div>
-            <div className="check-note muted">
-              <AlertCircle size={18} />
-              <span>{t.saveNotice}</span>
-            </div>
-            <div className="case-detail-documents">
-              {groupedDocs.map(([groupName, items]) => (
-                <section key={groupName} className="case-group">
-                  <h3>{groupName}</h3>
-                  <div className="checklist">
-                    {items.map((item) => (
-                      <label key={item.id} className={`check-item ${item.required ? "required" : ""}`}>
-                        <input checked={Boolean(documents[item.id])} onChange={() => toggleDocument(item.id)} type="checkbox" />
-                        <div>
-                          <strong>{item.title}</strong>
-                          <span>{item.detail}</span>
-                        </div>
-                        <em>{item.required ? t.required : t.optional}</em>
-                      </label>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </div>
         </section>
       )}
 
@@ -4492,6 +4666,65 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <div><span>{t.court}</span><strong>{selectedCase.courtName}</strong></div>
                 </div>
                 <p>{selectedCase.notes}</p>
+                <div className="case-collection-stack compact">
+                  <section className="case-collection-panel">
+                    <div className="case-collection-head">
+                      <div>
+                        <span className="case-collection-icon"><UsersRound size={19} /></span>
+                        <strong>{t.partiesTitle.replace("{count}", String(selectedCase.parties?.length ?? 0))}</strong>
+                      </div>
+                    </div>
+                    {selectedCase.parties?.length ? (
+                      <div className="case-saved-items">
+                        {selectedCase.parties.map((party) => (
+                          <div className="case-saved-item" key={party.id ?? `${party.name}-${party.role}`}>
+                            <strong>{party.name || "-"}</strong>
+                            <span>{party.role || "-"}</span>
+                            <small>{[party.identityNumber, party.phone, party.email].filter(Boolean).join(" / ") || party.contact || "-"}</small>
+                            <small>{[party.startDate, party.endDate].filter(Boolean).join(" - ") || "-"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="case-collection-empty">{t.noParties}</p>}
+                  </section>
+                  <section className="case-collection-panel">
+                    <div className="case-collection-head">
+                      <div>
+                        <span className="case-collection-icon expense"><CreditCard size={19} /></span>
+                        <strong>{t.expensesTitle}</strong>
+                      </div>
+                    </div>
+                    {selectedCase.expenses?.length ? (
+                      <div className="case-saved-items">
+                        {selectedCase.expenses.map((expense) => (
+                          <div className="case-saved-item" key={expense.id ?? `${expense.title}-${expense.amount}`}>
+                            <strong>{expense.title || "-"}</strong>
+                            <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL</span>
+                            <small>{expense.description || "-"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="case-collection-empty">{t.noExpenses}</p>}
+                  </section>
+                  <section className="case-collection-panel">
+                    <div className="case-collection-head">
+                      <div>
+                        <span className="case-collection-icon note"><FileText size={19} /></span>
+                        <strong>{t.caseNotesTitle.replace("{count}", String(selectedCase.caseNotes?.length ?? 0))}</strong>
+                      </div>
+                    </div>
+                    {selectedCase.caseNotes?.length ? (
+                      <div className="case-saved-items">
+                        {selectedCase.caseNotes.map((caseNote) => (
+                          <div className="case-saved-item" key={caseNote.id ?? `${caseNote.title}-${caseNote.text}`}>
+                            <strong>{caseNote.title || "-"}</strong>
+                            <small>{caseNote.text || "-"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="case-collection-empty">{t.noCaseNotes}</p>}
+                  </section>
+                </div>
                 <div className="case-detail-documents">
                   {selectedCase.documents.map((document) => (
                     <label key={document.id} className={`check-item ${document.required ? "required" : ""}`}>
@@ -4516,18 +4749,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
       )}
     </section>
   );
-}
-
-function groupDocuments(items: ApiCaseDocument[]) {
-  return items.reduce<Array<[string, ApiCaseDocument[]]>>((acc, item) => {
-    const entry = acc.find(([groupName]) => groupName === item.group);
-    if (entry) {
-      entry[1].push(item);
-    } else {
-      acc.push([item.group, [item]]);
-    }
-    return acc;
-  }, []);
 }
 
 function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {

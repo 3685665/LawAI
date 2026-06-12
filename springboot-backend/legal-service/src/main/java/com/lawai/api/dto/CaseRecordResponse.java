@@ -16,6 +16,9 @@ public record CaseRecordResponse(
     int completedRequiredDocumentCount,
     int progress,
     List<CaseDocumentDto> documents,
+    List<CasePartyDto> parties,
+    List<CaseExpenseDto> expenses,
+    List<CaseNoteDto> caseNotes,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {

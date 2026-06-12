@@ -69,12 +69,36 @@ export type CaseDocument = {
   completed: boolean;
 };
 
+export type CaseParty = {
+  id?: string;
+  name: string;
+  role: string;
+  contact: string;
+  identityNumber?: string;
+  phone?: string;
+  email?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type CaseExpense = {
+  id?: string;
+  title: string;
+  amount: number;
+  description: string;
+};
+
+export type CaseNote = {
+  id?: string;
+  title: string;
+  text: string;
+};
+
 export type CaseTemplate = {
   caseType: string;
   label: string;
   title: string;
   courtHint: string;
-  summary: string;
   documents: CaseDocument[];
 };
 
@@ -91,6 +115,9 @@ export type CaseRecord = {
   completedRequiredDocumentCount: number;
   progress: number;
   documents: CaseDocument[];
+  parties: CaseParty[];
+  expenses: CaseExpense[];
+  caseNotes: CaseNote[];
   createdAt: string;
   updatedAt: string;
 };
@@ -103,6 +130,9 @@ export type CaseCreatePayload = {
   city: string;
   notes: string;
   completedDocumentIds?: string[];
+  parties?: CaseParty[];
+  expenses?: CaseExpense[];
+  caseNotes?: CaseNote[];
 };
 
 export type CaseTemplatesResponse = { templates: CaseTemplate[] };

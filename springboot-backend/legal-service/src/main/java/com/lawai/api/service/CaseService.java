@@ -4,6 +4,9 @@ import com.lawai.api.dto.CaseCreateRequest;
 import com.lawai.api.dto.CaseDocumentDto;
 import com.lawai.api.dto.CaseDocumentPatchResponse;
 import com.lawai.api.dto.CaseDocumentUpdateRequest;
+import com.lawai.api.dto.CaseExpenseDto;
+import com.lawai.api.dto.CaseNoteDto;
+import com.lawai.api.dto.CasePartyDto;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplateDto;
 import com.lawai.api.dto.CaseTemplatesResponse;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -33,7 +37,6 @@ public class CaseService {
           "Genel hukuk",
           "Genel hukuk dosyasi",
           "Nobetci Asliye Hukuk Mahkemesi",
-          "Dava dilekcesi, delil listesi, vekaletname ve ekler klasoru ile baslanir.",
           List.of(
               doc("genel-vekalet", "Vekaletname / yetki belgesi", "Musteri vekaleti ve temsil yetkisini gosteren ana belge.", true, "Yetki"),
               doc("genel-kimlik", "Taraf kimlik ve iletisim bilgileri", "TCKN / VKN, adres, telefon ve tebligat bilgileri.", true, "Taraf bilgileri"),
@@ -50,7 +53,6 @@ public class CaseService {
           "Is hukuku",
           "Is hukuku dosyasi",
           "Is Mahkemesi",
-          "Hizmet dokumu, fesih bildirimi, bordrolar ve arabuluculuk son tutanagi onerilir.",
           List.of(
               doc("is-vekalet", "Vekaletname / yetki belgesi", "Avukatlik yetkisini ve temsil kapsamini gosterir.", true, "Yetki"),
               doc("is-hizmet", "Hizmet dokumu / SGK kayitlari", "Calisma suresi ve prim kayitlarini teyit eder.", true, "Calisma kaydi"),
@@ -67,7 +69,6 @@ public class CaseService {
           "Sozlesme / alacak",
           "Sozlesme / alacak dosyasi",
           "Nobetci Asliye Hukuk Mahkemesi",
-          "Sozlesme, fatura, dekont, ihtarname ve teslim / kabul belgeleri bir arada tutulur.",
           List.of(
               doc("s-vekalet", "Vekaletname / yetki belgesi", "Temsil yetkisini ve dava acma yetkisini gosterir.", true, "Yetki"),
               doc("s-sozlesme", "Sozlesme / siparis formu", "Taraflar arasindaki borc ve edimleri belirler.", true, "Sozlesme"),
@@ -84,7 +85,6 @@ public class CaseService {
           "Icra takibi",
           "Icra takibi dosyasi",
           "Icra Mudurlugu / Icra Hukuk Mahkemesi",
-          "Takip dayanagi belge, hesap cetveli, senet / cek ve tebligat evraki gerekir.",
           List.of(
               doc("i-dayanak", "Takip dayanagi belge", "Ilam, senet, sozlesme veya faturaya dayali evrak.", true, "Dayanak"),
               doc("i-vekalet", "Vekaletname / yetki belgesi", "Icra islemlerinde temsil yetkisi icin gerekir.", true, "Yetki"),
@@ -100,7 +100,6 @@ public class CaseService {
           "Aile hukuku",
           "Aile hukuku dosyasi",
           "Aile Mahkemesi",
-          "Nufus kayit ornegi, evlilik belgeleri, velayet / nafaka belgeleri ve sosyal inceleme destegi gerekir.",
           List.of(
               doc("a-vekalet", "Vekaletname / yetki belgesi", "Temsil yetkisini gosterir.", true, "Yetki"),
               doc("a-nufus", "Nufus kayit ornegi", "Taraflarin aile bagini ve baglantili kayitlarini ortaya koyar.", true, "Kimlik"),
@@ -208,6 +207,9 @@ public class CaseService {
                 completedDocumentIds.getOrDefault(document.id(), false)
             ))
             .toList(),
+        normalizeParties(request.parties()),
+        normalizeExpenses(request.expenses()),
+        normalizeCaseNotes(request.caseNotes()),
         now,
         now
     );
@@ -266,7 +268,6 @@ public class CaseService {
         template.label(),
         template.title(),
         template.courtHint(),
-        template.summary(),
         template.documents().stream()
             .map(document -> new CaseDocumentDto(document.id(), document.title(), document.detail(), document.required(), document.group(), false))
             .toList()
@@ -285,18 +286,86 @@ public class CaseService {
         snapshot.id(),
         snapshot.caseType(),
         template == null ? snapshot.caseType() : template.label(),
-        snapshot.fileTitle(),
-        snapshot.caseNumber(),
-        snapshot.courtName(),
-        snapshot.city(),
-        snapshot.notes(),
+        safe(snapshot.fileTitle()),
+        safe(snapshot.caseNumber()),
+        safe(snapshot.courtName()),
+        safe(snapshot.city()),
+        safe(snapshot.notes()),
         requiredDocumentCount,
         completedRequiredDocumentCount,
         progress,
         documents,
+        snapshot.parties().stream()
+            .map(party -> new CasePartyDto(
+                party.id(),
+                party.name(),
+                party.role(),
+                party.contact(),
+                party.identityNumber(),
+                party.phone(),
+                party.email(),
+                party.startDate(),
+                party.endDate()
+            ))
+            .toList(),
+        snapshot.expenses().stream()
+            .map(expense -> new CaseExpenseDto(expense.id(), expense.title(), expense.amount(), expense.description()))
+            .toList(),
+        snapshot.caseNotes().stream()
+            .map(caseNote -> new CaseNoteDto(caseNote.id(), caseNote.title(), caseNote.text()))
+            .toList(),
         snapshot.createdAt(),
         snapshot.updatedAt()
     );
+  }
+
+  private List<CasePartySnapshot> normalizeParties(List<CasePartyDto> parties) {
+    if (parties == null) {
+      return List.of();
+    }
+    return parties.stream()
+        .filter(party -> StringUtils.hasText(party.name()) || StringUtils.hasText(party.role()) || StringUtils.hasText(party.contact()))
+        .map(party -> new CasePartySnapshot(
+            newId(),
+            safe(party.name()).trim(),
+            safe(party.role()).trim(),
+            safe(party.contact()).trim(),
+            safe(party.identityNumber()).trim(),
+            safe(party.phone()).trim(),
+            safe(party.email()).trim(),
+            safe(party.startDate()).trim(),
+            safe(party.endDate()).trim()
+        ))
+        .toList();
+  }
+
+  private List<CaseExpenseSnapshot> normalizeExpenses(List<CaseExpenseDto> expenses) {
+    if (expenses == null) {
+      return List.of();
+    }
+    return expenses.stream()
+        .filter(expense -> StringUtils.hasText(expense.title()) || expense.amount() != null || StringUtils.hasText(expense.description()))
+        .map(expense -> new CaseExpenseSnapshot(
+            newId(),
+            safe(expense.title()).trim(),
+            expense.amount() == null ? BigDecimal.ZERO : expense.amount(),
+            safe(expense.description()).trim()
+        ))
+        .toList();
+  }
+
+  private List<CaseNoteSnapshot> normalizeCaseNotes(List<CaseNoteDto> caseNotes) {
+    if (caseNotes == null) {
+      return List.of();
+    }
+    return caseNotes.stream()
+        .filter(caseNote -> StringUtils.hasText(caseNote.title()) || StringUtils.hasText(caseNote.text()))
+        .map(caseNote -> new CaseNoteSnapshot(
+            newId(),
+            safe(caseNote.title()).trim(),
+            safe(caseNote.text()).trim()
+        ))
+        .toList();
   }
 
   private CaseTemplateDefinition requireTemplate(String caseType) {
@@ -355,6 +424,9 @@ public class CaseService {
         city,
         notes,
         documents,
+        List.of(),
+        List.of(),
+        List.of(),
         updatedAt.minusHours(6),
         updatedAt
     );
@@ -368,12 +440,15 @@ public class CaseService {
     return value == null ? "" : value;
   }
 
+  private String newId() {
+    return UUID.randomUUID().toString();
+  }
+
   public record CaseTemplateDefinition(
       String caseType,
       String label,
       String title,
       String courtHint,
-      String summary,
       List<CaseDocumentSnapshot> documents
   ) {
   }
@@ -397,15 +472,46 @@ public class CaseService {
       String city,
       String notes,
       List<CaseDocumentSnapshot> documents,
+      List<CasePartySnapshot> parties,
+      List<CaseExpenseSnapshot> expenses,
+      List<CaseNoteSnapshot> caseNotes,
       OffsetDateTime createdAt,
       OffsetDateTime updatedAt
   ) {
     private CaseRecordSnapshot withDocuments(List<CaseDocumentSnapshot> documents) {
-      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, parties, expenses, caseNotes, createdAt, updatedAt);
     }
 
     private CaseRecordSnapshot withUpdatedAt(OffsetDateTime updatedAt) {
-      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, parties, expenses, caseNotes, createdAt, updatedAt);
     }
+  }
+
+  public record CasePartySnapshot(
+      String id,
+      String name,
+      String role,
+      String contact,
+      String identityNumber,
+      String phone,
+      String email,
+      String startDate,
+      String endDate
+  ) {
+  }
+
+  public record CaseExpenseSnapshot(
+      String id,
+      String title,
+      BigDecimal amount,
+      String description
+  ) {
+  }
+
+  public record CaseNoteSnapshot(
+      String id,
+      String title,
+      String text
+  ) {
   }
 }

@@ -5282,18 +5282,6 @@ body[data-theme="dark"] .petition-linked-precedents li {
   color: #fff;
 }
 
-.cases-grid {
-  align-items: start;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.1fr);
-}
-
-.case-form-large {
-  min-height: 100%;
-}
-
-.cases-preview-head,
 .case-list-head {
   align-items: center;
   display: flex;
@@ -5306,7 +5294,6 @@ body[data-theme="dark"] .petition-linked-precedents li {
   gap: 8px;
 }
 
-.cases-preview-head h2,
 .case-list-head h2,
 .case-detail-panel h2 {
   margin: 0;
@@ -5411,7 +5398,7 @@ body[data-theme="dark"] .petition-linked-precedents li {
   justify-content: center;
 }
 
-.case-form, .case-summary-panel, .case-checklist-panel {
+.case-form {
   align-content: start;
 }
 
@@ -5427,6 +5414,252 @@ body[data-theme="dark"] .petition-linked-precedents li {
 .case-template p, .case-template small {
   margin: 0;
   color: var(--muted);
+}
+
+.case-collection-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.case-collection-stack.compact {
+  gap: 10px;
+}
+
+.case-collection-panel {
+  background: #fafbfc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.case-collection-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.case-collection-head > div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.case-collection-head strong {
+  color: var(--ink);
+  font-size: 16px;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.case-collection-icon {
+  align-items: center;
+  color: #6f4bbd;
+  display: inline-flex;
+}
+
+.case-collection-icon.expense {
+  color: #2f9461;
+}
+
+.case-collection-icon.note {
+  color: var(--muted);
+}
+
+.case-collection-empty {
+  color: var(--muted);
+  margin: 0;
+}
+
+.case-collection-rows,
+.case-saved-items {
+  display: grid;
+  gap: 10px;
+}
+
+.case-collection-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr) 40px;
+}
+
+.case-collection-row-note {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr) 40px;
+}
+
+.case-collection-row input,
+.case-collection-row textarea {
+  min-width: 0;
+}
+
+.case-saved-item {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.case-saved-item strong,
+.case-saved-item span,
+.case-saved-item small {
+  overflow-wrap: anywhere;
+}
+
+.case-saved-item span,
+.case-saved-item small {
+  color: var(--muted);
+}
+
+.case-party-preview {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  padding: 10px 12px;
+}
+
+.case-party-preview > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.case-party-preview strong,
+.case-party-preview span,
+.case-party-preview small {
+  overflow-wrap: anywhere;
+}
+
+.case-party-preview span,
+.case-party-preview small {
+  color: var(--muted);
+}
+
+.case-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(4px);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 80;
+}
+
+.case-party-modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 40px);
+  max-width: 680px;
+  overflow-y: auto;
+  padding: 18px;
+  width: min(680px, 100%);
+}
+
+.case-party-modal-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.case-party-modal .field-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  gap: 6px;
+}
+
+.case-party-modal input,
+.case-party-modal select,
+.case-party-modal textarea {
+  font-size: 15px;
+  min-height: 46px;
+  padding: 12px;
+}
+
+.case-party-modal input::placeholder {
+  color: var(--muted);
+}
+
+.case-party-modal select {
+  appearance: auto;
+}
+
+.case-party-modal-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.case-party-modal-separator {
+  border-top: 1px solid var(--line);
+  height: 1px;
+}
+
+.case-party-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.case-party-modal-actions button {
+  min-height: 42px;
+}
+
+.case-party-modal-actions .secondary-button {
+  min-width: 88px;
+}
+
+.icon-danger-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(190, 69, 69, 0.28);
+  border-radius: 10px;
+  color: #b42318;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  padding: 0;
+  width: 40px;
+}
+
+.secondary-button.success {
+  border-color: rgba(47, 148, 97, 0.35);
+  color: #16834f;
+}
+
+.secondary-button.neutral {
+  border-color: rgba(87, 92, 102, 0.3);
+  color: var(--ink);
+}
+
+body[data-theme="dark"] .case-collection-panel,
+body[data-theme="dark"] .case-saved-item,
+body[data-theme="dark"] .case-party-preview {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .icon-danger-button {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
 }
 
 .case-score {
@@ -5703,6 +5936,28 @@ body[data-theme="dark"] .petition-linked-precedents li {
     grid-template-columns: 1fr;
   }
 
+  .case-collection-head,
+  .case-collection-row,
+  .case-collection-row-note,
+  .case-party-preview,
+  .case-party-modal-grid,
+  .case-party-modal-actions {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .case-party-modal {
+    border-radius: 16px;
+  }
+
+  .case-collection-head {
+    display: grid;
+  }
+
+  .icon-danger-button {
+    width: 100%;
+  }
+
   .app-shell.sidebar-collapsed {
     grid-template-columns: 1fr;
   }
@@ -5837,10 +6092,6 @@ body[data-theme="dark"] .petition-linked-precedents li {
     position: static;
   }
 
-  .cases-grid {
-    grid-template-columns: 1fr;
-  }
-
   .sidebar {
     min-height: auto;
     position: relative;
@@ -5897,7 +6148,6 @@ body[data-theme="dark"] .petition-linked-precedents li {
   }
 
   .cases-toolbar,
-  .cases-preview-head,
   .case-list-head,
   .case-detail-head {
     align-items: flex-start;

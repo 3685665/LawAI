@@ -11,6 +11,9 @@ public record CaseCreateRequest(
     @NotBlank String courtName,
     @NotBlank String city,
     @NotBlank String notes,
-    List<String> completedDocumentIds
+    List<String> completedDocumentIds,
+    List<CasePartyDto> parties,
+    List<CaseExpenseDto> expenses,
+    List<CaseNoteDto> caseNotes
 ) {
 }
