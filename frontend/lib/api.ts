@@ -1,5 +1,35 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080/api";
 
+type ApiLocale = "tr" | "en";
+
+function getCurrentApiLocale(): ApiLocale {
+  if (typeof window === "undefined") {
+    return "tr";
+  }
+  const storedLocale = window.localStorage.getItem("lawai-locale");
+  return storedLocale === "en" || storedLocale === "tr" ? storedLocale : "tr";
+}
+
+function toAcceptLanguage(locale: ApiLocale) {
+  return locale === "en" ? "en-US,en;q=0.9,tr;q=0.8" : "tr-TR,tr;q=0.9,en;q=0.8";
+}
+
+function withLocaleHeaders(init: RequestInit = {}): RequestInit {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", toAcceptLanguage(getCurrentApiLocale()));
+  }
+  return { ...init, headers };
+}
+
+function localizedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, withLocaleHeaders(init));
+}
+
+function apiFallbackMessage(en: string, tr: string) {
+  return getCurrentApiLocale() === "en" ? en : tr;
+}
+
 export type Precedent = {
   sourceId?: string | null;
   court: string;
@@ -432,7 +462,7 @@ export type BillingCheckoutResponse = {
 };
 
 export async function postJson<T>(path: string, payload: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -445,7 +475,7 @@ export async function postJson<T>(path: string, payload: unknown): Promise<T> {
 }
 
 export async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store", credentials: "include" });
+  const response = await localizedFetch(`${API_BASE}${path}`, { cache: "no-store", credentials: "include" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
@@ -453,7 +483,7 @@ export async function getJson<T>(path: string): Promise<T> {
 }
 
 export async function patchJson<T>(path: string, payload: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -466,7 +496,7 @@ export async function patchJson<T>(path: string, payload: unknown): Promise<T> {
 }
 
 export async function putJson<T>(path: string, payload: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -479,7 +509,7 @@ export async function putJson<T>(path: string, payload: unknown): Promise<T> {
 }
 
 export async function deleteJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "DELETE",
     credentials: "include"
   });
@@ -490,7 +520,7 @@ export async function deleteJson<T>(path: string): Promise<T> {
 }
 
 export async function seedSamples<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "POST",
     credentials: "include"
   });
@@ -509,7 +539,7 @@ export async function applyPrecedentToPetition(payload: PrecedentApplyPayload): 
 }
 
 export async function uploadMultipart<T>(path: string, form: FormData): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await localizedFetch(`${API_BASE}${path}`, {
     method: "POST",
     credentials: "include",
     body: form
@@ -522,7 +552,7 @@ export async function uploadMultipart<T>(path: string, form: FormData): Promise<
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/health`, { cache: "no-store", credentials: "include" });
+    const response = await localizedFetch(`${API_BASE}/health`, { cache: "no-store", credentials: "include" });
     return response.ok;
   } catch {
     return false;
@@ -546,7 +576,7 @@ export async function authMe(): Promise<AuthUser> {
 }
 
 export async function authUpdateProfile(payload: { name: string; email: string }): Promise<AuthUser> {
-  const response = await fetch(`${API_BASE}/auth/me`, {
+  const response = await localizedFetch(`${API_BASE}/auth/me`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -591,7 +621,7 @@ export async function createUser(payload: AdminUserPayload & { password: string 
 }
 
 export async function updateUser(id: string, payload: AdminUserPayload): Promise<AuthUser> {
-  const response = await fetch(`${API_BASE}/auth/users/${id}`, {
+  const response = await localizedFetch(`${API_BASE}/auth/users/${id}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -653,7 +683,7 @@ export async function createBatchDocumentJob(payload: BatchDocumentJobPayload): 
 }
 
 export async function updateBatchDocumentJob(id: number, payload: BatchDocumentJobPayload): Promise<BatchDocumentJob> {
-  const response = await fetch(`${API_BASE}/batch-documents/jobs/${id}`, {
+  const response = await localizedFetch(`${API_BASE}/batch-documents/jobs/${id}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -694,7 +724,7 @@ export async function createPrecedentSyncTask(payload: PrecedentSyncTaskPayload)
 }
 
 export async function updatePrecedentSyncTask(id: number, payload: PrecedentSyncTaskPayload): Promise<PrecedentSyncTask> {
-  const response = await fetch(`${API_BASE}/precedent-sync/tasks/${id}`, {
+  const response = await localizedFetch(`${API_BASE}/precedent-sync/tasks/${id}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -731,7 +761,7 @@ export async function listSubscriptions(): Promise<SubscriptionPlan[]> {
 }
 
 export async function getMySubscription(): Promise<UserSubscription | null> {
-  const response = await fetch(`${API_BASE}/subscriptions/me`, { cache: "no-store", credentials: "include" });
+  const response = await localizedFetch(`${API_BASE}/subscriptions/me`, { cache: "no-store", credentials: "include" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
@@ -764,7 +794,7 @@ export async function createSubscriptionPlan(payload: SubscriptionPlanPayload): 
 }
 
 export async function updateSubscriptionPlan(id: string, payload: SubscriptionPlanPayload): Promise<SubscriptionPlan> {
-  const response = await fetch(`${API_BASE}/subscriptions/admin/${id}`, {
+  const response = await localizedFetch(`${API_BASE}/subscriptions/admin/${id}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -777,7 +807,7 @@ export async function updateSubscriptionPlan(id: string, payload: SubscriptionPl
 }
 
 export async function updateUserSubscriptionStatus(id: string, status: UserSubscription["status"]): Promise<UserSubscription> {
-  const response = await fetch(`${API_BASE}/subscriptions/admin/users/${id}/status`, {
+  const response = await localizedFetch(`${API_BASE}/subscriptions/admin/users/${id}/status`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -796,9 +826,15 @@ export async function deleteSubscriptionPlan(id: string): Promise<void> {
 async function readError(response: Response): Promise<string> {
   try {
     const body = await response.json();
-    return body.detail ?? body.message ?? `API istegi basarisiz: ${response.status}`;
+    return body.detail ?? body.message ?? apiFallbackMessage(
+      `API request failed: ${response.status}`,
+      `API istegi basarisiz: ${response.status}`
+    );
   } catch {
-    return `API istegi basarisiz: ${response.status}`;
+    return apiFallbackMessage(
+      `API request failed: ${response.status}`,
+      `API istegi basarisiz: ${response.status}`
+    );
   }
 }
 
@@ -844,7 +880,7 @@ export async function streamLegalResearch(
   sessionId: string | null,
   onStep: (step: ResearchStep) => void
 ): Promise<LegalResearchResponse> {
-  const response = await fetch(`${API_BASE}/research/run/stream`, {
+  const response = await localizedFetch(`${API_BASE}/research/run/stream`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -858,7 +894,7 @@ export async function streamLegalResearch(
     throw new Error(await readError(response));
   }
   if (!response.body) {
-    throw new Error("SSE yanit akisi alinamadi.");
+    throw new Error(apiFallbackMessage("SSE response stream could not be read.", "SSE yanit akisi alinamadi."));
   }
 
   const reader = response.body.getReader();
@@ -875,7 +911,7 @@ export async function streamLegalResearch(
     buffer = consumeSseBuffer(buffer, (eventName, payload) => {
       if (eventName === "error") {
         const errorBody = JSON.parse(payload) as { detail?: string };
-        throw new Error(errorBody.detail ?? "Hukuki arastirma basarisiz.");
+        throw new Error(errorBody.detail ?? apiFallbackMessage("Legal research failed.", "Hukuki arastirma basarisiz."));
       }
       const event = JSON.parse(payload) as ResearchProgressEvent;
       if (event.event === "step" && event.stepType && event.label && event.status) {
@@ -888,7 +924,7 @@ export async function streamLegalResearch(
   }
 
   if (!completed) {
-    throw new Error("Arastirma tamamlanmadi.");
+    throw new Error(apiFallbackMessage("Research did not complete.", "Arastirma tamamlanmadi."));
   }
   return completed;
 }
