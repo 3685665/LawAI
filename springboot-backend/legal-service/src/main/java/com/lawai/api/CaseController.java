@@ -123,6 +123,17 @@ public class CaseController {
     return response;
   }
 
+  @DeleteMapping("/{caseId}/uploaded-documents/{documentId}")
+  public CaseRecordResponse deleteUploadedDocument(
+      @PathVariable String caseId,
+      @PathVariable String documentId,
+      Authentication authentication
+  ) {
+    CaseRecordResponse response = caseService.deleteUploadedDocument(caseId, documentId);
+    activityLogClient.logBackend(requireUser(authentication), "case-document-delete", "Davalar", "Yuklenen belge silindi: " + documentId, "/api/cases/" + caseId + "/uploaded-documents/" + documentId);
+    return response;
+  }
+
   @PatchMapping("/{caseId}/documents/{documentId}")
   public CaseDocumentPatchResponse updateDocument(
       @PathVariable String caseId,

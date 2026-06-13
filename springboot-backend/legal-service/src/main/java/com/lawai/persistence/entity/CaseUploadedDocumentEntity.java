@@ -89,4 +89,8 @@ public class CaseUploadedDocumentEntity {
         extractedText, originalContent, createdAt
     );
   }
+
+  public String getId() {
+    return id;
+  }
 }

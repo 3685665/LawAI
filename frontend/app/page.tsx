@@ -281,6 +281,7 @@ type CaseExpenseDraft = CaseExpense & { draftId: string };
 type CaseNoteDraft = CaseNote & { draftId: string };
 type CasePartyForm = Omit<CaseParty, "id">;
 type CaseExpenseForm = Omit<CaseExpense, "id">;
+type CaseNoteForm = Omit<CaseNote, "id">;
 type CaseAiActionKey =
   | "strategy"
   | "hearing_statement"
@@ -346,6 +347,10 @@ const emptyCasePartyForm: CasePartyForm = {
   endDate: ""
 };
 const caseExpenseCategories = ["Diger", "Harc", "Tebligat", "Bilirkisi", "Ulasim", "Vekalet", "Fotokopi"];
+const emptyCaseNoteForm: CaseNoteForm = {
+  title: "",
+  text: ""
+};
 
 const caseAiActions: CaseAiAction[] = [
   { key: "strategy", title: "Dava Stratejisi", description: "Güçlü iddialar, ispat planı ve usuli hamleler", icon: Scale, tone: "blue" },
@@ -4005,20 +4010,25 @@ function CasesPanel({ locale }: { locale: Locale }) {
   const [notes, setNotes] = useState("");
   const [parties, setParties] = useState<CasePartyDraft[]>([]);
   const [partyModalOpen, setPartyModalOpen] = useState(false);
+  const [partyEditingId, setPartyEditingId] = useState<string | null>(null);
   const [partyForm, setPartyForm] = useState<CasePartyForm>(emptyCasePartyForm);
   const [partyClientSearch, setPartyClientSearch] = useState("");
   const [expenses, setExpenses] = useState<CaseExpenseDraft[]>([]);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expenseEditingId, setExpenseEditingId] = useState<string | null>(null);
   const [expenseForm, setExpenseForm] = useState<CaseExpenseForm>(() => createEmptyCaseExpenseForm());
   const [caseNotes, setCaseNotes] = useState<CaseNoteDraft[]>([]);
+  const [caseNoteModalOpen, setCaseNoteModalOpen] = useState(false);
+  const [caseNoteEditingId, setCaseNoteEditingId] = useState<string | null>(null);
+  const [caseNoteForm, setCaseNoteForm] = useState<CaseNoteForm>(emptyCaseNoteForm);
   const [savedCases, setSavedCases] = useState<CaseRecord[]>([]);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [activeCaseAiAction, setActiveCaseAiAction] = useState<CaseAiActionKey | null>(null);
   const [caseAiResult, setCaseAiResult] = useState<CaseAiActionResponse | null>(null);
   const [caseDocumentUploading, setCaseDocumentUploading] = useState(false);
+  const [caseDocumentDeletingId, setCaseDocumentDeletingId] = useState<string | null>(null);
   const [documentPreview, setDocumentPreview] = useState<CaseUploadedDocumentDetail | null>(null);
   const [documentPreviewObjectUrl, setDocumentPreviewObjectUrl] = useState<string | null>(null);
-  const [documentPreviewLoadingId, setDocumentPreviewLoadingId] = useState<string | null>(null);
   const [localError, setLocalError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingCases, setLoadingCases] = useState(true);
@@ -4221,7 +4231,31 @@ function CasesPanel({ locale }: { locale: Locale }) {
   function addParty() {
     setPartyForm(emptyCasePartyForm);
     setPartyClientSearch("");
+    setPartyEditingId(null);
     setPartyModalOpen(true);
+  }
+
+  function editParty(party: CasePartyDraft) {
+    setPartyForm({
+      name: party.name,
+      role: party.role,
+      contact: party.contact,
+      identityNumber: party.identityNumber ?? "",
+      phone: party.phone ?? "",
+      email: party.email ?? "",
+      startDate: party.startDate ?? "",
+      endDate: party.endDate ?? ""
+    });
+    setPartyClientSearch("");
+    setPartyEditingId(party.draftId);
+    setPartyModalOpen(true);
+  }
+
+  function closePartyModal() {
+    setPartyForm(emptyCasePartyForm);
+    setPartyClientSearch("");
+    setPartyEditingId(null);
+    setPartyModalOpen(false);
   }
 
   function updatePartyForm(field: keyof CasePartyForm, value: string) {
@@ -4231,23 +4265,21 @@ function CasesPanel({ locale }: { locale: Locale }) {
   function saveParty() {
     if (!partyForm.name.trim()) return;
     const contact = partyForm.contact?.trim() || [partyForm.phone, partyForm.email].filter(Boolean).join(" / ");
-    setParties((current) => [
-      ...current,
-      {
-        draftId: createCaseDraftId("party"),
-        name: partyForm.name.trim(),
-        role: partyForm.role.trim() || "Muvekkil",
-        contact,
-        identityNumber: partyForm.identityNumber?.trim() ?? "",
-        phone: partyForm.phone?.trim() ?? "",
-        email: partyForm.email?.trim() ?? "",
-        startDate: partyForm.startDate ?? "",
-        endDate: partyForm.endDate ?? ""
-      }
-    ]);
-    setPartyForm(emptyCasePartyForm);
-    setPartyClientSearch("");
-    setPartyModalOpen(false);
+    const nextParty = {
+      name: partyForm.name.trim(),
+      role: partyForm.role.trim() || "Muvekkil",
+      contact,
+      identityNumber: partyForm.identityNumber?.trim() ?? "",
+      phone: partyForm.phone?.trim() ?? "",
+      email: partyForm.email?.trim() ?? "",
+      startDate: partyForm.startDate ?? "",
+      endDate: partyForm.endDate ?? ""
+    };
+    setParties((current) => partyEditingId
+      ? current.map((party) => party.draftId === partyEditingId ? { ...party, ...nextParty } : party)
+      : [...current, { draftId: createCaseDraftId("party"), ...nextParty }]
+    );
+    closePartyModal();
   }
 
   function removeParty(draftId: string) {
@@ -4256,7 +4288,27 @@ function CasesPanel({ locale }: { locale: Locale }) {
 
   function addExpense() {
     setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseEditingId(null);
     setExpenseModalOpen(true);
+  }
+
+  function editExpense(expense: CaseExpenseDraft) {
+    setExpenseForm({
+      title: expense.title,
+      amount: expense.amount,
+      description: expense.description,
+      category: expense.category,
+      expenseDate: expense.expenseDate,
+      paid: expense.paid
+    });
+    setExpenseEditingId(expense.draftId);
+    setExpenseModalOpen(true);
+  }
+
+  function closeExpenseModal() {
+    setExpenseForm(createEmptyCaseExpenseForm());
+    setExpenseEditingId(null);
+    setExpenseModalOpen(false);
   }
 
   function updateExpenseForm(field: keyof CaseExpenseForm, value: string | boolean) {
@@ -4268,20 +4320,19 @@ function CasesPanel({ locale }: { locale: Locale }) {
 
   function saveExpense() {
     if (!expenseForm.title.trim()) return;
-    setExpenses((current) => [
-      ...current,
-      {
-        draftId: createCaseDraftId("expense"),
-        title: expenseForm.title.trim(),
-        amount: Number(expenseForm.amount || 0),
-        description: expenseForm.description?.trim() ?? "",
-        category: expenseForm.category?.trim() || "Diger",
-        expenseDate: expenseForm.expenseDate ?? "",
-        paid: Boolean(expenseForm.paid)
-      }
-    ]);
-    setExpenseForm(createEmptyCaseExpenseForm());
-    setExpenseModalOpen(false);
+    const nextExpense = {
+      title: expenseForm.title.trim(),
+      amount: Number(expenseForm.amount || 0),
+      description: expenseForm.description?.trim() ?? "",
+      category: expenseForm.category?.trim() || "Diger",
+      expenseDate: expenseForm.expenseDate ?? "",
+      paid: Boolean(expenseForm.paid)
+    };
+    setExpenses((current) => expenseEditingId
+      ? current.map((expense) => expense.draftId === expenseEditingId ? { ...expense, ...nextExpense } : expense)
+      : [...current, { draftId: createCaseDraftId("expense"), ...nextExpense }]
+    );
+    closeExpenseModal();
   }
 
   function removeExpense(draftId: string) {
@@ -4289,11 +4340,41 @@ function CasesPanel({ locale }: { locale: Locale }) {
   }
 
   function addCaseNote() {
-    setCaseNotes((current) => [...current, { draftId: createCaseDraftId("note"), title: "", text: "" }]);
+    setCaseNoteForm(emptyCaseNoteForm);
+    setCaseNoteEditingId(null);
+    setCaseNoteModalOpen(true);
   }
 
-  function updateCaseNote(draftId: string, field: keyof CaseNote, value: string) {
-    setCaseNotes((current) => current.map((caseNote) => caseNote.draftId === draftId ? { ...caseNote, [field]: value } : caseNote));
+  function editCaseNote(caseNote: CaseNoteDraft) {
+    setCaseNoteForm({
+      title: caseNote.title,
+      text: caseNote.text
+    });
+    setCaseNoteEditingId(caseNote.draftId);
+    setCaseNoteModalOpen(true);
+  }
+
+  function updateCaseNoteForm(field: keyof CaseNoteForm, value: string) {
+    setCaseNoteForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function closeCaseNoteModal() {
+    setCaseNoteForm(emptyCaseNoteForm);
+    setCaseNoteEditingId(null);
+    setCaseNoteModalOpen(false);
+  }
+
+  function saveCaseNote() {
+    if (!caseNoteForm.title.trim() && !caseNoteForm.text.trim()) return;
+    const nextCaseNote = {
+      title: caseNoteForm.title.trim(),
+      text: caseNoteForm.text.trim()
+    };
+    setCaseNotes((current) => caseNoteEditingId
+      ? current.map((caseNote) => caseNote.draftId === caseNoteEditingId ? { ...caseNote, ...nextCaseNote } : caseNote)
+      : [...current, { draftId: createCaseDraftId("note"), ...nextCaseNote }]
+    );
+    closeCaseNoteModal();
   }
 
   function removeCaseNote(draftId: string) {
@@ -4413,7 +4494,6 @@ function CasesPanel({ locale }: { locale: Locale }) {
 
   async function openUploadedDocument(document: CaseUploadedDocument) {
     if (!selectedCase) return;
-    setDocumentPreviewLoadingId(document.id);
     setLocalError("");
     try {
       const detail = await getJson<CaseUploadedDocumentDetail>(
@@ -4429,8 +4509,27 @@ function CasesPanel({ locale }: { locale: Locale }) {
       setDocumentPreviewObjectUrl(nextObjectUrl);
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.documentOpen);
+    }
+  }
+
+  async function deleteUploadedDocument(document: CaseUploadedDocument) {
+    if (!selectedCase) return;
+    const confirmed = window.confirm(t.confirmUploadedDocumentDelete.replace("{name}", document.filename));
+    if (!confirmed) return;
+    setCaseDocumentDeletingId(document.id);
+    setLocalError("");
+    try {
+      const updatedCase = await deleteJson<CaseRecord>(`/cases/${selectedCase.id}/uploaded-documents/${document.id}`);
+      const caseList = await getJson<CaseRecord[]>("/cases");
+      setSelectedCase(updatedCase);
+      setSavedCases(caseList);
+      if (documentPreview?.id === document.id) {
+        closeDocumentPreview();
+      }
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : t.errors.documentDelete);
     } finally {
-      setDocumentPreviewLoadingId(null);
+      setCaseDocumentDeletingId(null);
     }
   }
 
@@ -4491,11 +4590,11 @@ function CasesPanel({ locale }: { locale: Locale }) {
       ) : null}
 
       {partyModalOpen && (
-        <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setPartyModalOpen(false)}>
-          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={t.addParty} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={closePartyModal}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={partyEditingId ? t.editParty : t.addParty} onMouseDown={(event) => event.stopPropagation()}>
             <div className="case-party-modal-head">
-              <PanelTitle icon={<UsersRound size={20} />} title={t.addParty} />
-              <button className="secondary-button compact icon-only" type="button" onClick={() => setPartyModalOpen(false)} aria-label={t.cancel}>
+              <PanelTitle icon={<UsersRound size={20} />} title={partyEditingId ? t.editParty : t.addParty} />
+              <button className="secondary-button compact icon-only" type="button" onClick={closePartyModal} aria-label={t.cancel}>
                 <X size={17} />
               </button>
             </div>
@@ -4535,19 +4634,19 @@ function CasesPanel({ locale }: { locale: Locale }) {
               <input value={partyForm.endDate ?? ""} onChange={(event) => updatePartyForm("endDate", event.target.value)} aria-label="Bitis tarihi" type="date" />
             </div>
             <div className="case-party-modal-actions">
-              <button disabled={!partyForm.name.trim()} type="button" onClick={saveParty}>{t.add}</button>
-              <button className="secondary-button" type="button" onClick={() => setPartyModalOpen(false)}>{t.cancel}</button>
+              <button disabled={!partyForm.name.trim()} type="button" onClick={saveParty}>{partyEditingId ? t.saveChanges : t.add}</button>
+              <button className="secondary-button" type="button" onClick={closePartyModal}>{t.cancel}</button>
             </div>
           </section>
         </div>
       )}
 
       {expenseModalOpen && (
-        <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setExpenseModalOpen(false)}>
-          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={t.addExpense} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={closeExpenseModal}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={expenseEditingId ? t.editExpense : t.addExpense} onMouseDown={(event) => event.stopPropagation()}>
             <div className="case-party-modal-head">
-              <PanelTitle icon={<CreditCard size={20} />} title={t.addExpense} />
-              <button className="secondary-button compact icon-only" type="button" onClick={() => setExpenseModalOpen(false)} aria-label={t.cancel}>
+              <PanelTitle icon={<CreditCard size={20} />} title={expenseEditingId ? t.editExpense : t.addExpense} />
+              <button className="secondary-button compact icon-only" type="button" onClick={closeExpenseModal} aria-label={t.cancel}>
                 <X size={17} />
               </button>
             </div>
@@ -4582,8 +4681,35 @@ function CasesPanel({ locale }: { locale: Locale }) {
               <span>{t.expensePaid}</span>
             </label>
             <div className="case-party-modal-actions">
-              <button disabled={!expenseForm.title.trim()} type="button" onClick={saveExpense}>{t.saveExpense}</button>
-              <button className="secondary-button" type="button" onClick={() => setExpenseModalOpen(false)}>{t.cancel}</button>
+              <button disabled={!expenseForm.title.trim()} type="button" onClick={saveExpense}>{expenseEditingId ? t.saveChanges : t.saveExpense}</button>
+              <button className="secondary-button" type="button" onClick={closeExpenseModal}>{t.cancel}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {caseNoteModalOpen && (
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={closeCaseNoteModal}>
+          <section className="case-party-modal" role="dialog" aria-modal="true" aria-label={caseNoteEditingId ? t.editCaseNote : t.addCaseNote} onMouseDown={(event) => event.stopPropagation()}>
+            <div className="case-party-modal-head">
+              <PanelTitle icon={<FileText size={20} />} title={caseNoteEditingId ? t.editCaseNote : t.addCaseNote} />
+              <button className="secondary-button compact icon-only" type="button" onClick={closeCaseNoteModal} aria-label={t.cancel}>
+                <X size={17} />
+              </button>
+            </div>
+            <label className="field-label">
+              {t.noteTitlePlaceholder}
+              <input value={caseNoteForm.title} onChange={(event) => updateCaseNoteForm("title", event.target.value)} placeholder={t.noteTitlePlaceholder} />
+            </label>
+            <label className="field-label">
+              {t.noteTextPlaceholder}
+              <textarea rows={5} value={caseNoteForm.text} onChange={(event) => updateCaseNoteForm("text", event.target.value)} placeholder={t.noteTextPlaceholder} />
+            </label>
+            <div className="case-party-modal-actions">
+              <button disabled={!caseNoteForm.title.trim() && !caseNoteForm.text.trim()} type="button" onClick={saveCaseNote}>
+                {caseNoteEditingId ? t.saveChanges : t.add}
+              </button>
+              <button className="secondary-button" type="button" onClick={closeCaseNoteModal}>{t.cancel}</button>
             </div>
           </section>
         </div>
@@ -4650,18 +4776,48 @@ function CasesPanel({ locale }: { locale: Locale }) {
                       </div>
                     </div>
                     {selectedCase.uploadedDocuments?.length ? (
-                      <div className="case-saved-items">
-                        {selectedCase.uploadedDocuments.map((document: CaseUploadedDocument) => (
-                          <button className="case-party-preview case-document-preview-item" key={document.id} onClick={() => void openUploadedDocument(document)} type="button">
-                            <div>
-                              <strong>{document.filename}</strong>
-                              <span>{formatBytes(document.size)} · {document.indexed} {t.indexedParts}</span>
-                              <small>{document.textPreview || t.noDocumentPreview}</small>
-                            </div>
-                            {documentPreviewLoadingId === document.id ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : <FileSearch size={17} aria-hidden="true" />}
-                          </button>
-                        ))}
-                      </div>
+                      <TableContainer component={Paper} className="case-uploaded-documents-table" elevation={0}>
+                        <Table size="small" aria-label={t.uploadedDocumentsTableLabel}>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>{t.uploadedDocumentName}</TableCell>
+                              <TableCell align="right">{t.uploadedDocumentActions}</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {selectedCase.uploadedDocuments.map((document: CaseUploadedDocument) => (
+                              <TableRow key={document.id}>
+                                <TableCell>
+                                  <strong>{document.filename}</strong>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <div className="case-uploaded-document-actions">
+                                    <button
+                                      className="secondary-button compact icon-only"
+                                      type="button"
+                                      onClick={() => void openUploadedDocument(document)}
+                                      title={t.uploadedDocumentView}
+                                      aria-label={`${t.uploadedDocumentView}: ${document.filename}`}
+                                    >
+                                      <FileSearch size={16} aria-hidden="true" />
+                                    </button>
+                                    <button
+                                      className="danger-button compact icon-only"
+                                      type="button"
+                                      onClick={() => void deleteUploadedDocument(document)}
+                                      disabled={caseDocumentDeletingId === document.id}
+                                      title={t.uploadedDocumentDelete}
+                                      aria-label={`${t.uploadedDocumentDelete}: ${document.filename}`}
+                                    >
+                                      {caseDocumentDeletingId === document.id ? <LoaderCircle className="spin" size={16} aria-hidden="true" /> : <Trash2 size={16} aria-hidden="true" />}
+                                    </button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     ) : (
                       <p className="case-collection-empty">{t.noUploadedDocuments}</p>
                     )}
@@ -4714,20 +4870,41 @@ function CasesPanel({ locale }: { locale: Locale }) {
                   </button>
                 </div>
                 {parties.length ? (
-                  <div className="case-saved-items">
-                    {parties.map((party) => (
-                      <div className="case-party-preview" key={party.draftId}>
-                        <div>
-                          <strong>{party.name}</strong>
-                          <span>{party.role}</span>
-                          <small>{[party.identityNumber, party.phone, party.email].filter(Boolean).join(" / ") || "-"}</small>
-                        </div>
-                        <button className="icon-danger-button" type="button" onClick={() => removeParty(party.draftId)} aria-label={t.removeItem}>
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <TableContainer component={Paper} className="case-mui-table" elevation={0}>
+                    <Table size="small" aria-label={t.partiesTitle.replace("{count}", String(parties.length))}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t.partyFullNameRequired.replace(" *", "")}</TableCell>
+                          <TableCell>{t.partyRolePlaceholder}</TableCell>
+                          <TableCell>{t.partyContactPlaceholder}</TableCell>
+                          <TableCell align="right">{t.uploadedDocumentActions}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {parties.map((party) => (
+                          <TableRow key={party.draftId}>
+                            <TableCell>
+                              <strong>{party.name}</strong>
+                            </TableCell>
+                            <TableCell>{party.role || "-"}</TableCell>
+                            <TableCell>
+                              {[party.identityNumber, party.phone, party.email].filter(Boolean).join(" / ") || party.contact || "-"}
+                            </TableCell>
+                            <TableCell align="right">
+                              <div className="case-table-actions">
+                                <button className="secondary-button compact icon-only" type="button" onClick={() => editParty(party)} title={t.editItem} aria-label={t.editItem}>
+                                  <Pencil size={16} aria-hidden="true" />
+                                </button>
+                                <button className="danger-button compact icon-only" type="button" onClick={() => removeParty(party.draftId)} title={t.removeItem} aria-label={t.removeItem}>
+                                  <Trash2 size={16} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 ) : (
                   <p className="case-collection-empty">{t.noParties}</p>
                 )}
@@ -4745,20 +4922,42 @@ function CasesPanel({ locale }: { locale: Locale }) {
                   </button>
                 </div>
                 {expenses.length ? (
-                  <div className="case-saved-items">
-                    {expenses.map((expense) => (
-                      <div className="case-party-preview" key={expense.draftId}>
-                        <div>
-                          <strong>{expense.title}</strong>
-                          <span>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL · {expense.category || "Diger"}</span>
-                          <small>{[expense.expenseDate, expense.paid ? t.expensePaid : null].filter(Boolean).join(" / ") || "-"}</small>
-                        </div>
-                        <button className="icon-danger-button" type="button" onClick={() => removeExpense(expense.draftId)} aria-label={t.removeItem}>
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <TableContainer component={Paper} className="case-mui-table" elevation={0}>
+                    <Table size="small" aria-label={t.expensesTitle}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t.expenseTitlePlaceholder}</TableCell>
+                          <TableCell>{t.expenseAmountPlaceholder}</TableCell>
+                          <TableCell>{t.expenseCategory}</TableCell>
+                          <TableCell>{t.expenseDate}</TableCell>
+                          <TableCell align="right">{t.uploadedDocumentActions}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {expenses.map((expense) => (
+                          <TableRow key={expense.draftId}>
+                            <TableCell>
+                              <strong>{expense.title}</strong>
+                              {expense.description ? <small>{expense.description}</small> : null}
+                            </TableCell>
+                            <TableCell>{Number(expense.amount ?? 0).toLocaleString(locale === "en" ? "en-US" : "tr-TR")} TL</TableCell>
+                            <TableCell>{expense.category || "Diger"}</TableCell>
+                            <TableCell>{[expense.expenseDate, expense.paid ? t.expensePaid : null].filter(Boolean).join(" / ") || "-"}</TableCell>
+                            <TableCell align="right">
+                              <div className="case-table-actions">
+                                <button className="secondary-button compact icon-only" type="button" onClick={() => editExpense(expense)} title={t.editItem} aria-label={t.editItem}>
+                                  <Pencil size={16} aria-hidden="true" />
+                                </button>
+                                <button className="danger-button compact icon-only" type="button" onClick={() => removeExpense(expense.draftId)} title={t.removeItem} aria-label={t.removeItem}>
+                                  <Trash2 size={16} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 ) : (
                   <p className="case-collection-empty">{t.noExpenses}</p>
                 )}
@@ -4780,17 +4979,37 @@ function CasesPanel({ locale }: { locale: Locale }) {
                   </button>
                 </div>
                 {caseNotes.length ? (
-                  <div className="case-collection-rows">
-                    {caseNotes.map((caseNote) => (
-                      <div className="case-collection-row case-collection-row-note" key={caseNote.draftId}>
-                        <input value={caseNote.title} onChange={(event) => updateCaseNote(caseNote.draftId, "title", event.target.value)} placeholder={t.noteTitlePlaceholder} />
-                        <textarea rows={2} value={caseNote.text} onChange={(event) => updateCaseNote(caseNote.draftId, "text", event.target.value)} placeholder={t.noteTextPlaceholder} />
-                        <button className="icon-danger-button" type="button" onClick={() => removeCaseNote(caseNote.draftId)} aria-label={t.removeItem}>
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <TableContainer component={Paper} className="case-mui-table" elevation={0}>
+                    <Table size="small" aria-label={t.caseNotesTitle.replace("{count}", String(caseNotes.length))}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t.noteTitlePlaceholder}</TableCell>
+                          <TableCell>{t.noteTextPlaceholder}</TableCell>
+                          <TableCell align="right">{t.uploadedDocumentActions}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {caseNotes.map((caseNote) => (
+                          <TableRow key={caseNote.draftId}>
+                            <TableCell>
+                              <strong>{caseNote.title || "-"}</strong>
+                            </TableCell>
+                            <TableCell>{caseNote.text || "-"}</TableCell>
+                            <TableCell align="right">
+                              <div className="case-table-actions">
+                                <button className="secondary-button compact icon-only" type="button" onClick={() => editCaseNote(caseNote)} title={t.editItem} aria-label={t.editItem}>
+                                  <Pencil size={16} aria-hidden="true" />
+                                </button>
+                                <button className="danger-button compact icon-only" type="button" onClick={() => removeCaseNote(caseNote.draftId)} title={t.removeItem} aria-label={t.removeItem}>
+                                  <Trash2 size={16} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 ) : (
                   <p className="case-collection-empty">{t.noCaseNotes}</p>
                 )}

@@ -5832,6 +5832,7 @@ body[data-theme="dark"] .petition-linked-precedents li {
   color: inherit;
   cursor: pointer;
   font: inherit;
+  grid-template-columns: minmax(0, 1fr);
   text-align: left;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   width: 100%;
@@ -5839,10 +5840,65 @@ body[data-theme="dark"] .petition-linked-precedents li {
 
 .case-document-preview-item:hover,
 .case-document-preview-item:focus-visible {
-  border-color: rgba(37, 99, 235, 0.45);
+  border-color: var(--line);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
   outline: none;
   transform: translateY(-1px);
+}
+
+.case-mui-table,
+.case-uploaded-documents-table {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid var(--line);
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.case-mui-table .MuiTableCell-root,
+.case-uploaded-documents-table .MuiTableCell-root {
+  border-color: var(--line);
+  color: var(--ink);
+  font-family: inherit;
+  padding: 10px 12px;
+}
+
+.case-mui-table .MuiTableHead-root .MuiTableCell-root,
+.case-uploaded-documents-table .MuiTableHead-root .MuiTableCell-root {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.case-mui-table .MuiTableBody-root .MuiTableRow-root:last-child .MuiTableCell-root,
+.case-uploaded-documents-table .MuiTableBody-root .MuiTableRow-root:last-child .MuiTableCell-root {
+  border-bottom: 0;
+}
+
+.case-mui-table strong,
+.case-uploaded-documents-table strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.case-mui-table small {
+  color: var(--muted);
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.case-table-actions,
+.case-uploaded-document-actions {
+  display: inline-flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+body[data-theme="dark"] .case-mui-table,
+body[data-theme="dark"] .case-uploaded-documents-table {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .case-modal-backdrop {

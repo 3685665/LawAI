@@ -183,6 +183,19 @@ public class CaseService {
   }
 
   @Transactional
+  public CaseRecordResponse deleteUploadedDocument(String caseId, String documentId) {
+    LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    boolean documentRemoved = legalCase.getUploadedDocuments().removeIf(document -> document.getId().equals(documentId));
+    if (!documentRemoved) {
+      throw new IllegalArgumentException("Belge bulunamadi.");
+    }
+    legalCase.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+    LegalCaseEntity saved = legalCaseRepository.save(legalCase);
+    return toResponse(saved.toSnapshot());
+  }
+
+  @Transactional
   public CaseDocumentPatchResponse updateDocument(String caseId, String documentId, CaseDocumentUpdateRequest request) {
     LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
         .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
