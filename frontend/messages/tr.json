@@ -554,6 +554,11 @@
     "removeItem": "Kaydi kaldir",
     "caseUploadHint": "Dokuman yukleyebilir veya mevcut dosyayi belge akisina baglayabilirsiniz.",
     "uploadDocument": "Belge yukleme",
+    "uploadToCase": "Davaya belge ekle",
+    "uploadedDocumentsTitle": "YUKLENEN BELGELER ({count})",
+    "noUploadedDocuments": "Bu davaya henuz belge eklenmedi.",
+    "noDocumentPreview": "Metin onizlemesi yok.",
+    "indexedParts": "parca",
     "saveAndList": "Kaydet ve listele",
     "saveChanges": "Degisiklikleri kaydet",
     "backList": "Listeye don",
@@ -585,6 +590,7 @@
       "open": "Dava acilamadi.",
       "save": "Dava kaydedilemedi.",
       "document": "Belge durumu guncellenemedi.",
+      "documentUpload": "Belge davaya eklenemedi.",
       "delete": "Dava silinemedi."
     }
   },

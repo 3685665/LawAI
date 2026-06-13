@@ -99,6 +99,18 @@ export type CaseDocument = {
   completed: boolean;
 };
 
+export type CaseUploadedDocument = {
+  id: string;
+  filename: string;
+  size: number;
+  contentType: string;
+  extractedCharacters: number;
+  chunkCount: number;
+  indexed: number;
+  textPreview?: string | null;
+  createdAt: string;
+};
+
 export type CaseParty = {
   id?: string;
   name: string;
@@ -147,6 +159,7 @@ export type CaseRecord = {
   requiredDocumentCount: number;
   completedRequiredDocumentCount: number;
   documents: CaseDocument[];
+  uploadedDocuments: CaseUploadedDocument[];
   parties: CaseParty[];
   expenses: CaseExpense[];
   caseNotes: CaseNote[];

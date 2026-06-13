@@ -115,6 +115,7 @@ public class DocumentService {
         ingestResponse.storage(),
         ingestResponse.message(),
         preview(extractedText, 500),
+        extractedText,
         List.of()
     );
   }

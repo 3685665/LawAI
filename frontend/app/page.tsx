@@ -73,6 +73,7 @@ import {
   type CaseNote,
   type CaseParty,
   type CaseRecord,
+  type CaseUploadedDocument,
   type AuthPasswordResetResponse,
   type AuthSessionResponse,
   type AuthUser,
@@ -316,6 +317,7 @@ type UploadResponse = {
   storage?: string;
   message?: string;
   textPreview?: string;
+  extractedText?: string;
   warnings?: string[];
 };
 
@@ -4011,9 +4013,11 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [activeCaseAiAction, setActiveCaseAiAction] = useState<CaseAiActionKey | null>(null);
   const [caseAiResult, setCaseAiResult] = useState<CaseAiActionResponse | null>(null);
+  const [caseDocumentUploading, setCaseDocumentUploading] = useState(false);
   const [localError, setLocalError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingCases, setLoadingCases] = useState(true);
+  const caseDocumentInputRef = useRef<HTMLInputElement | null>(null);
 
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
   const caseFormTabs = useMemo<Array<{ key: CaseFormTab; label: string; description: string; icon: LucideIcon }>>(() => [
@@ -4344,6 +4348,42 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
     }
   }
 
+  async function uploadCaseDocument(file: File | null) {
+    if (!selectedCase) {
+      setLocalError(t.errors.save);
+      return;
+    }
+    const validationError = validateFile(file, locale);
+    if (validationError || !file) {
+      setLocalError(validationError ?? t.errors.document);
+      return;
+    }
+    setCaseDocumentUploading(true);
+    setLocalError("");
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      form.append("caseId", selectedCase.id);
+      form.append("topic", selectedCase.fileTitle || file.name);
+      if (selectedCase.courtName) {
+        form.append("court", selectedCase.courtName);
+      }
+      await uploadMultipart<UploadResponse>("/documents/ingest", form);
+      const detail = await getJson<CaseRecord>(`/cases/${selectedCase.id}`);
+      const caseList = await getJson<CaseRecord[]>("/cases");
+      setSelectedCase(detail);
+      setSavedCases(caseList);
+      setCaseAiResult(null);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : t.errors.documentUpload);
+    } finally {
+      setCaseDocumentUploading(false);
+      if (caseDocumentInputRef.current) {
+        caseDocumentInputRef.current.value = "";
+      }
+    }
+  }
+
   async function deleteCase(caseId: string) {
     const confirmed = window.confirm(t.confirmDelete);
     if (!confirmed) return;
@@ -4510,12 +4550,52 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   <p>{caseScreen === "detail" ? t.updateNotice : t.saveNotice}</p>
                   <small>{t.caseUploadHint}</small>
                 </div>
+                <input
+                  ref={caseDocumentInputRef}
+                  accept={acceptedExtensions.join(",")}
+                  onChange={(event) => void uploadCaseDocument(event.target.files?.[0] ?? null)}
+                  type="file"
+                  hidden
+                />
                 <div className="upload-actions">
+                  <button
+                    disabled={caseScreen !== "detail" || caseDocumentUploading}
+                    type="button"
+                    onClick={() => caseDocumentInputRef.current?.click()}
+                  >
+                    {caseDocumentUploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
+                    {t.uploadToCase}
+                  </button>
                   <button className="secondary-button" type="button" onClick={onGoToDocuments}>
                     <Upload size={17} />
                     {t.uploadDocument}
                   </button>
                 </div>
+                {caseScreen === "detail" && selectedCase ? (
+                  <div className="case-collection-panel">
+                    <div className="case-collection-head">
+                      <div>
+                        <span className="case-collection-icon note"><FileText size={19} /></span>
+                        <strong>{t.uploadedDocumentsTitle.replace("{count}", String(selectedCase.uploadedDocuments?.length ?? 0))}</strong>
+                      </div>
+                    </div>
+                    {selectedCase.uploadedDocuments?.length ? (
+                      <div className="case-saved-items">
+                        {selectedCase.uploadedDocuments.map((document: CaseUploadedDocument) => (
+                          <div className="case-party-preview" key={document.id}>
+                            <div>
+                              <strong>{document.filename}</strong>
+                              <span>{formatBytes(document.size)} · {document.indexed} {t.indexedParts}</span>
+                              <small>{document.textPreview || t.noDocumentPreview}</small>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="case-collection-empty">{t.noUploadedDocuments}</p>
+                    )}
+                  </div>
+                ) : null}
                 <div className="cases-form-grid">
                   <label className="field-label">
                     {t.fileTitle}

@@ -5,6 +5,7 @@ import com.lawai.api.service.CaseService.CaseExpenseSnapshot;
 import com.lawai.api.service.CaseService.CaseNoteSnapshot;
 import com.lawai.api.service.CaseService.CasePartySnapshot;
 import com.lawai.api.service.CaseService.CaseRecordSnapshot;
+import com.lawai.api.service.CaseService.CaseUploadedDocumentSnapshot;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -54,6 +55,10 @@ public class LegalCaseEntity {
   @OrderBy("id ASC")
   private List<CaseDocumentEntity> documents = new ArrayList<>();
 
+  @OneToMany(mappedBy = "legalCase", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+  @OrderBy("createdAt DESC")
+  private List<CaseUploadedDocumentEntity> uploadedDocuments = new ArrayList<>();
+
   @OneToMany(mappedBy = "legalCase", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @OrderBy("id ASC")
   private List<CasePartyEntity> parties = new ArrayList<>();
@@ -92,6 +97,11 @@ public class LegalCaseEntity {
         entity.documents.add(CaseDocumentEntity.fromSnapshot(document, entity));
       }
     }
+    if (snapshot.uploadedDocuments() != null) {
+      for (var document : snapshot.uploadedDocuments()) {
+        entity.uploadedDocuments.add(CaseUploadedDocumentEntity.fromSnapshot(document, entity));
+      }
+    }
     if (snapshot.parties() != null) {
       for (var party : snapshot.parties()) {
         entity.parties.add(CasePartyEntity.fromSnapshot(party, entity));
@@ -125,6 +135,12 @@ public class LegalCaseEntity {
         this.documents.add(CaseDocumentEntity.fromSnapshot(document, this));
       }
     }
+    this.uploadedDocuments.clear();
+    if (snapshot.uploadedDocuments() != null) {
+      for (var document : snapshot.uploadedDocuments()) {
+        this.uploadedDocuments.add(CaseUploadedDocumentEntity.fromSnapshot(document, this));
+      }
+    }
     this.parties.clear();
     if (snapshot.parties() != null) {
       for (var party : snapshot.parties()) {
@@ -149,6 +165,9 @@ public class LegalCaseEntity {
     List<CaseDocumentSnapshot> documentSnapshots = documents.stream()
         .map(CaseDocumentEntity::toSnapshot)
         .toList();
+    List<CaseUploadedDocumentSnapshot> uploadedDocumentSnapshots = uploadedDocuments.stream()
+        .map(CaseUploadedDocumentEntity::toSnapshot)
+        .toList();
     List<CasePartySnapshot> partySnapshots = parties.stream()
         .map(CasePartyEntity::toSnapshot)
         .toList();
@@ -159,7 +178,7 @@ public class LegalCaseEntity {
         .map(CaseNoteEntity::toSnapshot)
         .toList();
     return new CaseRecordSnapshot(
-        id, caseType, fileTitle, caseNumber, courtName, city, notes, documentSnapshots,
+        id, caseType, fileTitle, caseNumber, courtName, city, notes, documentSnapshots, uploadedDocumentSnapshots,
         partySnapshots, expenseSnapshots, caseNoteSnapshots, createdAt, updatedAt
     );
   }
@@ -174,5 +193,9 @@ public class LegalCaseEntity {
 
   public List<CaseDocumentEntity> getDocuments() {
     return documents;
+  }
+
+  public List<CaseUploadedDocumentEntity> getUploadedDocuments() {
+    return uploadedDocuments;
   }
 }

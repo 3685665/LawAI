@@ -15,6 +15,7 @@ public record CaseRecordResponse(
     int requiredDocumentCount,
     int completedRequiredDocumentCount,
     List<CaseDocumentDto> documents,
+    List<CaseUploadedDocumentDto> uploadedDocuments,
     List<CasePartyDto> parties,
     List<CaseExpenseDto> expenses,
     List<CaseNoteDto> caseNotes,

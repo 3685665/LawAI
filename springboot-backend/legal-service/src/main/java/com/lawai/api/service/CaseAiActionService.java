@@ -6,6 +6,7 @@ import com.lawai.api.dto.CaseExpenseDto;
 import com.lawai.api.dto.CaseNoteDto;
 import com.lawai.api.dto.CasePartyDto;
 import com.lawai.api.dto.CaseRecordResponse;
+import com.lawai.api.dto.CaseUploadedDocumentDto;
 import com.lawai.api.dto.ChatRequest;
 import com.lawai.api.dto.ChatResponse;
 import org.springframework.stereotype.Service;
@@ -142,7 +143,8 @@ public class CaseAiActionService {
         "Taraflar:\n" + formatParties(legalCase.parties()),
         "Masraflar:\n" + formatExpenses(legalCase.expenses()),
         "Dosya notları:\n" + formatNotes(legalCase.caseNotes()),
-        "Belge checklist:\n" + formatDocuments(legalCase.documents())
+        "Belge checklist:\n" + formatDocuments(legalCase.documents()),
+        "Yuklenen dava belgeleri:\n" + formatUploadedDocuments(legalCase.uploadedDocuments())
     );
   }
 
@@ -192,6 +194,23 @@ public class CaseAiActionService {
             fallback(document.title()),
             document.required() ? "zorunlu" : "opsiyonel",
             fallback(document.detail())
+        ))
+        .toList()
+        .stream()
+        .reduce((left, right) -> left + "\n" + right)
+        .orElse("-");
+  }
+
+  private String formatUploadedDocuments(List<CaseUploadedDocumentDto> documents) {
+    if (documents == null || documents.isEmpty()) {
+      return "-";
+    }
+    return documents.stream()
+        .map(document -> "- %s | %s karakter | %s parca indekslendi\n  Onizleme: %s".formatted(
+            fallback(document.filename()),
+            document.extractedCharacters(),
+            document.indexed(),
+            fallback(document.textPreview())
         ))
         .toList()
         .stream()

@@ -10,7 +10,10 @@ import com.lawai.api.dto.CasePartyDto;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplateDto;
 import com.lawai.api.dto.CaseTemplatesResponse;
+import com.lawai.api.dto.CaseUploadedDocumentDto;
+import com.lawai.api.dto.DocumentIngestResponse;
 import com.lawai.persistence.entity.LegalCaseEntity;
+import com.lawai.persistence.entity.CaseUploadedDocumentEntity;
 import com.lawai.persistence.repository.LegalCaseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -113,7 +116,8 @@ public class CaseService {
         id,
         request,
         existing.createdAt(),
-        OffsetDateTime.now(ZoneOffset.UTC)
+        OffsetDateTime.now(ZoneOffset.UTC),
+        existing.uploadedDocuments()
     );
     legalCase.replaceFromSnapshot(snapshot);
     LegalCaseEntity saved = legalCaseRepository.save(legalCase);
@@ -158,6 +162,31 @@ public class CaseService {
     return new CaseDocumentPatchResponse(toResponse(saved.toSnapshot()), listCases());
   }
 
+  @Transactional
+  public CaseRecordResponse attachUploadedDocument(String caseId, DocumentIngestResponse document) {
+    LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    legalCase.getUploadedDocuments().add(CaseUploadedDocumentEntity.fromSnapshot(
+        new CaseUploadedDocumentSnapshot(
+            UUID.randomUUID().toString(),
+            document.filename(),
+            document.size(),
+            document.contentType(),
+            document.extractedCharacters(),
+            document.chunkCount(),
+            document.indexed(),
+            document.textPreview(),
+            document.extractedText(),
+            now
+        ),
+        legalCase
+    ));
+    legalCase.setUpdatedAt(now);
+    LegalCaseEntity saved = legalCaseRepository.save(legalCase);
+    return toResponse(saved.toSnapshot());
+  }
+
   private CaseTemplateDto toTemplateDto(CaseTemplateDefinition template) {
     return new CaseTemplateDto(
         template.caseType(),
@@ -196,6 +225,19 @@ public class CaseService {
         requiredDocumentCount,
         completedRequiredDocumentCount,
         documents,
+        snapshot.uploadedDocuments().stream()
+            .map(document -> new CaseUploadedDocumentDto(
+                document.id(),
+                document.filename(),
+                document.size(),
+                document.contentType(),
+                document.extractedCharacters(),
+                document.chunkCount(),
+                document.indexed(),
+                document.textPreview(),
+                document.createdAt()
+            ))
+            .toList(),
         snapshot.parties().stream()
             .map(party -> new CasePartyDto(
                 party.id(),
@@ -286,6 +328,16 @@ public class CaseService {
       OffsetDateTime createdAt,
       OffsetDateTime updatedAt
   ) {
+    return buildSnapshot(id, request, createdAt, updatedAt, List.of());
+  }
+
+  private CaseRecordSnapshot buildSnapshot(
+      String id,
+      CaseCreateRequest request,
+      OffsetDateTime createdAt,
+      OffsetDateTime updatedAt,
+      List<CaseUploadedDocumentSnapshot> uploadedDocuments
+  ) {
     CaseTemplateDefinition template = requireTemplate(request.caseType());
     Map<String, Boolean> completedDocumentIds = request.completedDocumentIds() == null
         ? Map.of()
@@ -311,6 +363,7 @@ public class CaseService {
                 completedDocumentIds.getOrDefault(document.id(), false)
             ))
             .toList(),
+        uploadedDocuments == null ? List.of() : uploadedDocuments,
         normalizeParties(request.parties()),
         normalizeExpenses(request.expenses()),
         normalizeCaseNotes(request.caseNotes()),
@@ -373,6 +426,7 @@ public class CaseService {
       String city,
       String notes,
       List<CaseDocumentSnapshot> documents,
+      List<CaseUploadedDocumentSnapshot> uploadedDocuments,
       List<CasePartySnapshot> parties,
       List<CaseExpenseSnapshot> expenses,
       List<CaseNoteSnapshot> caseNotes,
@@ -380,12 +434,26 @@ public class CaseService {
       OffsetDateTime updatedAt
   ) {
     private CaseRecordSnapshot withDocuments(List<CaseDocumentSnapshot> documents) {
-      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, parties, expenses, caseNotes, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, uploadedDocuments, parties, expenses, caseNotes, createdAt, updatedAt);
     }
 
     private CaseRecordSnapshot withUpdatedAt(OffsetDateTime updatedAt) {
-      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, parties, expenses, caseNotes, createdAt, updatedAt);
+      return new CaseRecordSnapshot(id, caseType, fileTitle, caseNumber, courtName, city, notes, documents, uploadedDocuments, parties, expenses, caseNotes, createdAt, updatedAt);
     }
+  }
+
+  public record CaseUploadedDocumentSnapshot(
+      String id,
+      String filename,
+      long size,
+      String contentType,
+      int extractedCharacters,
+      int chunkCount,
+      int indexed,
+      String textPreview,
+      String extractedText,
+      OffsetDateTime createdAt
+  ) {
   }
 
   public record CasePartySnapshot(

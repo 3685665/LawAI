@@ -1,5 +1,7 @@
 package com.lawai.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.List;
 
 public record DocumentIngestResponse(
@@ -12,6 +14,8 @@ public record DocumentIngestResponse(
     String storage,
     String message,
     String textPreview,
+    @JsonIgnore
+    String extractedText,
     List<String> warnings
 ) {
 }

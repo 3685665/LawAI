@@ -554,6 +554,11 @@
     "removeItem": "Remove item",
     "caseUploadHint": "Upload documents or connect the case to the document workflow.",
     "uploadDocument": "Document upload",
+    "uploadToCase": "Add document to case",
+    "uploadedDocumentsTitle": "UPLOADED DOCUMENTS ({count})",
+    "noUploadedDocuments": "No document has been added to this case yet.",
+    "noDocumentPreview": "No text preview.",
+    "indexedParts": "chunks",
     "saveAndList": "Save and list",
     "saveChanges": "Save changes",
     "backList": "Back to list",
@@ -585,6 +590,7 @@
       "open": "Case could not be opened.",
       "save": "Case could not be saved.",
       "document": "Document status could not be updated.",
+      "documentUpload": "Document could not be added to the case.",
       "delete": "Case could not be deleted."
     }
   },

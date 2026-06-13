@@ -21,6 +21,7 @@ import com.lawai.api.dto.PrecedentSyncResponse;
 import com.lawai.api.service.AiServiceClient;
 import com.lawai.common.client.ActivityLogClient;
 import com.lawai.api.service.ChatHistoryService;
+import com.lawai.api.service.CaseService;
 import com.lawai.api.service.DocumentService;
 import com.lawai.api.service.AnayasaPrecedentService;
 import com.lawai.api.service.DanistayPrecedentService;
@@ -51,6 +52,7 @@ public class LawaiController {
 
   private final AiServiceClient aiServiceClient;
   private final ChatHistoryService chatHistoryService;
+  private final CaseService caseService;
   private final DocumentService documentService;
   private final ActivityLogClient activityLogClient;
   private final PrecedentSearchService precedentSearchService;
@@ -61,6 +63,7 @@ public class LawaiController {
   public LawaiController(
       AiServiceClient aiServiceClient,
       ChatHistoryService chatHistoryService,
+      CaseService caseService,
       DocumentService documentService,
       ActivityLogClient activityLogClient,
       PrecedentSearchService precedentSearchService,
@@ -70,6 +73,7 @@ public class LawaiController {
   ) {
     this.aiServiceClient = aiServiceClient;
     this.chatHistoryService = chatHistoryService;
+    this.caseService = caseService;
     this.documentService = documentService;
     this.activityLogClient = activityLogClient;
     this.precedentSearchService = precedentSearchService;
@@ -192,9 +196,16 @@ public class LawaiController {
       @RequestPart("file") MultipartFile file,
       @RequestParam(value = "topic", required = false) String topic,
       @RequestParam(value = "court", required = false) String court,
+      @RequestParam(value = "caseId", required = false) String caseId,
       Authentication authentication
   ) {
+    if (caseId != null && !caseId.isBlank()) {
+      caseService.getCase(caseId);
+    }
     DocumentIngestResponse response = documentService.ingest(file, topic, court);
+    if (caseId != null && !caseId.isBlank()) {
+      caseService.attachUploadedDocument(caseId, response);
+    }
     activityLogClient.logBackend(requireUser(authentication), "document-ingest", "Belge Isleme", "Belge bilgi bankasina eklendi: " + file.getOriginalFilename(), "/api/documents/ingest");
     return response;
   }
