@@ -3226,7 +3226,7 @@ export default function Home() {
           </div>
         </Drawer>
 
-        {activeTab === "cases" && <CasesPanel locale={locale} onGoToDocuments={() => setActiveTab("document")} />}
+        {activeTab === "cases" && <CasesPanel locale={locale} />}
 
         {activeTab === "document" && <DocumentPanel locale={locale} loading={loading} run={run} onGoToChat={() => setActiveTab("chat")} />}
 
@@ -3991,7 +3991,7 @@ function createCaseDraftId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocuments: () => void }) {
+function CasesPanel({ locale }: { locale: Locale }) {
   const t = getMessages(locale).cases;
   const [caseScreen, setCaseScreen] = useState<CaseScreen>("list");
   const [activeCaseFormTab, setActiveCaseFormTab] = useState<CaseFormTab>("overview");
@@ -4545,11 +4545,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
 
             {activeCaseFormTab === "overview" ? (
               <div className="case-form-tab-panel" role="tabpanel">
-                <div className="case-template">
-                  <strong>{t.uploadDocument}</strong>
-                  <p>{caseScreen === "detail" ? t.updateNotice : t.saveNotice}</p>
-                  <small>{t.caseUploadHint}</small>
-                </div>
                 <input
                   ref={caseDocumentInputRef}
                   accept={acceptedExtensions.join(",")}
@@ -4565,10 +4560,6 @@ function CasesPanel({ locale, onGoToDocuments }: { locale: Locale; onGoToDocumen
                   >
                     {caseDocumentUploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
                     {t.uploadToCase}
-                  </button>
-                  <button className="secondary-button" type="button" onClick={onGoToDocuments}>
-                    <Upload size={17} />
-                    {t.uploadDocument}
                   </button>
                 </div>
                 {caseScreen === "detail" && selectedCase ? (
