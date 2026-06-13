@@ -4035,11 +4035,16 @@ function CasesPanel({ locale }: { locale: Locale }) {
   const caseDocumentInputRef = useRef<HTMLInputElement | null>(null);
 
   const allCases = useMemo(() => [...savedCases].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [savedCases]);
-  const caseFormTabs = useMemo<Array<{ key: CaseFormTab; label: string; description: string; icon: LucideIcon }>>(() => [
-    { key: "overview", label: t.tabOverview, description: t.tabOverviewDesc, icon: FolderOpen },
-    { key: "people", label: t.tabPeople, description: t.tabPeopleDesc, icon: UsersRound },
-    { key: "notes", label: t.tabNotes, description: t.tabNotesDesc, icon: FileText }
-  ], [t]);
+  const caseFormTabs = useMemo<Array<{ key: CaseFormTab; label: string; description: string; icon: LucideIcon }>>(() => {
+    const tabs: Array<{ key: CaseFormTab; label: string; description: string; icon: LucideIcon }> = [
+      { key: "overview", label: t.tabOverview, description: t.tabOverviewDesc, icon: FolderOpen },
+      { key: "people", label: t.tabPeople, description: t.tabPeopleDesc, icon: UsersRound }
+    ];
+    if (caseScreen === "detail" && selectedCase) {
+      tabs.push({ key: "notes", label: t.tabNotes, description: t.tabNotesDesc, icon: Sparkles });
+    }
+    return tabs;
+  }, [caseScreen, selectedCase, t]);
   const caseColumns = useMemo<GridColDef<CaseRecord>[]>(() => [
     {
       field: "fileTitle",
@@ -4757,16 +4762,6 @@ function CasesPanel({ locale }: { locale: Locale }) {
                   type="file"
                   hidden
                 />
-                <div className="upload-actions">
-                  <button
-                    disabled={caseScreen !== "detail" || caseDocumentUploading}
-                    type="button"
-                    onClick={() => caseDocumentInputRef.current?.click()}
-                  >
-                    {caseDocumentUploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
-                    {t.uploadToCase}
-                  </button>
-                </div>
                 {caseScreen === "detail" && selectedCase ? (
                   <div className="case-collection-panel">
                     <div className="case-collection-head">
@@ -4774,6 +4769,15 @@ function CasesPanel({ locale }: { locale: Locale }) {
                         <span className="case-collection-icon note"><FileText size={19} /></span>
                         <strong>{t.uploadedDocumentsTitle.replace("{count}", String(selectedCase.uploadedDocuments?.length ?? 0))}</strong>
                       </div>
+                      <button
+                        className="secondary-button success"
+                        disabled={caseDocumentUploading}
+                        type="button"
+                        onClick={() => caseDocumentInputRef.current?.click()}
+                      >
+                        {caseDocumentUploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
+                        {t.uploadToCase}
+                      </button>
                     </div>
                     {selectedCase.uploadedDocuments?.length ? (
                       <TableContainer component={Paper} className="case-uploaded-documents-table" elevation={0}>
@@ -4962,11 +4966,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
                   <p className="case-collection-empty">{t.noExpenses}</p>
                 )}
               </section>
-              </div>
-            ) : null}
 
-            {activeCaseFormTab === "notes" ? (
-              <div className="case-collection-stack case-form-tab-panel" role="tabpanel">
               <section className="case-collection-panel">
                 <div className="case-collection-head">
                   <div>
@@ -5016,6 +5016,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
               </section>
               </div>
             ) : null}
+
             {activeCaseFormTab === "notes" && caseScreen === "detail" && selectedCase ? (
               <section className="case-ai-workspace">
                 <div className="case-ai-head">
