@@ -7,11 +7,17 @@ import com.lawai.api.dto.CaseDocumentPatchResponse;
 import com.lawai.api.dto.CaseDocumentUpdateRequest;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplatesResponse;
+import com.lawai.api.dto.CaseUploadedDocumentDetailDto;
 import com.lawai.common.client.ActivityLogClient;
 import com.lawai.api.service.CaseAiActionService;
 import com.lawai.api.service.CaseService;
+import com.lawai.api.service.CaseService.CaseUploadedDocumentContent;
 import com.lawai.common.model.AuthenticatedUser;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,6 +66,32 @@ public class CaseController {
   @GetMapping("/{caseId}")
   public CaseRecordResponse getCase(@PathVariable String caseId) {
     return caseService.getCase(caseId);
+  }
+
+  @GetMapping("/{caseId}/uploaded-documents/{documentId}")
+  public CaseUploadedDocumentDetailDto getUploadedDocument(
+      @PathVariable String caseId,
+      @PathVariable String documentId
+  ) {
+    return caseService.getUploadedDocument(caseId, documentId);
+  }
+
+  @GetMapping("/{caseId}/uploaded-documents/{documentId}/content")
+  public ResponseEntity<byte[]> getUploadedDocumentContent(
+      @PathVariable String caseId,
+      @PathVariable String documentId
+  ) {
+    CaseUploadedDocumentContent document = caseService.getUploadedDocumentContent(caseId, documentId);
+    MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+    try {
+      mediaType = MediaType.parseMediaType(document.contentType());
+    } catch (Exception ignored) {
+      // Fall back to octet-stream for invalid or missing upload content types.
+    }
+    return ResponseEntity.ok()
+        .contentType(mediaType)
+        .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(document.filename()).build().toString())
+        .body(document.content());
   }
 
   @PutMapping("/{caseId}")

@@ -556,6 +556,8 @@
     "uploadedDocumentsTitle": "UPLOADED DOCUMENTS ({count})",
     "noUploadedDocuments": "No document has been added to this case yet.",
     "noDocumentPreview": "No text preview.",
+    "documentPreviewTitle": "Uploaded document",
+    "closeDocumentPreview": "Close document window",
     "indexedParts": "chunks",
     "saveAndList": "Save and list",
     "saveChanges": "Save changes",
@@ -587,6 +589,7 @@
       "save": "Case could not be saved.",
       "document": "Document status could not be updated.",
       "documentUpload": "Document could not be added to the case.",
+      "documentOpen": "Document could not be opened.",
       "delete": "Case could not be deleted."
     }
   },

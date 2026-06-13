@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -204,7 +205,7 @@ public class LawaiController {
     }
     DocumentIngestResponse response = documentService.ingest(file, topic, court);
     if (caseId != null && !caseId.isBlank()) {
-      caseService.attachUploadedDocument(caseId, response);
+      caseService.attachUploadedDocument(caseId, response, readOriginalContent(file));
     }
     activityLogClient.logBackend(requireUser(authentication), "document-ingest", "Belge Isleme", "Belge bilgi bankasina eklendi: " + file.getOriginalFilename(), "/api/documents/ingest");
     return response;
@@ -234,6 +235,14 @@ public class LawaiController {
 
   private String normalizeCourt(String court) {
     return court == null ? "" : court.trim().toUpperCase(Locale.ROOT);
+  }
+
+  private byte[] readOriginalContent(MultipartFile file) {
+    try {
+      return file.getBytes();
+    } catch (IOException exc) {
+      throw new IllegalStateException("Belge icerigi saklanamadi.", exc);
+    }
   }
 
 }

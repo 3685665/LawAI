@@ -111,6 +111,11 @@ export type CaseUploadedDocument = {
   createdAt: string;
 };
 
+export type CaseUploadedDocumentDetail = CaseUploadedDocument & {
+  extractedText?: string | null;
+  originalContentAvailable: boolean;
+};
+
 export type CaseParty = {
   id?: string;
   name: string;
@@ -492,6 +497,14 @@ export async function getJson<T>(path: string): Promise<T> {
     throw new Error(await readError(response));
   }
   return response.json();
+}
+
+export async function getBlob(path: string): Promise<Blob> {
+  const response = await localizedFetch(`${API_BASE}${path}`, { cache: "no-store", credentials: "include" });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.blob();
 }
 
 export async function patchJson<T>(path: string, payload: unknown): Promise<T> {

@@ -556,6 +556,8 @@
     "uploadedDocumentsTitle": "YUKLENEN BELGELER ({count})",
     "noUploadedDocuments": "Bu davaya henuz belge eklenmedi.",
     "noDocumentPreview": "Metin onizlemesi yok.",
+    "documentPreviewTitle": "Yuklenen belge",
+    "closeDocumentPreview": "Belge penceresini kapat",
     "indexedParts": "parca",
     "saveAndList": "Kaydet ve listele",
     "saveChanges": "Degisiklikleri kaydet",
@@ -587,6 +589,7 @@
       "save": "Dava kaydedilemedi.",
       "document": "Belge durumu guncellenemedi.",
       "documentUpload": "Belge davaya eklenemedi.",
+      "documentOpen": "Belge goruntulenemedi.",
       "delete": "Dava silinemedi."
     }
   },

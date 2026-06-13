@@ -10,6 +10,7 @@ import com.lawai.api.dto.CasePartyDto;
 import com.lawai.api.dto.CaseRecordResponse;
 import com.lawai.api.dto.CaseTemplateDto;
 import com.lawai.api.dto.CaseTemplatesResponse;
+import com.lawai.api.dto.CaseUploadedDocumentDetailDto;
 import com.lawai.api.dto.CaseUploadedDocumentDto;
 import com.lawai.api.dto.DocumentIngestResponse;
 import com.lawai.persistence.entity.LegalCaseEntity;
@@ -133,6 +134,45 @@ public class CaseService {
         .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
   }
 
+  @Transactional(readOnly = true)
+  public CaseUploadedDocumentDetailDto getUploadedDocument(String caseId, String documentId) {
+    LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    return legalCase.toSnapshot().uploadedDocuments().stream()
+        .filter(document -> document.id().equals(documentId))
+        .findFirst()
+        .map(document -> new CaseUploadedDocumentDetailDto(
+            document.id(),
+            document.filename(),
+            document.size(),
+            document.contentType(),
+            document.extractedCharacters(),
+            document.chunkCount(),
+            document.indexed(),
+            document.textPreview(),
+            document.extractedText(),
+            document.originalContent() != null && document.originalContent().length > 0,
+            document.createdAt()
+        ))
+        .orElseThrow(() -> new IllegalArgumentException("Belge bulunamadi."));
+  }
+
+  @Transactional(readOnly = true)
+  public CaseUploadedDocumentContent getUploadedDocumentContent(String caseId, String documentId) {
+    LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
+        .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
+    return legalCase.toSnapshot().uploadedDocuments().stream()
+        .filter(document -> document.id().equals(documentId))
+        .findFirst()
+        .filter(document -> document.originalContent() != null && document.originalContent().length > 0)
+        .map(document -> new CaseUploadedDocumentContent(
+            document.filename(),
+            document.contentType(),
+            document.originalContent()
+        ))
+        .orElseThrow(() -> new IllegalArgumentException("Belge icerigi bulunamadi."));
+  }
+
   @Transactional
   public List<CaseRecordResponse> deleteCase(String id) {
     if (!legalCaseRepository.existsById(id)) {
@@ -163,7 +203,7 @@ public class CaseService {
   }
 
   @Transactional
-  public CaseRecordResponse attachUploadedDocument(String caseId, DocumentIngestResponse document) {
+  public CaseRecordResponse attachUploadedDocument(String caseId, DocumentIngestResponse document, byte[] originalContent) {
     LegalCaseEntity legalCase = legalCaseRepository.findById(caseId)
         .orElseThrow(() -> new IllegalArgumentException("Dava bulunamadi."));
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -178,6 +218,7 @@ public class CaseService {
             document.indexed(),
             document.textPreview(),
             document.extractedText(),
+            originalContent == null ? new byte[0] : originalContent,
             now
         ),
         legalCase
@@ -452,7 +493,15 @@ public class CaseService {
       int indexed,
       String textPreview,
       String extractedText,
+      byte[] originalContent,
       OffsetDateTime createdAt
+  ) {
+  }
+
+  public record CaseUploadedDocumentContent(
+      String filename,
+      String contentType,
+      byte[] content
   ) {
   }
 

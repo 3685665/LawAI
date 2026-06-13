@@ -43,6 +43,11 @@ public class LegalCaseSchemaMigration {
     relaxLegacyNotNull("opponent_name");
     relaxLegacyNotNull("subject");
     relaxLegacyNotNull("summary");
+
+    if (tableExists("case_uploaded_documents") && !columnExists("case_uploaded_documents", "original_content")) {
+      jdbcTemplate.execute("ALTER TABLE case_uploaded_documents ADD COLUMN original_content bytea");
+      log.info("Added original_content column to case_uploaded_documents");
+    }
   }
 
   private void relaxLegacyNotNull(String columnName) {

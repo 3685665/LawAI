@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
@@ -47,6 +48,10 @@ public class CaseUploadedDocumentEntity {
   @Column(name = "extracted_text", columnDefinition = "text")
   private String extractedText;
 
+  @Lob
+  @Column(name = "original_content")
+  private byte[] originalContent;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -55,7 +60,7 @@ public class CaseUploadedDocumentEntity {
 
   public CaseUploadedDocumentEntity(String id, LegalCaseEntity legalCase, String filename, long size,
       String contentType, int extractedCharacters, int chunkCount, int indexed, String textPreview,
-      String extractedText, OffsetDateTime createdAt) {
+      String extractedText, byte[] originalContent, OffsetDateTime createdAt) {
     this.id = id;
     this.legalCase = legalCase;
     this.filename = filename;
@@ -66,6 +71,7 @@ public class CaseUploadedDocumentEntity {
     this.indexed = indexed;
     this.textPreview = textPreview;
     this.extractedText = extractedText;
+    this.originalContent = originalContent;
     this.createdAt = createdAt;
   }
 
@@ -73,14 +79,14 @@ public class CaseUploadedDocumentEntity {
     return new CaseUploadedDocumentEntity(
         snapshot.id(), legalCase, snapshot.filename(), snapshot.size(), snapshot.contentType(),
         snapshot.extractedCharacters(), snapshot.chunkCount(), snapshot.indexed(), snapshot.textPreview(),
-        snapshot.extractedText(), snapshot.createdAt()
+        snapshot.extractedText(), snapshot.originalContent(), snapshot.createdAt()
     );
   }
 
   public CaseUploadedDocumentSnapshot toSnapshot() {
     return new CaseUploadedDocumentSnapshot(
         id, filename, size, contentType, extractedCharacters, chunkCount, indexed, textPreview,
-        extractedText, createdAt
+        extractedText, originalContent, createdAt
     );
   }
 }

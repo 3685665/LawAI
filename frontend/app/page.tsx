@@ -74,6 +74,7 @@ import {
   type CaseParty,
   type CaseRecord,
   type CaseUploadedDocument,
+  type CaseUploadedDocumentDetail,
   type AuthPasswordResetResponse,
   type AuthSessionResponse,
   type AuthUser,
@@ -82,6 +83,7 @@ import {
   createUser,
   deleteJson,
   deleteUser,
+  getBlob,
   getJson,
   getUser,
   postJson,
@@ -4014,6 +4016,9 @@ function CasesPanel({ locale }: { locale: Locale }) {
   const [activeCaseAiAction, setActiveCaseAiAction] = useState<CaseAiActionKey | null>(null);
   const [caseAiResult, setCaseAiResult] = useState<CaseAiActionResponse | null>(null);
   const [caseDocumentUploading, setCaseDocumentUploading] = useState(false);
+  const [documentPreview, setDocumentPreview] = useState<CaseUploadedDocumentDetail | null>(null);
+  const [documentPreviewObjectUrl, setDocumentPreviewObjectUrl] = useState<string | null>(null);
+  const [documentPreviewLoadingId, setDocumentPreviewLoadingId] = useState<string | null>(null);
   const [localError, setLocalError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingCases, setLoadingCases] = useState(true);
@@ -4124,6 +4129,24 @@ function CasesPanel({ locale }: { locale: Locale }) {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (documentPreviewObjectUrl) {
+        URL.revokeObjectURL(documentPreviewObjectUrl);
+      }
+    };
+  }, [documentPreviewObjectUrl]);
+
+  function closeDocumentPreview() {
+    setDocumentPreview(null);
+    setDocumentPreviewObjectUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+  }
+
   async function openCase(caseId: string) {
     setLocalError("");
     try {
@@ -4131,6 +4154,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
       setSelectedCase(detail);
       fillCaseForm(detail);
       setCaseAiResult(null);
+      closeDocumentPreview();
       setActiveCaseFormTab("overview");
       setCaseScreen("detail");
     } catch (error) {
@@ -4170,6 +4194,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
     setLocalError("");
     setSelectedCase(null);
     setCaseAiResult(null);
+    closeDocumentPreview();
     setCaseType("genel");
     setFileTitle("");
     setCaseNumber("");
@@ -4189,6 +4214,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
   function openListScreen() {
     setCaseScreen("list");
     setCaseAiResult(null);
+    closeDocumentPreview();
     setLocalError("");
   }
 
@@ -4374,6 +4400,7 @@ function CasesPanel({ locale }: { locale: Locale }) {
       setSelectedCase(detail);
       setSavedCases(caseList);
       setCaseAiResult(null);
+      closeDocumentPreview();
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : t.errors.documentUpload);
     } finally {
@@ -4381,6 +4408,29 @@ function CasesPanel({ locale }: { locale: Locale }) {
       if (caseDocumentInputRef.current) {
         caseDocumentInputRef.current.value = "";
       }
+    }
+  }
+
+  async function openUploadedDocument(document: CaseUploadedDocument) {
+    if (!selectedCase) return;
+    setDocumentPreviewLoadingId(document.id);
+    setLocalError("");
+    try {
+      const detail = await getJson<CaseUploadedDocumentDetail>(
+        `/cases/${selectedCase.id}/uploaded-documents/${document.id}`
+      );
+      let nextObjectUrl: string | null = null;
+      if (detail.originalContentAvailable && canPreviewOriginalDocument(detail.contentType)) {
+        const blob = await getBlob(`/cases/${selectedCase.id}/uploaded-documents/${document.id}/content`);
+        nextObjectUrl = URL.createObjectURL(blob);
+      }
+      closeDocumentPreview();
+      setDocumentPreview(detail);
+      setDocumentPreviewObjectUrl(nextObjectUrl);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : t.errors.documentOpen);
+    } finally {
+      setDocumentPreviewLoadingId(null);
     }
   }
 
@@ -4410,6 +4460,35 @@ function CasesPanel({ locale }: { locale: Locale }) {
       </div>
 
       {localError && <div className="error">{localError}</div>}
+
+      {documentPreview ? (
+        <div className="case-modal-backdrop" role="presentation" onMouseDown={closeDocumentPreview}>
+          <section
+            className="case-party-modal case-document-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.documentPreviewTitle}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="case-party-modal-head">
+              <div>
+                <strong>{documentPreview.filename}</strong>
+                <span>{formatBytes(documentPreview.size)} · {documentPreview.contentType || "-"}</span>
+              </div>
+              <button className="secondary-button compact icon-only" type="button" onClick={closeDocumentPreview} aria-label={t.closeDocumentPreview}>
+                <X size={17} aria-hidden="true" />
+              </button>
+            </div>
+            {documentPreviewObjectUrl ? (
+              <iframe className="case-document-original-frame" src={documentPreviewObjectUrl} title={documentPreview.filename} />
+            ) : (
+              <pre className="case-document-preview-text">
+                {documentPreview.extractedText?.trim() || documentPreview.textPreview || t.noDocumentPreview}
+              </pre>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       {partyModalOpen && (
         <div className="case-modal-backdrop" role="presentation" onMouseDown={() => setPartyModalOpen(false)}>
@@ -4573,13 +4652,14 @@ function CasesPanel({ locale }: { locale: Locale }) {
                     {selectedCase.uploadedDocuments?.length ? (
                       <div className="case-saved-items">
                         {selectedCase.uploadedDocuments.map((document: CaseUploadedDocument) => (
-                          <div className="case-party-preview" key={document.id}>
+                          <button className="case-party-preview case-document-preview-item" key={document.id} onClick={() => void openUploadedDocument(document)} type="button">
                             <div>
                               <strong>{document.filename}</strong>
                               <span>{formatBytes(document.size)} · {document.indexed} {t.indexedParts}</span>
                               <small>{document.textPreview || t.noDocumentPreview}</small>
                             </div>
-                          </div>
+                            {documentPreviewLoadingId === document.id ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : <FileSearch size={17} aria-hidden="true" />}
+                          </button>
                         ))}
                       </div>
                     ) : (
@@ -4936,6 +5016,11 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function canPreviewOriginalDocument(contentType: string | null | undefined) {
+  const normalized = (contentType ?? "").toLowerCase();
+  return normalized === "application/pdf" || normalized.startsWith("image/") || normalized.startsWith("text/");
 }
 
 function formatDateTime(value: string | null | undefined, locale: Locale, fallback: string) {
