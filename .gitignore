@@ -10,6 +10,7 @@ __pycache__/
 .pytest_cache/
 .env
 .env.local
+.env.smtp
 .tmp-upload.docx
 data/
 frontend/*.log

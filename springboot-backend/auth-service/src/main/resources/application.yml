@@ -3,6 +3,8 @@ spring:
     import:
       - optional:file:./application-local.yml
       - optional:file:./.env.smtp[.properties]
+      - optional:file:../.env.smtp[.properties]
+      - optional:file:./springboot-backend/.env.smtp[.properties]
   datasource:
     url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/lawai}
     username: ${DATABASE_USERNAME:lawai}
